@@ -13,13 +13,14 @@ Usage::
     python manage.py ingest_materials --skip-ocr
 
 Requirements:
-    pip install Pillow pytesseract   (or tesserocr)
-    Tesseract traineddata in ``<project>/tessdata/eng.traineddata``
+    pip install Pillow easyocr torch torchvision
 """
 
 import os
 import re
 from pathlib import Path
+
+import numpy as np
 
 from django.conf import settings
 from django.core.files import File
@@ -52,42 +53,36 @@ PART_ROTATIONS = {
     5: 180,
 }
 
-# Tessdata path relative to BASE_DIR
-TESSDATA_DIR = 'tessdata'
-
 
 # ---------------------------------------------------------------------------
-# OCR backend abstraction
+# EasyOCR helpers
 # ---------------------------------------------------------------------------
 
-def _get_ocr_func(tessdata_path: str):
+def _sort_ocr_results(results: list) -> str:
     """
-    Return an OCR callable ``(pil_image) -> str`` using whichever
-    backend is available: tesserocr (bundled engine) or pytesseract
-    (requires system tesseract binary).
+    Sort EasyOCR result tuples spatially and combine into a single string.
+
+    EasyOCR returns ``[(bounding_box, text, confidence), ...]`` where each
+    ``bounding_box`` is four ``[x, y]`` corner points.
+
+    We sort **top-to-bottom** (by the minimum Y of each bounding box),
+    breaking ties **left-to-right** (by the minimum X). This ensures the
+    output text flows in natural reading order even when the OCR engine
+    returns blocks in an arbitrary sequence.
+
+    Returns a multi-line string with one text block per line.
     """
-    # Prefer tesserocr (no system binary needed)
-    try:
-        import tesserocr
-        def _ocr(img):
-            return tesserocr.image_to_text(img, path=tessdata_path, lang='eng')
-        # Quick smoke test
-        _ocr(Image.new('RGB', (10, 10)))
-        return _ocr
-    except Exception:
-        pass
+    if not results:
+        return ''
 
-    # Fallback to pytesseract
-    try:
-        import pytesseract
-        def _ocr(img):
-            return pytesseract.image_to_string(img, lang='eng')
-        _ocr(Image.new('RGB', (10, 10)))
-        return _ocr
-    except Exception:
-        pass
+    def _sort_key(entry):
+        bbox = entry[0]
+        y_top = min(point[1] for point in bbox)
+        x_left = min(point[0] for point in bbox)
+        return (y_top, x_left)
 
-    return None
+    sorted_results = sorted(results, key=_sort_key)
+    return '\n'.join(text for _bbox, text, _conf in sorted_results)
 
 
 # ---------------------------------------------------------------------------
@@ -110,6 +105,10 @@ class Command(BaseCommand):
             '--skip-ocr', action='store_true',
             help='Skip OCR — create records from answers.txt only.',
         )
+        parser.add_argument(
+            '--gpu', action='store_true',
+            help='Use GPU acceleration for EasyOCR (requires CUDA).',
+        )
 
     # ------------------------------------------------------------------
     # Entry point
@@ -117,19 +116,29 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         self.skip_ocr = options['skip_ocr']
-        self.ocr_func = None
+        self.reader = None  # EasyOCR reader — initialized once
 
         if not self.skip_ocr:
-            tessdata_path = str(settings.BASE_DIR / TESSDATA_DIR)
-            self.ocr_func = _get_ocr_func(tessdata_path)
-            if self.ocr_func is None:
+            try:
+                import easyocr
+                use_gpu = options.get('gpu', False)
+                self.stdout.write('    ⏳  Loading EasyOCR model…')
+                self.reader = easyocr.Reader(
+                    ['en'],
+                    gpu=use_gpu,
+                    verbose=False,
+                )
+                self.stdout.write(self.style.SUCCESS(
+                    f'    ✓  EasyOCR ready (gpu={use_gpu})'
+                ))
+            except ImportError:
                 raise CommandError(
-                    'No OCR backend available.\n'
-                    '  Install:  pip install tesserocr   (recommended, no system dep)\n'
-                    '            pip install pytesseract + apt install tesseract-ocr\n'
-                    '  And place eng.traineddata in:  tessdata/\n'
+                    'EasyOCR is not installed.\n'
+                    '  Install:  pip install easyocr torch torchvision\n'
                     '  Or run with:  --skip-ocr'
                 )
+            except Exception as e:
+                raise CommandError(f'Failed to initialize EasyOCR: {e}')
 
         materials_dir = settings.BASE_DIR / 'materials'
         if not materials_dir.exists():
@@ -249,7 +258,7 @@ class Command(BaseCommand):
         processed_img_path = None
 
         questions_img = part_dir / 'questions.jpg'
-        if questions_img.exists() and not self.skip_ocr and self.ocr_func:
+        if questions_img.exists() and not self.skip_ocr and self.reader:
             instructions, parsed_questions, processed_img_path = (
                 self._ocr_and_parse(
                     questions_img, part_num, q_type, answers, global_offset,
@@ -359,14 +368,18 @@ class Command(BaseCommand):
         return answers
 
     # ------------------------------------------------------------------
-    # OCR pipeline
+    # OCR pipeline  (EasyOCR with spatial sorting)
     # ------------------------------------------------------------------
 
     def _ocr_and_parse(self, image_path: Path, part_num: int,
                        q_type: str, answers: dict,
                        global_offset: int):
         """
-        OCR a question image and parse structured question data.
+        OCR a question image using EasyOCR and parse structured question data.
+
+        The EasyOCR reader returns a list of (bounding_box, text, confidence)
+        tuples.  We sort them spatially (top→bottom, left→right) before
+        joining into a single text string for the downstream regex parsers.
 
         Returns: (instructions, parsed_questions, processed_image_path)
         """
@@ -388,15 +401,22 @@ class Command(BaseCommand):
                 processed_path = str(tmp)
                 self.stdout.write(f'    🔄  Rotated image {rotation}°')
 
-            # Run OCR
-            self.stdout.write('    🔍  Running OCR…')
-            raw = self.ocr_func(img)
+            # Run EasyOCR on the numpy array
+            self.stdout.write('    🔍  Running EasyOCR…')
+            img_array = np.array(img)
+            results = self.reader.readtext(img_array)
 
-            if not raw or not raw.strip():
-                self.stderr.write(self.style.WARNING('    ⚠  OCR returned empty text'))
+            if not results:
+                self.stderr.write(self.style.WARNING('    ⚠  OCR returned no text blocks'))
                 return instructions, parsed, processed_path
 
-            self.stdout.write(f'    📄  OCR extracted {len(raw)} characters')
+            # Sort spatially and combine into a single string
+            raw = _sort_ocr_results(results)
+
+            self.stdout.write(
+                f'    📄  OCR extracted {len(results)} text blocks '
+                f'({len(raw)} characters)'
+            )
             instructions = raw.strip()
 
             # Parse per question type
