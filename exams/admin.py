@@ -131,7 +131,8 @@ class PartAdmin(admin.ModelAdmin):
                 'border:1px solid #ccc; border-radius:4px;" />',
                 obj.question_image.url,
             )
-        return format_html(
+        from django.utils.safestring import mark_safe
+        return mark_safe(
             '<span style="color:#999;">No image uploaded</span>'
         )
 
@@ -143,7 +144,8 @@ class PartAdmin(admin.ModelAdmin):
                 'border:1px solid #ccc; border-radius:4px;" />',
                 obj.map_image.url,
             )
-        return format_html(
+        from django.utils.safestring import mark_safe
+        return mark_safe(
             '<span style="color:#999;">No map image</span>'
         )
 
@@ -214,7 +216,8 @@ class QuestionAdmin(admin.ModelAdmin):
                 '</div>',
                 obj.part.question_image.url,
             )
-        return format_html(
+        from django.utils.safestring import mark_safe
+        return mark_safe(
             '<span style="color:#999; font-style:italic;">'
             'No question image available for this Part.</span>'
         )
