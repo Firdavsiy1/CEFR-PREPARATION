@@ -150,6 +150,33 @@ class Part(models.Model):
         null=True,
         help_text="Supplementary image (e.g. map for Part 4).",
     )
+    passage_title = models.CharField(
+        max_length=300,
+        blank=True,
+        help_text=(
+            "Title of the passage (Parts 2 & 6), "
+            "e.g. 'British Marine Life in Crisis'."
+        ),
+    )
+    passage_text = models.TextField(
+        blank=True,
+        help_text=(
+            "Full passage text with numbered blanks (Parts 2 & 6). "
+            "Blanks are marked as {30}, {31}, etc."
+        ),
+    )
+    shared_choices_json = models.JSONField(
+        default=list,
+        blank=True,
+        help_text=(
+            'Shared choices for matching parts (e.g. Part 3). '
+            'Format: [{"label": "A", "text": "disturbing someone"}, ...]'
+        ),
+    )
+    transcript = models.TextField(
+        blank=True,
+        help_text="AI-generated audio transcript.",
+    )
     points_per_question = models.FloatField(
         default=2.0,
         help_text="Weighted points awarded per correct answer in this part.",
@@ -201,6 +228,14 @@ class Question(models.Model):
         blank=True,
         help_text="Question number as printed on the exam paper (1–35).",
     )
+    group_label = models.CharField(
+        max_length=100,
+        blank=True,
+        help_text=(
+            "Sub-group label, e.g. 'Extract One' (Part 5) "
+            "or 'Speaker 1' (Part 3)."
+        ),
+    )
     question_text = models.TextField(
         blank=True,
         help_text="OCR-extracted question text. The original image is the primary display.",
@@ -212,6 +247,10 @@ class Question(models.Model):
     correct_answer = models.CharField(
         max_length=200,
         help_text="The correct answer: a letter (A/B/C…) or a word/phrase.",
+    )
+    explanation = models.TextField(
+        blank=True,
+        help_text="AI-generated explanation for the correct answer.",
     )
 
     class Meta:

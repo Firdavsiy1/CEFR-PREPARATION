@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+
+{% block title %}Examination Results — {{ attempt.test.name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-fade-in" id="overview">
+
+    <!-- Header Navigation -->
+    <div class="mb-8">
+        <a href="{% url 'exams:history' %}" class="inline-flex items-center gap-2 text-sm font-medium text-slate-400 hover:text-indigo-400 transition-colors">
+            <i class="ph-bold ph-arrow-left"></i>
+            Return to Examination History
+        </a>
+    </div>
+
+    <!-- Main Score Highlight Box -->
+    <div class="bg-brand-900 border text-center relative border-white/5 shadow-xl rounded-xl px-10 py-12 mb-12">
+        
+        <h1 class="text-4xl font-display font-bold text-white mb-2">Final Evaluation Report</h1>
+        <p class="text-slate-400 font-medium tracking-wide text-sm mb-12 uppercase">{{ attempt.test.name }} &middot; {{ attempt.completed_at|date:"F j, Y" }}</p>
+
+        <div class="flex flex-col md:flex-row items-center justify-center gap-16 relative z-10">
+            <div class="text-center">
+                <span class="block text-xs text-slate-500 uppercase tracking-widest font-bold mb-2">Raw Score</span>
+                <span class="text-4xl font-display font-bold text-indigo-400">{{ attempt.total_correct }}<span class="text-2xl text-slate-500 font-normal">/{{ attempt.total_questions }}</span></span>
+            </div>
+            
+            <div class="w-px h-16 bg-white/10 hidden md:block"></div>
+            
+            <div class="text-center">
+                <span class="block text-xs text-slate-500 uppercase tracking-widest font-bold mb-2">Weighted Points</span>
+                <span class="text-4xl font-display font-bold text-indigo-400">{{ attempt.total_score }}<span class="text-2xl text-slate-500 font-normal">/{{ attempt.max_possible_score }}</span></span>
+            </div>
+
+            <div class="w-px h-16 bg-white/10 hidden md:block"></div>
+
+            <!-- Percentage Certificate -->
+            <div class="text-center">
+                <span class="block text-xs text-slate-500 uppercase tracking-widest font-bold mb-2">Overall Proficiency</span>
+                <div class="flex flex-col items-center">
+                     <span class="text-6xl font-display font-bold text-accent drop-shadow-[0_0_15px_rgba(99,102,241,0.5)] leading-none">{{ attempt.score_percentage }}%</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats Breakdown by Part -->
+    <div class="mb-14">
+        <h2 class="text-2xl font-display font-bold text-white mb-6 pb-2 border-b border-white/10">Section Breakdown</h2>
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            {% for part in part_results %}
+            <div class="bg-white/[0.02] backdrop-blur-2xl border border-white/[0.08] rounded-lg p-5 text-center shadow-lg">
+                <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Part {{ part.part_number }}</h3>
+                <div class="mb-1">
+                    <span class="text-2xl text-white font-display font-bold">
+                        {{ part.correct }}<span class="text-sm font-normal text-slate-500">/{{ part.total }}</span>
+                    </span>
+                </div>
+                <p class="text-[11px] font-bold text-accent uppercase tracking-wide">{{ part.score }} / {{ part.max_score }} PTS</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Detailed Question Review -->
+    <h2 class="text-2xl font-display font-bold text-white mb-6 pb-2 border-b border-white/10 mt-16">Comprehensive Review</h2>
+    
+    {% regroup answers by question.part as parts_list %}
+    
+    <div class="flex flex-col lg:flex-row gap-8 items-start">
+        
+        <!-- Sticky Navigation Sidebar -->
+        <aside class="w-full lg:w-64 flex-shrink-0 lg:sticky lg:top-28 hidden lg:block bg-white/[0.02] backdrop-blur-2xl border border-white/[0.08] shadow-[0_8px_30px_rgb(0,0,0,0.12)] rounded-[1.5rem] p-6 z-10">
+            <h3 class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-4">Quick Navigation</h3>
+            <nav class="space-y-1.5">
+                <a href="#overview" class="block px-4 py-2.5 text-sm font-bold text-slate-400 hover:text-white hover:bg-white/[0.05] rounded-xl transition-all">Score Overview</a>
+                {% for part in part_results %}
+                <a href="#part-{{ part.part_number }}" class="flex items-center justify-between px-4 py-2.5 text-sm font-medium text-slate-400 hover:text-white hover:bg-white/[0.05] rounded-xl transition-all group">
+                    <span>Section {{ part.part_number }}</span>
+                    <span class="text-[10px] font-bold {% if part.score == part.max_score %}text-emerald-400/80{% else %}text-slate-600 group-hover:text-slate-400{% endif %} tracking-wider">{{ part.score|floatformat:0 }}/{{ part.max_score|floatformat:0 }}</span>
+                </a>
+                {% endfor %}
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <div class="flex-1 w-full min-w-0 space-y-10">
+        {% for part_entry in parts_list %}
+        <div id="part-{{ part_entry.grouper.part_number }}" class="bg-white/[0.02] backdrop-blur-2xl rounded-[1.5rem] border border-white/[0.08] shadow-[0_8px_30px_rgb(0,0,0,0.12)] overflow-hidden">
+            <!-- Part Header -->
+            <div class="bg-white/[0.02] px-8 py-5 border-b border-white/5 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                    <h3 class="text-xl font-display font-bold text-white">Part {{ part_entry.grouper.part_number }}</h3>
+                    <span class="text-xs font-bold uppercase tracking-widest text-slate-400">Weight: {{ part_entry.grouper.points_per_question }} pts / question</span>
+                </div>
+                
+                {% if part_entry.grouper.transcript %}
+                <div class="w-full md:w-auto">
+                    <details class="group bg-[#1F2937] border border-white/10 rounded px-4 py-2 cursor-pointer shadow-sm">
+                        <summary class="flex items-center gap-3 list-none">
+                            <span class="text-xs font-bold text-white uppercase tracking-widest">Audio Transcript</span>
+                            <span class="transition duration-300 group-open:rotate-180 text-slate-400">
+                                <i class="ph-bold ph-caret-down text-lg"></i>
+                            </span>
+                        </summary>
+                        <p class="text-sm text-slate-300 leading-loose mt-4 pb-2 whitespace-pre-wrap font-medium">{{ part_entry.grouper.transcript }}</p>
+                    </details>
+                </div>
+                {% endif %}
+            </div>
+            
+            <div class="divide-y divide-white/5">
+                {% for answer in part_entry.list %}
+                <div class="px-8 py-6 flex flex-col sm:flex-row gap-6 hover:bg-white/5 transition-colors">
+                    
+                    <!-- Question Marker -->
+                    <div class="flex-shrink-0 pt-1">
+                        <span class="inline-flex items-center justify-center w-8 h-8 rounded border text-sm font-bold shadow-sm
+                            {% if answer.is_correct %}bg-emerald-500/10 text-emerald-400 border-emerald-500/20
+                            {% else %}bg-rose-500/10 text-rose-400 border-rose-500/20{% endif %}">
+                            {% if answer.question.global_question_number %}
+                                {{ answer.question.global_question_number }}
+                            {% else %}
+                                {{ answer.question.question_number }}
+                            {% endif %}
+                        </span>
+                    </div>
+
+                    <!-- Question & Answers -->
+                    <div class="flex-1">
+                        {% if answer.question.question_text %}
+                        <p class="text-white font-medium mb-4 text-base">{{ answer.question.question_text }}</p>
+                        {% endif %}
+                        
+                        <div class="flex flex-col sm:flex-row gap-6 mb-2">
+                            <!-- User's Answer -->
+                            <div class="flex-1">
+                                <p class="text-[10px] text-slate-500 font-bold uppercase tracking-widest mb-1.5">Candidate Response</p>
+                                <div class="flex items-center gap-2">
+                                    {% if answer.is_correct %}
+                                    <i class="ph-bold ph-check text-emerald-400 text-base"></i>
+                                    <span class="text-emerald-400 font-bold">{{ answer.given_answer }}</span>
+                                    {% else %}
+                                    <i class="ph-bold ph-x text-rose-400 text-base"></i>
+                                    <span class="text-rose-400 font-bold line-through decoration-rose-400/50">
+                                        {% if answer.given_answer %}{{ answer.given_answer }}{% else %}<span class="italic font-normal">Blank</span>{% endif %}
+                                    </span>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <!-- Correct Answer (only show if user was wrong) -->
+                            {% if not answer.is_correct %}
+                            <div class="flex-1 pl-0 sm:pl-6 sm:border-l border-white/10">
+                                <p class="text-[10px] text-slate-500 font-bold uppercase tracking-widest mb-1.5">Key</p>
+                                <div class="flex items-center gap-2">
+                                    <i class="ph-bold ph-check-circle text-emerald-400 text-base"></i>
+                                    <span class="text-emerald-400 font-bold">{{ answer.question.correct_answer }}</span>
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Explanation Block -->
+                        {% if answer.question.explanation %}
+                        <div class="mt-5 p-5 rounded border bg-white/[0.02] border-white/5 shadow-inner relative mt-6">
+                            <span class="absolute -top-3 left-4 bg-[#1F2937] px-2 text-[10px] font-bold text-accent uppercase tracking-widest border border-white/10 rounded">Evaluator Feedback</span>
+                            <div class="mt-1">
+                                <p class="text-sm text-slate-300 leading-relaxed font-medium">{{ answer.question.explanation }}</p>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Points -->
+                    <div class="flex-shrink-0 text-right w-16 pt-1">
+                        <span class="block text-lg font-display font-bold {% if answer.is_correct %}text-emerald-400{% else %}text-slate-500{% endif %}">
+                            {% if answer.is_correct %}+{{ part_entry.grouper.points_per_question|floatformat:1 }}{% else %}0.0{% endif %}
+                        </span>
+                        <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Pts</span>
+                    </div>
+
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    </div>
+</div>
+{% endblock %}

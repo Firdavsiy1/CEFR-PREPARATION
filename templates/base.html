@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="CEFR B2 English Exam Preparation Platform — Practice listening exams with automated scoring.">
+    <title>{% block title %}CEFR Exam Prep{% endblock %}</title>
+
+    <!-- Tailwind CSS via CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+                        display: ['Outfit', 'system-ui', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            950: '#06080D', // Even darker midnight
+                            900: '#0A0E17',
+                            800: '#151C2C',
+                        },
+                        accent: {
+                            // Sleek modern indigo/purple
+                            DEFAULT: '#6366f1',
+                            glow: 'rgba(99, 102, 241, 0.25)',
+                        }
+                    },
+                    animation: {
+                        'fade-in': 'fadeIn 0.8s cubic-bezier(0.16, 1, 0.3, 1)',
+                        'slide-up': 'slideUp 0.8s cubic-bezier(0.16, 1, 0.3, 1)',
+                        'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                    },
+                    keyframes: {
+                        fadeIn: {
+                            '0%': { opacity: '0' },
+                            '100%': { opacity: '1' },
+                        },
+                        slideUp: {
+                            '0%': { opacity: '0', transform: 'translateY(20px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' },
+                        },
+                    },
+                },
+            },
+        }
+    </script>
+
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <style>
+        body { 
+            background-color: #06080D; 
+            background-image: 
+                radial-gradient(circle at 50% 10%, rgba(99, 102, 241, 0.15), transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(168, 85, 247, 0.08), transparent 50%);
+            background-attachment: fixed;
+        }
+        
+        /* Custom scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #0B0F19; }
+        ::-webkit-scrollbar-thumb { background: #374151; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #4B5563; }
+
+        /* Premium Audio Player styling */
+        audio {
+            width: 100%;
+            height: 48px;
+            border-radius: 8px;
+            outline: none;
+        }
+        audio::-webkit-media-controls-panel {
+            background-color: #1F2937;
+        }
+        audio::-webkit-media-controls-current-time-display,
+        audio::-webkit-media-controls-time-remaining-display {
+            color: #E5E7EB;
+        }
+
+        /* Choice options styling for take_test */
+        .choice-option {
+            transition: all 0.2s ease;
+        }
+        .choice-option:hover {
+            border-color: #4B5563;
+            background-color: #1a2335;
+        }
+        .choice-option:has(input:checked) {
+            border-color: #6366f1;
+            background-color: rgba(99, 102, 241, 0.05);
+            box-shadow: 0 1px 10px rgba(99, 102, 241, 0.1);
+        }
+    </style>
+
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="min-h-screen text-slate-300 font-sans antialiased selection:bg-gold-500/30 selection:text-gold-400">
+
+    <!-- Navbar -->
+    <nav class="sticky top-0 z-50 bg-[#06080D]/70 backdrop-blur-xl border-b border-white/[0.06] shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-20">
+                <!-- Logo -->
+                <a href="{% url 'exams:dashboard' %}" class="flex items-center gap-3 group" id="nav-logo">
+                    <!-- Modern Minimal Logo -->
+                    <div class="w-10 h-10 rounded-xl flex items-center justify-center bg-gradient-to-br from-indigo-500/20 to-purple-600/20 border border-indigo-500/30 shadow-[0_0_15px_rgba(99,102,241,0.2)] group-hover:shadow-[0_0_20px_rgba(99,102,241,0.4)] transition-all duration-300">
+                        <i class="ph-fill ph-student text-indigo-400 text-xl"></i>
+                    </div>
+                    <span class="text-xl font-display font-bold text-white tracking-tight">CEFR Prep</span>
+                </a>
+
+                <!-- User info -->
+                {% if user.is_authenticated %}
+                <div class="flex items-center gap-6">
+                    <span class="text-sm font-medium text-slate-400">
+                        <span class="hidden sm:inline">User: </span><span class="text-slate-200">{{ user.username }}</span>
+                    </span>
+                    <div class="h-4 w-px bg-white/10"></div>
+                    <a href="{% url 'exams:dashboard' %}" class="flex items-center gap-2 text-sm font-medium text-slate-400 hover:text-white hover:text-indigo-400 transition-colors" id="nav-dashboard"><i class="ph ph-squares-four text-lg"></i> Dashboard</a>
+                    <a href="{% url 'exams:history' %}" class="flex items-center gap-2 text-sm font-medium text-slate-400 hover:text-white hover:text-indigo-400 transition-colors" id="nav-history"><i class="ph ph-clock-counter-clockwise text-lg"></i> History</a>
+                    <form action="{% url 'accounts:logout' %}" method="post" class="inline">
+                        {% csrf_token %}
+                        <button type="submit" class="flex items-center gap-2 text-sm border border-white/10 px-3 py-1.5 rounded-lg text-slate-400 hover:text-white hover:border-white/30 transition-colors"><i class="ph ph-sign-out text-lg"></i> Log out</button>
+                    </form>
+                </div>
+                {% else %}
+                <div class="flex items-center gap-4">
+                    <a href="{% url 'accounts:login' %}" class="flex items-center gap-2 text-sm font-medium text-slate-300 hover:text-white hover:text-indigo-400 transition-colors"><i class="ph ph-sign-in text-lg"></i> Sign In</a>
+                    <a href="{% url 'accounts:register' %}" class="flex items-center gap-2 text-sm font-bold bg-white text-slate-900 px-4 py-2 rounded-lg hover:bg-indigo-50 transition-colors shadow-[0_0_15px_rgba(255,255,255,0.1)]"><i class="ph ph-user-plus text-lg"></i> Apply</a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </nav>
+
+    <!-- Messages -->
+    {% if messages %}
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6">
+        {% for message in messages %}
+        <div class="mb-3 p-4 rounded-lg border shadow-sm animate-fade-in
+            {% if message.tags == 'success' %}bg-emerald-500/10 border-emerald-500/20 text-emerald-400
+            {% elif message.tags == 'error' %}bg-rose-500/10 border-rose-500/20 text-rose-400
+            {% elif message.tags == 'warning' %}bg-amber-500/10 border-amber-500/20 text-amber-400
+            {% else %}bg-brand-800/50 border-brand-700 text-slate-300{% endif %}">
+            {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Main content -->
+    <main class="relative z-10 py-10">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="mt-20 py-12 border-t border-white/[0.06] bg-[#06080D]/50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center flex flex-col items-center">
+            <span class="font-display font-bold text-lg text-white mb-2 tracking-tight">CEFR Exam Preparation</span>
+            <p class="text-sm text-slate-500/80 font-light">
+                A modern platform for English proficiency testing.
+            </p>
+        </div>
+    </footer>
+
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html>

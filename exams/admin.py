@@ -23,7 +23,7 @@ class PartInline(admin.TabularInline):
     extra = 0
     fields = (
         'part_number', 'points_per_question', 'audio_file',
-        'question_image', 'map_image', 'instructions',
+        'question_image', 'map_image', 'passage_title', 'instructions',
     )
     readonly_fields = ('points_per_question',)
     show_change_link = True
@@ -34,7 +34,7 @@ class QuestionInline(admin.TabularInline):
     extra = 0
     fields = (
         'question_number', 'global_question_number', 'question_type',
-        'correct_answer', 'question_text',
+        'group_label', 'correct_answer', 'question_text',
     )
     show_change_link = True
 
@@ -103,6 +103,22 @@ class PartAdmin(admin.ModelAdmin):
         }),
         ('Instructions (OCR)', {
             'fields': ('instructions',),
+            'classes': ('collapse',),
+        }),
+        ('Passage Content (Parts 2 & 6)', {
+            'description': (
+                'For fill-in-the-blank parts: the passage title and full text '
+                'with numbered blank markers like {30}, {31}.'
+            ),
+            'fields': ('passage_title', 'passage_text'),
+            'classes': ('collapse',),
+        }),
+        ('Shared Choices (Part 3 — Matching)', {
+            'description': (
+                'For matching parts: a JSON list of shared choices. '
+                'Example: [{"label": "A", "text": "disturbing someone"}, ...]'
+            ),
+            'fields': ('shared_choices_json',),
             'classes': ('collapse',),
         }),
     )
@@ -175,7 +191,7 @@ class QuestionAdmin(admin.ModelAdmin):
         ('Question Details', {
             'fields': (
                 'part', 'question_number', 'global_question_number',
-                'question_type', 'correct_answer',
+                'question_type', 'group_label', 'correct_answer',
             ),
         }),
         ('Original Screenshot (source of truth)', {

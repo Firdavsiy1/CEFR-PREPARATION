@@ -1,0 +1,242 @@
+{% extends "base.html" %}
+{% load exam_filters %}
+
+{% block title %}Part {{ part_number }} — {{ test.name }}{% endblock %}
+
+{% block extra_head %}
+<style>
+    .passage-text { line-height: 2.2; font-size: 1.1rem; color: #E5E7EB; } /* text-gray-200 */
+    .passage-text input { border-bottom: 1px solid #6B7280; background: transparent; padding: 0 0.5rem; color: #F9FAFB; font-weight: 500; text-align: center; } /* text-gray-50 */
+    .passage-text input:focus { outline: none; border-bottom: 2px solid #6366f1; }
+    
+    .timer-badge { font-variant-numeric: tabular-nums; }
+    
+    @keyframes pulse-gold {
+        0%, 100% { color: #F9FAFB; border-color: rgba(255,255,255,0.1); }
+        50% { color: #ef4444; border-color: rgba(239, 68, 68, 0.4); }
+    }
+    .timer-critical {
+        animation: pulse-gold 1.5s infinite;
+        font-weight: 700;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+
+    <!-- Header / Progress & Timer -->
+    <div class="bg-brand-900 border text-center relative border-white/5 shadow-lg rounded-xl py-6 px-8 mb-10 flex flex-col md:flex-row items-center justify-between gap-6">
+        <div class="flex items-center gap-6">
+            <div class="w-14 h-14 rounded-full border border-white/10 bg-white/[0.02] flex items-center justify-center font-display font-bold text-2xl text-white">
+                {{ part_number }}
+            </div>
+            <div class="text-left">
+                <h1 class="text-2xl font-display font-bold text-white">{{ test.name }}</h1>
+                <p class="text-sm font-medium text-slate-400 tracking-wide uppercase mt-1">Section {{ part_number }} of 6 &middot; {{ part.get_part_type_display|default:"Assessment Section" }}</p>
+            </div>
+        </div>
+
+        <!-- Timer -->
+        <div class="flex items-center gap-3 px-5 py-2.5 rounded border border-white/10 bg-white/[0.02]" id="timer-container">
+            <i class="ph ph-timer text-slate-400 text-xl"></i>
+            <div id="timer" class="timer-badge text-xl font-medium tracking-tight text-white">
+                --:--
+            </div>
+        </div>
+    </div>
+
+    <!-- The Form -->
+    <form method="POST" id="test-form" class="space-y-10">
+        {% csrf_token %}
+
+        <section class="part-section animate-fade-in" id="part-{{ part_number }}">
+            
+            {% if part.instructions or part.audio_file %}
+            <div class="bg-white/[0.02] backdrop-blur-2xl border border-white/[0.08] rounded-xl p-8 shadow-lg mb-10">
+                {% if part.instructions %}
+                <div class="mb-6">
+                    <h3 class="text-xs font-bold text-accent uppercase tracking-widest mb-3">Directions</h3>
+                    <p class="text-slate-300 leading-relaxed font-medium">{{ part.instructions }}</p>
+                </div>
+                {% endif %}
+
+                {% if part.audio_file %}
+                <div class="mt-4 pt-6 border-t border-white/10 flex items-center gap-4">
+                    <audio controls class="flex-1" id="part-audio">
+                        <source src="{{ part.audio_file.url }}" type="audio/mpeg">
+                    </audio>
+                </div>
+                {% endif %}
+            </div>
+            {% endif %}
+
+            <!-- Optional Map (Part 4) -->
+            {% if part.part_number == 4 and part.map_image %}
+            <div class="bg-white/[0.02] backdrop-blur-2xl border border-white/[0.08] shadow-lg rounded-xl p-4 mb-10">
+                <p class="text-xs text-slate-400 uppercase tracking-widest font-bold mb-4 ml-2">Reference Material</p>
+                <img src="{{ part.map_image.url }}" class="w-full rounded border border-white/10 opacity-90 hover:opacity-100 transition-opacity" loading="lazy">
+            </div>
+            {% endif %}
+
+            <!-- Questions Render Logic -->
+            <div class="space-y-8">
+                
+                <!-- Part 1 & 5: Multiple Choice -->
+                {% if part.part_number == 1 or part.part_number == 5 %}
+                    {% regroup part.questions.all by group_label as grouped_questions %}
+                    {% for group in grouped_questions %}
+                        <div class="bg-white/[0.02] backdrop-blur-2xl rounded-[1.5rem] p-8 border border-white/5 shadow-lg">
+                            {% if group.grouper %}<h3 class="text-xl font-display font-bold text-white mb-6 pb-3 border-b border-white/10">{{ group.grouper }}</h3>{% endif %}
+                            <div class="space-y-10">
+                                {% for question in group.list %}
+                                <div class="question-block">
+                                    <p class="text-white font-medium mb-5 flex items-start gap-4">
+                                        <span class="inline-flex items-center justify-center w-7 h-7 rounded border border-white/20 bg-white/5 text-slate-300 text-sm font-bold flex-shrink-0 mt-0.5">
+                                            {{ question.global_question_number|default:question.question_number }}
+                                        </span>
+                                        <span class="text-lg">{{ question.question_text }}</span>
+                                    </p>
+                                    <div class="grid grid-cols-1 gap-3 ml-11">
+                                        {% for choice in question.choices.all %}
+                                        <label class="choice-option relative flex items-center gap-4 px-5 py-4 rounded-lg border border-white/10 cursor-pointer">
+                                            <input type="radio" name="question_{{ question.id }}" value="{{ choice.label }}" class="w-4 h-4 text-accent focus:ring-indigo-500 border-slate-600 bg-white/[0.02]">
+                                            <span class="text-slate-300 font-medium"><span class="font-bold text-accent mr-2">{{ choice.label }}.</span> {{ choice.text }}</span>
+                                        </label>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                                {% if not forloop.last %}<hr class="border-white/5">{% endif %}
+                                {% endfor %}
+                            </div>
+                        </div>
+                    {% endfor %}
+
+                <!-- Part 2 & 6: Fill in Blank -->
+                {% elif part.part_number == 2 or part.part_number == 6 %}
+                    <div class="bg-white/[0.02] backdrop-blur-2xl rounded-[1.5rem] p-10 border border-white/5 shadow-lg">
+                        {% if part.passage_title %}<h2 class="text-2xl font-display font-bold text-white mb-8 text-center">{{ part.passage_title }}</h2>{% endif %}
+                        <div class="passage-text">
+                            {{ part.passage_text|render_blanks:part.questions.all }}
+                        </div>
+                    </div>
+
+                <!-- Part 3: Speaker Matching -->
+                {% elif part.part_number == 3 %}
+                    <div class="bg-white/[0.02] backdrop-blur-2xl rounded-[1.5rem] p-8 border border-white/5 shadow-lg">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-10 pb-8 border-b border-white/10">
+                            {% for choice in part.shared_choices_json %}
+                            <div class="flex items-start gap-4">
+                                <span class="font-bold text-accent w-6">{{ choice.label }}.</span>
+                                <span class="text-slate-300 font-medium">{{ choice.text }}</span>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        <div class="space-y-4">
+                            {% for question in part.questions.all %}
+                            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded bg-white/[0.02] border border-white/10">
+                                <span class="font-bold text-white ml-2">Speaker {{ question.group_label|default:question.question_number }}</span>
+                                <select name="question_{{ question.id }}" class="w-full sm:w-64 bg-[#1F2937] border border-white/10 text-white font-medium rounded shadow-sm px-4 py-2 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none">
+                                    <option value="">Select an option...</option>
+                                    {% for choice in part.shared_choices_json %}
+                                    <option value="{{ choice.label }}">{{ choice.label }}: {{ choice.text|truncatechars:40 }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                <!-- Part 4: Map -->
+                {% elif part.part_number == 4 %}
+                    <div class="bg-white/[0.02] backdrop-blur-2xl rounded-[1.5rem] p-8 border border-white/5 shadow-lg space-y-4">
+                        {% for question in part.questions.all %}
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded bg-white/[0.02] border border-white/10">
+                            <div class="flex items-center gap-4">
+                                <span class="w-8 h-8 rounded border border-white/10 bg-[#1F2937] flex items-center justify-center text-slate-300 font-bold ml-2">{{ question.global_question_number|default:question.question_number }}</span>
+                                <span class="text-white font-medium">{{ question.question_text }}</span>
+                            </div>
+                            <select name="question_{{ question.id }}" class="w-full sm:w-32 bg-[#1F2937] border border-white/10 text-white font-bold rounded shadow-sm px-4 py-2 text-center focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none">
+                                <option value="">---</option>
+                                <option value="A">A</option>
+                                <option value="B">B</option>
+                                <option value="C">C</option>
+                                <option value="D">D</option>
+                                <option value="E">E</option>
+                                <option value="F">F</option>
+                                <option value="G">G</option>
+                                <option value="H">H</option>
+                            </select>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+        </section>
+
+        <!-- Navigation Buttons -->
+        <div class="flex flex-col sm:flex-row items-center justify-between pt-6 mt-4 border-t border-white/10">
+            <div class="text-slate-500 text-xs sm:text-sm uppercase tracking-wide font-medium mb-6 sm:mb-0">
+                Responses are automatically saved upon advancing.
+            </div>
+            <button type="submit" class="w-full sm:w-auto px-10 py-4 rounded-xl shadow-[0_0_20px_rgba(99,102,241,0.2)] hover:shadow-[0_0_30px_rgba(99,102,241,0.4)] hover:scale-[1.02] bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-display font-bold text-lg tracking-wide transition-all duration-300 text-center">
+                {% if part_number < 6 %}
+                    Proceed to Part {{ part_number|add:1 }}
+                {% else %}
+                    Submit Assessment
+                {% endif %}
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const timerDisplay = document.getElementById('timer');
+        const timerContainer = document.getElementById('timer-container');
+        const testForm = document.getElementById('test-form');
+        
+        // Target ISO date passed from server
+        const endTime = new Date("{{ endtime_iso }}").getTime();
+
+        const updateTimer = () => {
+            const now = new Date().getTime();
+            const distance = endTime - now;
+
+            if (distance <= 0) {
+                clearInterval(interval);
+                timerDisplay.innerHTML = "00:00";
+                timerContainer.classList.add('timer-critical');
+                alert("Time has elapsed. Your responses are being submitted.");
+                testForm.submit();
+                return;
+            }
+
+            const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+            const display = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+            timerDisplay.innerHTML = display;
+
+            // Highlight if under 5 minutes
+            if (distance < 300000) {
+                timerContainer.classList.add('timer-critical');
+            }
+        };
+
+        updateTimer(); // Initial call
+        const interval = setInterval(updateTimer, 1000);
+
+        // Warn before navigation
+        window.onbeforeunload = function() {
+            return "Are you certain you wish to exit? Unsubmitted progress in this section will be lost.";
+        };
+
+        testForm.onsubmit = () => {
+            window.onbeforeunload = null;
+        };
+    });
+</script>
+{% endblock %}

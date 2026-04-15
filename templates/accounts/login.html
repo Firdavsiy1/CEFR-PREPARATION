@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+
+{% block title %}Sign In — CEFR Exam Prep{% endblock %}
+
+{% block content %}
+<div class="min-h-[80vh] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-md w-full animate-fade-in group space-y-8 bg-white/[0.02] backdrop-blur-3xl border border-white/[0.08] rounded-[2rem] p-10 shadow-[0_8px_30px_rgb(0,0,0,0.12)]">
+        <div class="text-center">
+            <div class="w-16 h-16 bg-gradient-to-br from-indigo-500/20 to-purple-600/20 border border-indigo-500/30 rounded-[1.5rem] mx-auto flex items-center justify-center shadow-[0_0_20px_rgba(99,102,241,0.2)] mb-6">
+                <i class="ph-fill ph-sign-in text-indigo-400 text-3xl"></i>
+            </div>
+            <h2 class="text-3xl font-display font-bold text-white mb-2">Welcome Back</h2>
+            <p class="text-slate-400 font-light">Sign in to your premium academic account.</p>
+        </div>
+
+        <form class="mt-8 space-y-6" method="POST">
+            {% csrf_token %}
+            <div class="space-y-4">
+                {% for field in form %}
+                <div>
+                    <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-slate-300 mb-2 uppercase tracking-wider text-[11px]">{{ field.label }}</label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                            {% if field.name == 'username' %}
+                            <i class="ph ph-user text-slate-400 text-lg"></i>
+                            {% elif field.name == 'password' %}
+                            <i class="ph ph-lock text-slate-400 text-lg"></i>
+                            {% else %}
+                            <i class="ph ph-textbox text-slate-400 text-lg"></i>
+                            {% endif %}
+                        </div>
+                        {{ field }}
+                    </div>
+                    {% if field.errors %}
+                        <p class="mt-2 text-sm text-rose-400">{{ field.errors.0 }}</p>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+
+            <div class="pt-2">
+                <button type="submit" class="w-full flex justify-center py-3.5 px-4 rounded-xl shadow-[0_0_20px_rgba(99,102,241,0.2)] text-sm font-bold text-white bg-gradient-to-r from-indigo-500 to-purple-600 hover:shadow-[0_0_30px_rgba(99,102,241,0.4)] hover:scale-[1.02] transition-all duration-300 focus:outline-none">
+                    Sign In to Dashboard
+                </button>
+            </div>
+        </form>
+
+        <div class="text-center mt-6">
+            <p class="text-sm text-slate-400 font-light">
+                Don't have an account? <a href="{% url 'accounts:register' %}" class="font-bold text-white hover:text-indigo-400 transition-colors">Apply for Admission</a>
+            </p>
+        </div>
+    </div>
+</div>
+
+<style>
+/* Custom styling for Django's built-in forms */
+input[type="text"], input[type="password"] {
+    appearance: none;
+    background-color: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #f8fafc;
+    border-radius: 0.75rem;
+    padding: 0.875rem 1rem 0.875rem 2.75rem;
+    width: 100%;
+    font-size: 0.875rem;
+    transition: all 0.2s;
+}
+input[type="text"]:focus, input[type="password"]:focus {
+    outline: none;
+    border-color: rgba(99, 102, 241, 0.5);
+    background-color: rgba(255, 255, 255, 0.05);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.25);
+}
+</style>
+{% endblock %}
