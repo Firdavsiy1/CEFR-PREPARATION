@@ -103,7 +103,7 @@
 
     {% block extra_head %}{% endblock %}
 </head>
-<body class="min-h-screen text-slate-300 font-sans antialiased selection:bg-gold-500/30 selection:text-gold-400">
+<body class="min-h-screen flex flex-col text-slate-300 font-sans antialiased selection:bg-gold-500/30 selection:text-gold-400">
 
     <!-- Navbar -->
     <nav class="sticky top-0 z-50 bg-[#06080D]/70 backdrop-blur-xl border-b border-white/[0.06] shadow-sm">
@@ -161,7 +161,7 @@
     {% endif %}
 
     <!-- Main content -->
-    <main class="relative z-10 py-10">
+    <main class="relative z-10 py-10 flex-1">
         {% block content %}{% endblock %}
     </main>
 
