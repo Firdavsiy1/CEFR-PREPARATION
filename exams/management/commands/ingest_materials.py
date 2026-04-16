@@ -1,6 +1,3 @@
-# requirements:
-#   pip install google-genai>=1.51.0 Pillow
-
 import os
 import re
 import json

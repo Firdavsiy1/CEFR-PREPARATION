@@ -84,6 +84,14 @@ class Test(models.Model):
         ],
         default='listening',
     )
+    author = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='authored_tests',
+        help_text="The mentor who created/uploaded this test.",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     is_active = models.BooleanField(
         default=True,

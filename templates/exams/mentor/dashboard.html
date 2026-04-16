@@ -1,0 +1,291 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Mentor Panel — CEFR Prep{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-10 animate-fade-in">
+        <div>
+            <div class="flex items-center gap-3 mb-2">
+                <div class="w-12 h-12 rounded-2xl flex items-center justify-center bg-gradient-to-br from-amber-500/20 to-orange-600/20 border border-amber-500/30 shadow-[0_0_20px_rgba(245,158,11,0.2)]">
+                    <i class="ph-fill ph-chalkboard-teacher text-amber-400 text-2xl"></i>
+                </div>
+                <h1 class="text-3xl font-display font-bold text-white tracking-tight">Mentor Panel</h1>
+            </div>
+            <p class="text-slate-400 text-sm ml-[60px]">
+                Manage your CEFR exam tests. Upload new tests, edit questions, and control visibility.
+            </p>
+        </div>
+
+        <a href="{% url 'exams:mentor_upload' %}" id="btn-upload-test"
+           class="group flex items-center gap-2.5 px-5 py-3 rounded-xl font-semibold text-sm
+                  bg-gradient-to-r from-indigo-600 to-violet-600
+                  text-white shadow-[0_0_25px_rgba(99,102,241,0.3)]
+                  hover:shadow-[0_0_35px_rgba(99,102,241,0.5)]
+                  hover:from-indigo-500 hover:to-violet-500
+                  transition-all duration-300 transform hover:scale-[1.02]">
+            <i class="ph-fill ph-upload-simple text-lg group-hover:animate-bounce"></i>
+            Upload New Test
+        </a>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8 animate-slide-up" style="animation-delay: 0.1s;">
+        <div class="relative overflow-hidden rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm p-5">
+            <div class="absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-indigo-500/10 to-transparent rounded-bl-full"></div>
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl flex items-center justify-center bg-indigo-500/10 border border-indigo-500/20">
+                    <i class="ph-fill ph-exam text-indigo-400 text-lg"></i>
+                </div>
+                <div>
+                    <p class="text-2xl font-display font-bold text-white">{{ tests|length }}</p>
+                    <p class="text-xs text-slate-500 uppercase tracking-widest">Total Tests</p>
+                </div>
+            </div>
+        </div>
+        <div class="relative overflow-hidden rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm p-5">
+            <div class="absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-emerald-500/10 to-transparent rounded-bl-full"></div>
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl flex items-center justify-center bg-emerald-500/10 border border-emerald-500/20">
+                    <i class="ph-fill ph-eye text-emerald-400 text-lg"></i>
+                </div>
+                <div>
+                    {% with active_count=0 %}
+                    {% for t in tests %}{% if t.is_active %}{% with ''|center:1 as x %}{% endwith %}{% endif %}{% endfor %}
+                    <p class="text-2xl font-display font-bold text-white" id="active-count">—</p>
+                    {% endwith %}
+                    <p class="text-xs text-slate-500 uppercase tracking-widest">Active Tests</p>
+                </div>
+            </div>
+        </div>
+        <div class="relative overflow-hidden rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm p-5">
+            <div class="absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-violet-500/10 to-transparent rounded-bl-full"></div>
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl flex items-center justify-center bg-violet-500/10 border border-violet-500/20">
+                    <i class="ph-fill ph-question text-violet-400 text-lg"></i>
+                </div>
+                <div>
+                    <p class="text-2xl font-display font-bold text-white" id="total-questions">—</p>
+                    <p class="text-xs text-slate-500 uppercase tracking-widest">Total Questions</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tests Table -->
+    <div class="animate-slide-up" style="animation-delay: 0.2s;">
+        <div class="rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm overflow-hidden">
+            <!-- Table Header -->
+            <div class="px-6 py-4 border-b border-white/[0.06] flex items-center justify-between">
+                <h2 class="text-lg font-display font-semibold text-white flex items-center gap-2">
+                    <i class="ph ph-list-dashes text-slate-400"></i>
+                    {% if is_superuser %}All Tests{% else %}My Tests{% endif %}
+                </h2>
+                <div class="flex items-center gap-2">
+                    <input type="text" id="search-tests" placeholder="Search tests..."
+                           class="text-sm bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-1.5
+                                  text-slate-300 placeholder-slate-500 focus:outline-none focus:border-indigo-500/40
+                                  focus:ring-1 focus:ring-indigo-500/20 transition-all w-48">
+                </div>
+            </div>
+
+            {% if tests %}
+            <div class="overflow-x-auto">
+                <table class="w-full" id="tests-table">
+                    <thead>
+                        <tr class="border-b border-white/[0.04] text-xs text-slate-500 uppercase tracking-widest">
+                            <th class="px-6 py-3 text-left font-medium">Test Name</th>
+                            <th class="px-6 py-3 text-left font-medium">Type</th>
+                            {% if is_superuser %}<th class="px-6 py-3 text-left font-medium">Author</th>{% endif %}
+                            <th class="px-6 py-3 text-center font-medium">Parts</th>
+                            <th class="px-6 py-3 text-center font-medium">Questions</th>
+                            <th class="px-6 py-3 text-center font-medium">Status</th>
+                            <th class="px-6 py-3 text-center font-medium">Created</th>
+                            <th class="px-6 py-3 text-right font-medium">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-white/[0.03]">
+                        {% for test in tests %}
+                        <tr class="group hover:bg-white/[0.02] transition-colors test-row" data-name="{{ test.name|lower }}">
+                            <td class="px-6 py-4">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-9 h-9 rounded-lg flex items-center justify-center
+                                                bg-gradient-to-br from-indigo-500/15 to-purple-600/15
+                                                border border-indigo-500/20 text-sm font-bold text-indigo-400">
+                                        {% if test.test_type == 'listening' %}
+                                        <i class="ph-fill ph-headphones text-base"></i>
+                                        {% else %}
+                                        <i class="ph-fill ph-book-open text-base"></i>
+                                        {% endif %}
+                                    </div>
+                                    <div>
+                                        <span class="text-sm font-semibold text-white group-hover:text-indigo-300 transition-colors">{{ test.name }}</span>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4">
+                                <span class="text-xs font-medium px-2.5 py-1 rounded-full
+                                    {% if test.test_type == 'listening' %}bg-sky-500/10 text-sky-400 border border-sky-500/20
+                                    {% else %}bg-emerald-500/10 text-emerald-400 border border-emerald-500/20{% endif %}">
+                                    {{ test.get_test_type_display }}
+                                </span>
+                            </td>
+                            {% if is_superuser %}
+                            <td class="px-6 py-4 text-sm text-slate-400">
+                                {% if test.author %}
+                                <span class="flex items-center gap-1.5">
+                                    <i class="ph ph-user text-xs"></i>
+                                    {{ test.author.username }}
+                                </span>
+                                {% else %}
+                                <span class="text-slate-600 italic">system</span>
+                                {% endif %}
+                            </td>
+                            {% endif %}
+                            <td class="px-6 py-4 text-center">
+                                <span class="text-sm text-slate-300 font-mono">{{ test.parts.count }}</span>
+                            </td>
+                            <td class="px-6 py-4 text-center">
+                                <span class="text-sm text-slate-300 font-mono test-q-count">{{ test.total_questions }}</span>
+                            </td>
+                            <td class="px-6 py-4 text-center">
+                                <button onclick="toggleActive({{ test.id }}, this)" data-active="{{ test.is_active|yesno:'true,false' }}"
+                                        class="status-badge text-xs font-semibold px-3 py-1 rounded-full cursor-pointer
+                                               transition-all duration-200 hover:scale-105
+                                    {% if test.is_active %}bg-emerald-500/15 text-emerald-400 border border-emerald-500/25
+                                    {% else %}bg-slate-500/10 text-slate-500 border border-slate-500/20{% endif %}">
+                                    {% if test.is_active %}Active{% else %}Draft{% endif %}
+                                </button>
+                            </td>
+                            <td class="px-6 py-4 text-center text-xs text-slate-500">
+                                {{ test.created_at|date:"M d, Y" }}
+                            </td>
+                            <td class="px-6 py-4">
+                                <div class="flex items-center justify-end gap-2">
+                                    <a href="{% url 'exams:mentor_test_builder' test.id %}"
+                                       class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium
+                                              bg-indigo-500/10 text-indigo-400 border border-indigo-500/20
+                                              hover:bg-indigo-500/20 hover:border-indigo-500/30 transition-all"
+                                       title="Edit test">
+                                        <i class="ph ph-pencil-simple"></i>
+                                        Edit
+                                    </a>
+                                    <a href="{% url 'exams:mentor_delete_test' test.id %}"
+                                       class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium
+                                              bg-rose-500/10 text-rose-400 border border-rose-500/20
+                                              hover:bg-rose-500/20 hover:border-rose-500/30 transition-all"
+                                       title="Delete test">
+                                        <i class="ph ph-trash"></i>
+                                        Delete
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <!-- Empty state -->
+            <div class="py-20 text-center">
+                <div class="w-20 h-20 mx-auto mb-6 rounded-2xl flex items-center justify-center
+                            bg-gradient-to-br from-indigo-500/10 to-purple-600/10
+                            border border-indigo-500/20">
+                    <i class="ph ph-folder-notch-open text-4xl text-indigo-400/60"></i>
+                </div>
+                <h3 class="text-lg font-display font-semibold text-white mb-2">No tests yet</h3>
+                <p class="text-sm text-slate-500 mb-6">Upload your first CEFR test to get started.</p>
+                <a href="{% url 'exams:mentor_upload' %}"
+                   class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm
+                          bg-gradient-to-r from-indigo-600 to-violet-600 text-white
+                          hover:from-indigo-500 hover:to-violet-500 transition-all">
+                    <i class="ph-fill ph-upload-simple"></i>
+                    Upload Your First Test
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    // ----- Compute stats -----
+    document.addEventListener('DOMContentLoaded', () => {
+        const rows = document.querySelectorAll('.test-row');
+        let activeCount = 0;
+        let totalQ = 0;
+
+        rows.forEach(row => {
+            const badge = row.querySelector('.status-badge');
+            if (badge && badge.dataset.active === 'true') activeCount++;
+            const qEl = row.querySelector('.test-q-count');
+            if (qEl) totalQ += parseInt(qEl.textContent || '0', 10);
+        });
+
+        const acEl = document.getElementById('active-count');
+        const tqEl = document.getElementById('total-questions');
+        if (acEl) acEl.textContent = activeCount;
+        if (tqEl) tqEl.textContent = totalQ;
+    });
+
+    // ----- Search -----
+    const searchInput = document.getElementById('search-tests');
+    if (searchInput) {
+        searchInput.addEventListener('input', () => {
+            const q = searchInput.value.toLowerCase();
+            document.querySelectorAll('.test-row').forEach(row => {
+                const name = row.dataset.name || '';
+                row.style.display = name.includes(q) ? '' : 'none';
+            });
+        });
+    }
+
+    // ----- Toggle active -----
+    function toggleActive(testId, btn) {
+        fetch(`/api/mentor/test/${testId}/toggle-active/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+            },
+        })
+        .then(r => r.json())
+        .then(data => {
+            btn.dataset.active = data.is_active ? 'true' : 'false';
+            if (data.is_active) {
+                btn.textContent = 'Active';
+                btn.className = btn.className
+                    .replace('bg-slate-500/10', 'bg-emerald-500/15')
+                    .replace('text-slate-500', 'text-emerald-400')
+                    .replace('border-slate-500/20', 'border-emerald-500/25');
+            } else {
+                btn.textContent = 'Draft';
+                btn.className = btn.className
+                    .replace('bg-emerald-500/15', 'bg-slate-500/10')
+                    .replace('text-emerald-400', 'text-slate-500')
+                    .replace('border-emerald-500/25', 'border-slate-500/20');
+            }
+            // Recount
+            let activeCount = 0;
+            document.querySelectorAll('.status-badge').forEach(b => {
+                if (b.dataset.active === 'true') activeCount++;
+            });
+            document.getElementById('active-count').textContent = activeCount;
+        });
+    }
+
+    function getCookie(name) {
+        let v = null;
+        document.cookie.split(';').forEach(c => {
+            c = c.trim();
+            if (c.startsWith(name + '=')) v = decodeURIComponent(c.substring(name.length + 1));
+        });
+        return v;
+    }
+</script>
+{% endblock %}

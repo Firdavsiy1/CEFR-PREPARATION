@@ -127,6 +127,9 @@
                     <div class="h-4 w-px bg-white/10"></div>
                     <a href="{% url 'exams:dashboard' %}" class="flex items-center gap-2 text-sm font-medium text-slate-400 hover:text-white hover:text-indigo-400 transition-colors" id="nav-dashboard"><i class="ph ph-squares-four text-lg"></i> Dashboard</a>
                     <a href="{% url 'exams:history' %}" class="flex items-center gap-2 text-sm font-medium text-slate-400 hover:text-white hover:text-indigo-400 transition-colors" id="nav-history"><i class="ph ph-clock-counter-clockwise text-lg"></i> History</a>
+                    {% if user.is_superuser or user_is_mentor %}
+                    <a href="{% url 'exams:mentor_dashboard' %}" class="flex items-center gap-2 text-sm font-medium text-amber-400/80 hover:text-amber-300 transition-colors" id="nav-mentor-panel"><i class="ph ph-chalkboard-teacher text-lg"></i> Mentor Panel</a>
+                    {% endif %}
                     <form action="{% url 'accounts:logout' %}" method="post" class="inline">
                         {% csrf_token %}
                         <button type="submit" class="flex items-center gap-2 text-sm border border-white/10 px-3 py-1.5 rounded-lg text-slate-400 hover:text-white hover:border-white/30 transition-colors"><i class="ph ph-sign-out text-lg"></i> Log out</button>

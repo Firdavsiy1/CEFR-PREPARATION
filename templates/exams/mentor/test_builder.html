@@ -1,0 +1,783 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Test Builder — {{ test.name }} — Mentor Panel{% endblock %}
+
+{% block extra_head %}
+<style>
+    /* Test Builder Layout */
+    .builder-layout {
+        display: grid;
+        grid-template-columns: 260px 1fr;
+        gap: 1.5rem;
+        min-height: calc(100vh - 200px);
+    }
+    @media (max-width: 1024px) {
+        .builder-layout {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    /* Sidebar */
+    .part-nav-btn {
+        transition: all 0.2s ease;
+    }
+    .part-nav-btn.active {
+        background: rgba(99, 102, 241, 0.12);
+        border-color: rgba(99, 102, 241, 0.35);
+        color: #a5b4fc;
+    }
+    .part-nav-btn:hover:not(.active) {
+        background: rgba(255, 255, 255, 0.03);
+        border-color: rgba(255, 255, 255, 0.08);
+    }
+
+    /* Question card */
+    .question-card {
+        transition: all 0.2s ease;
+    }
+    .question-card:hover {
+        border-color: rgba(255, 255, 255, 0.08);
+    }
+    .question-card.correct-highlight {
+        border-left: 3px solid rgba(52, 211, 153, 0.5);
+    }
+
+    /* Choice row */
+    .choice-row {
+        transition: all 0.15s ease;
+    }
+    .choice-row.is-correct {
+        background: rgba(52, 211, 153, 0.06);
+        border-color: rgba(52, 211, 153, 0.25);
+    }
+
+    /* Editable field */
+    .editable-field {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        border-radius: 0.75rem;
+        padding: 0.5rem 0.75rem;
+        color: #e2e8f0;
+        font-size: 0.875rem;
+        width: 100%;
+        transition: all 0.2s ease;
+    }
+    .editable-field:focus {
+        outline: none;
+        border-color: rgba(99, 102, 241, 0.4);
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+    }
+    .editable-textarea {
+        min-height: 80px;
+        resize: vertical;
+    }
+
+    /* Save indicator */
+    .save-indicator {
+        position: fixed;
+        bottom: 24px;
+        right: 24px;
+        z-index: 100;
+        padding: 10px 20px;
+        border-radius: 12px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        backdrop-filter: blur(12px);
+        transition: all 0.3s ease;
+        opacity: 0;
+        transform: translateY(10px);
+        pointer-events: none;
+    }
+    .save-indicator.show {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    .save-indicator.saving {
+        background: rgba(99, 102, 241, 0.15);
+        border: 1px solid rgba(99, 102, 241, 0.3);
+        color: #a5b4fc;
+    }
+    .save-indicator.saved {
+        background: rgba(52, 211, 153, 0.15);
+        border: 1px solid rgba(52, 211, 153, 0.3);
+        color: #6ee7b7;
+    }
+    .save-indicator.error {
+        background: rgba(244, 63, 94, 0.15);
+        border: 1px solid rgba(244, 63, 94, 0.3);
+        color: #fda4af;
+    }
+
+    /* Loading spinner */
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+    .spin { animation: spin 1s linear infinite; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
+
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 animate-fade-in">
+        <div class="flex items-center gap-4">
+            <a href="{% url 'exams:mentor_dashboard' %}" class="w-10 h-10 rounded-xl flex items-center justify-center border border-white/[0.08] bg-white/[0.03] hover:bg-white/[0.06] text-slate-400 hover:text-white transition-all">
+                <i class="ph ph-arrow-left text-lg"></i>
+            </a>
+            <div>
+                <div class="flex items-center gap-3">
+                    <h1 class="text-2xl font-display font-bold text-white tracking-tight" id="test-title">{{ test.name }}</h1>
+                    <button onclick="editTestName()" class="text-slate-500 hover:text-indigo-400 transition-colors" title="Rename test">
+                        <i class="ph ph-pencil-simple text-sm"></i>
+                    </button>
+                </div>
+                <p class="text-sm text-slate-500">Test Builder — Edit parts, questions, and choices</p>
+            </div>
+        </div>
+        <div class="flex items-center gap-3">
+            <span class="text-xs text-slate-500 font-mono" id="autosave-status">All changes saved</span>
+            <button onclick="toggleActive()" id="toggle-active-btn"
+                    class="px-4 py-2 rounded-xl text-xs font-semibold border transition-all {{ test.is_active|yesno:'bg-emerald-500/10 text-emerald-400 border-emerald-500/25 hover:bg-emerald-500/20,bg-slate-500/10 text-slate-500 border-slate-500/20 hover:bg-slate-500/15' }}">
+                {{ test.is_active|yesno:'Active,Draft' }}
+            </button>
+        </div>
+    </div>
+
+    <!-- Builder Layout -->
+    <div class="builder-layout animate-slide-up" style="animation-delay: 0.1s;">
+
+        <!-- Sidebar: Parts Navigation -->
+        <aside class="rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm p-4 h-fit sticky top-28" id="parts-sidebar">
+            <h3 class="text-xs text-slate-500 uppercase tracking-widest font-semibold mb-4 px-2">Parts</h3>
+            <nav class="space-y-1.5" id="parts-nav">
+                <!-- Populated by JS -->
+                <div class="text-center py-8 text-slate-500 text-sm" id="parts-loading">
+                    <i class="ph ph-spinner text-2xl spin"></i>
+                    <p class="mt-2">Loading...</p>
+                </div>
+            </nav>
+        </aside>
+
+        <!-- Main Content: Active Part Editor -->
+        <main class="min-w-0">
+            <div id="part-editor" class="space-y-6">
+                <!-- Populated by JS when a part is selected -->
+                <div class="rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm p-12 text-center">
+                    <i class="ph ph-cursor-click text-4xl text-slate-600 mb-3"></i>
+                    <p class="text-slate-500">Select a part from the sidebar to start editing</p>
+                </div>
+            </div>
+        </main>
+
+    </div>
+</div>
+
+<!-- Save Indicator -->
+<div class="save-indicator" id="save-indicator">
+    <i class="ph ph-spinner spin" id="save-icon"></i>
+    <span id="save-text">Saving...</span>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// =========================================================================
+// Test Builder — Interactive Editor
+// =========================================================================
+const TEST_ID = {{ test.id }};
+const CSRF = getCookie('csrftoken');
+let testData = null;
+let activePart = null;
+let saveTimer = null;
+
+// ---- Init ----
+document.addEventListener('DOMContentLoaded', () => {
+    loadTestData();
+});
+
+// ---- API Helpers ----
+function getCookie(name) {
+    let v = null;
+    document.cookie.split(';').forEach(c => {
+        c = c.trim();
+        if (c.startsWith(name + '=')) v = decodeURIComponent(c.substring(name.length + 1));
+    });
+    return v;
+}
+
+function apiCall(url, data = null, method = 'POST') {
+    const opts = {
+        method,
+        headers: { 'X-CSRFToken': CSRF, 'Content-Type': 'application/json' },
+    };
+    if (data) opts.body = JSON.stringify(data);
+    return fetch(url, opts).then(r => r.json());
+}
+
+function apiUpload(url, formData) {
+    return fetch(url, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': CSRF },
+        body: formData,
+    }).then(r => r.json());
+}
+
+function showSave(state, text) {
+    const el = document.getElementById('save-indicator');
+    const icon = document.getElementById('save-icon');
+    const txt = document.getElementById('save-text');
+
+    el.className = 'save-indicator show ' + state;
+    txt.textContent = text;
+    if (state === 'saving') {
+        icon.className = 'ph ph-spinner spin';
+    } else if (state === 'saved') {
+        icon.className = 'ph-fill ph-check-circle';
+    } else {
+        icon.className = 'ph-fill ph-warning-circle';
+    }
+
+    if (state !== 'saving') {
+        setTimeout(() => { el.classList.remove('show'); }, 2000);
+    }
+}
+
+// ---- Load Test Data ----
+async function loadTestData() {
+    try {
+        const resp = await fetch(`/api/mentor/test/${TEST_ID}/data/`);
+        testData = await resp.json();
+        renderSidebar();
+        if (testData.parts.length > 0) {
+            selectPart(testData.parts[0].id);
+        }
+    } catch (e) {
+        console.error('Failed to load test data:', e);
+    }
+}
+
+// ---- Sidebar ----
+function renderSidebar() {
+    const nav = document.getElementById('parts-nav');
+    document.getElementById('parts-loading').remove();
+
+    nav.innerHTML = testData.parts.map(part => {
+        const qCount = part.questions.length;
+        return `
+            <button onclick="selectPart(${part.id})"
+                    class="part-nav-btn w-full flex items-center gap-3 px-3 py-3 rounded-xl border border-transparent text-left"
+                    id="part-btn-${part.id}">
+                <div class="w-9 h-9 rounded-lg flex items-center justify-center bg-indigo-500/10 border border-indigo-500/20 text-sm font-bold text-indigo-400 flex-shrink-0">
+                    ${part.part_number}
+                </div>
+                <div class="min-w-0">
+                    <p class="text-sm font-semibold text-slate-200 truncate">Part ${part.part_number}</p>
+                    <p class="text-xs text-slate-500">${qCount} question${qCount !== 1 ? 's' : ''} · ${part.points_per_question} pts</p>
+                </div>
+                ${part.audio_file ? '<i class="ph-fill ph-speaker-high text-emerald-500/50 text-xs ml-auto flex-shrink-0"></i>' : ''}
+            </button>
+        `;
+    }).join('');
+}
+
+// ---- Select Part ----
+function selectPart(partId) {
+    activePart = testData.parts.find(p => p.id === partId);
+    if (!activePart) return;
+
+    // Update sidebar active state
+    document.querySelectorAll('.part-nav-btn').forEach(btn => btn.classList.remove('active'));
+    const activeBtn = document.getElementById(`part-btn-${partId}`);
+    if (activeBtn) activeBtn.classList.add('active');
+
+    renderPartEditor();
+}
+
+// ---- Render Part Editor ----
+function renderPartEditor() {
+    const p = activePart;
+    const editor = document.getElementById('part-editor');
+
+    const hasPassage = p.part_number === 2 || p.part_number === 6;
+    const hasSharedChoices = p.part_number === 3;
+    const questionTypeLabel = {
+        'multiple_choice': 'Multiple Choice',
+        'fill_blank': 'Fill in the Blank',
+        'map_label': 'Map Labeling',
+    };
+
+    editor.innerHTML = `
+        <!-- Part Header Card -->
+        <div class="rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm overflow-hidden">
+            <div class="px-6 py-4 border-b border-white/[0.06] flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl flex items-center justify-center bg-gradient-to-br from-indigo-500/15 to-purple-600/15 border border-indigo-500/20 text-lg font-bold text-indigo-400">${p.part_number}</div>
+                    <div>
+                        <h2 class="text-lg font-display font-semibold text-white">Part ${p.part_number}</h2>
+                        <p class="text-xs text-slate-500">${questionTypeLabel[p.questions[0]?.question_type] || 'Unknown'} · ${p.points_per_question} pts/question</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    ${p.question_image ? `<a href="${p.question_image}" target="_blank" class="text-xs px-3 py-1.5 rounded-lg bg-white/[0.04] border border-white/[0.06] text-slate-400 hover:text-white hover:border-white/[0.12] transition-all"><i class="ph ph-image mr-1"></i>Screenshot</a>` : ''}
+                    ${p.map_image ? `<a href="${p.map_image}" target="_blank" class="text-xs px-3 py-1.5 rounded-lg bg-white/[0.04] border border-white/[0.06] text-slate-400 hover:text-white hover:border-white/[0.12] transition-all"><i class="ph ph-map-trifold mr-1"></i>Map</a>` : ''}
+                </div>
+            </div>
+
+            <div class="p-6 space-y-5">
+                <!-- Instructions -->
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase tracking-widest mb-2">
+                        <i class="ph ph-note-pencil text-indigo-400 mr-1"></i> Instructions
+                    </label>
+                    <textarea class="editable-field editable-textarea"
+                              onchange="updatePart(${p.id}, 'instructions', this.value)"
+                              placeholder="Part instructions...">${escHtml(p.instructions)}</textarea>
+                </div>
+
+                <!-- Audio -->
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase tracking-widest mb-2">
+                        <i class="ph ph-speaker-high text-indigo-400 mr-1"></i> Audio
+                    </label>
+                    <div class="flex items-center gap-4">
+                        ${p.audio_file
+                            ? `<audio controls class="flex-1" style="height:40px"><source src="${p.audio_file}" type="audio/mpeg"></audio>`
+                            : '<span class="text-xs text-slate-500 italic">No audio uploaded</span>'}
+                        <label class="cursor-pointer flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 hover:bg-indigo-500/20 transition-all">
+                            <i class="ph ph-upload-simple"></i> Replace
+                            <input type="file" accept=".mp3,audio/*" class="hidden" onchange="uploadAudio(${p.id}, this)">
+                        </label>
+                    </div>
+                </div>
+
+                ${hasPassage ? `
+                <!-- Passage -->
+                <div class="pt-2 border-t border-white/[0.04]">
+                    <label class="block text-xs font-semibold text-slate-400 uppercase tracking-widest mb-2">
+                        <i class="ph ph-book-open-text text-indigo-400 mr-1"></i> Passage Title
+                    </label>
+                    <input class="editable-field" type="text"
+                           value="${escAttr(p.passage_title)}"
+                           onchange="updatePart(${p.id}, 'passage_title', this.value)"
+                           placeholder="e.g. Working in a Forest in New Zealand">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase tracking-widest mb-2">
+                        <i class="ph ph-text-align-left text-indigo-400 mr-1"></i> Passage Text
+                        <span class="text-slate-600 normal-case font-normal ml-1">(Use {N} for blanks)</span>
+                    </label>
+                    <textarea class="editable-field editable-textarea" style="min-height:150px"
+                              onchange="updatePart(${p.id}, 'passage_text', this.value)"
+                              placeholder="Full passage text with {30}, {31} blanks...">${escHtml(p.passage_text)}</textarea>
+                </div>
+                ` : ''}
+
+                ${hasSharedChoices ? `
+                <!-- Shared Choices (Part 3) -->
+                <div class="pt-2 border-t border-white/[0.04]">
+                    <label class="block text-xs font-semibold text-slate-400 uppercase tracking-widest mb-2">
+                        <i class="ph ph-list-checks text-indigo-400 mr-1"></i> Shared Choices (A-F)
+                    </label>
+                    <div class="space-y-2" id="shared-choices-list">
+                        ${(p.shared_choices_json || []).map((sc, idx) => `
+                            <div class="flex items-center gap-2">
+                                <span class="w-8 h-8 rounded-lg flex items-center justify-center bg-violet-500/10 border border-violet-500/20 text-xs font-bold text-violet-400">${sc.label}</span>
+                                <input class="editable-field flex-1" value="${escAttr(sc.text)}" onchange="updateSharedChoice(${p.id}, ${idx}, this.value)">
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+                ` : ''}
+
+                <!-- Transcript -->
+                <div class="pt-2 border-t border-white/[0.04]">
+                    <details>
+                        <summary class="text-xs font-semibold text-slate-400 uppercase tracking-widest cursor-pointer hover:text-slate-300 transition-colors">
+                            <i class="ph ph-subtitles text-indigo-400 mr-1"></i> Transcript
+                        </summary>
+                        <textarea class="editable-field editable-textarea mt-2" style="min-height:120px"
+                                  onchange="updatePart(${p.id}, 'transcript', this.value)"
+                                  placeholder="Audio transcript...">${escHtml(p.transcript)}</textarea>
+                    </details>
+                </div>
+            </div>
+        </div>
+
+        <!-- Questions List -->
+        <div class="rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm overflow-hidden">
+            <div class="px-6 py-4 border-b border-white/[0.06] flex items-center justify-between">
+                <h3 class="text-base font-display font-semibold text-white flex items-center gap-2">
+                    <i class="ph ph-list-numbers text-indigo-400"></i>
+                    Questions
+                    <span class="text-xs font-normal text-slate-500">(${p.questions.length})</span>
+                </h3>
+                <button onclick="addQuestion(${p.id})"
+                        class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium
+                               bg-indigo-500/10 text-indigo-400 border border-indigo-500/20
+                               hover:bg-indigo-500/20 transition-all">
+                    <i class="ph ph-plus-circle"></i> Add Question
+                </button>
+            </div>
+            <div class="p-4 space-y-3" id="questions-list">
+                ${p.questions.map(q => renderQuestionCard(q, p)).join('')}
+            </div>
+        </div>
+    `;
+}
+
+// ---- Render Question Card ----
+function renderQuestionCard(q, part) {
+    const isCorrectHighlight = q.correct_answer ? 'correct-highlight' : '';
+    const typeBadge = {
+        'multiple_choice': '<span class="text-sky-400 bg-sky-500/10 border-sky-500/20">MC</span>',
+        'fill_blank': '<span class="text-amber-400 bg-amber-500/10 border-amber-500/20">Fill</span>',
+        'map_label': '<span class="text-violet-400 bg-violet-500/10 border-violet-500/20">Map</span>',
+    };
+
+    return `
+        <div class="question-card ${isCorrectHighlight} rounded-xl border border-white/[0.05] bg-white/[0.01] p-4" id="q-card-${q.id}">
+            <!-- Question Header -->
+            <div class="flex items-start justify-between gap-3 mb-3">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-8 h-8 rounded-lg flex items-center justify-center bg-white/[0.04] border border-white/[0.06] text-xs font-bold text-slate-300">
+                        Q${q.question_number}
+                    </div>
+                    ${q.global_question_number ? `<span class="text-[10px] text-slate-600 font-mono">#${q.global_question_number}</span>` : ''}
+                    <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full border ${typeBadge[q.question_type] || ''}">${q.question_type}</span>
+                    ${q.group_label ? `<span class="text-[10px] text-slate-500 italic">${escHtml(q.group_label)}</span>` : ''}
+                </div>
+                <div class="flex items-center gap-1.5">
+                    <button onclick="deleteQuestion(${q.id})" class="w-7 h-7 rounded-lg flex items-center justify-center text-slate-600 hover:text-rose-400 hover:bg-rose-500/10 transition-all" title="Delete question">
+                        <i class="ph ph-trash text-sm"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Question Fields -->
+            <div class="space-y-2.5">
+                ${q.group_label !== undefined ? `
+                <div class="flex items-center gap-2">
+                    <label class="text-[10px] text-slate-500 w-20 flex-shrink-0 uppercase tracking-widest">Group</label>
+                    <input class="editable-field text-xs py-1.5" value="${escAttr(q.group_label)}"
+                           onchange="updateQuestion(${q.id}, 'group_label', this.value)" placeholder="e.g. Extract One">
+                </div>` : ''}
+
+                <div class="flex items-start gap-2">
+                    <label class="text-[10px] text-slate-500 w-20 flex-shrink-0 uppercase tracking-widest pt-2">Text</label>
+                    <textarea class="editable-field text-xs py-1.5" style="min-height:50px"
+                              onchange="updateQuestion(${q.id}, 'question_text', this.value)"
+                              placeholder="Question text (OCR result)...">${escHtml(q.question_text)}</textarea>
+                </div>
+
+                <div class="flex items-center gap-2">
+                    <label class="text-[10px] text-slate-500 w-20 flex-shrink-0 uppercase tracking-widest">Answer</label>
+                    <input class="editable-field text-xs py-1.5 font-mono font-bold text-emerald-400" style="max-width:200px"
+                           value="${escAttr(q.correct_answer)}"
+                           onchange="updateQuestion(${q.id}, 'correct_answer', this.value)"
+                           placeholder="Correct answer">
+                </div>
+
+                <!-- Explanation -->
+                <details class="mt-1">
+                    <summary class="text-[10px] text-slate-600 cursor-pointer hover:text-slate-400 transition-colors">
+                        Explanation
+                    </summary>
+                    <textarea class="editable-field text-xs py-1.5 mt-1" style="min-height:40px"
+                              onchange="updateQuestion(${q.id}, 'explanation', this.value)"
+                              placeholder="Why this answer is correct...">${escHtml(q.explanation)}</textarea>
+                </details>
+
+                <!-- Choices (if applicable) -->
+                ${q.question_type === 'multiple_choice' || q.question_type === 'map_label' ? `
+                <div class="mt-3 pt-3 border-t border-white/[0.04]">
+                    <div class="flex items-center justify-between mb-2">
+                        <label class="text-[10px] text-slate-500 uppercase tracking-widest">Choices</label>
+                        <button onclick="addChoice(${q.id})" class="text-[10px] text-indigo-400 hover:text-indigo-300 transition-colors flex items-center gap-1">
+                            <i class="ph ph-plus-circle text-xs"></i> Add
+                        </button>
+                    </div>
+                    <div class="space-y-1.5" id="choices-${q.id}">
+                        ${q.choices.map(c => renderChoiceRow(c, q)).join('')}
+                    </div>
+                </div>
+                ` : ''}
+            </div>
+        </div>
+    `;
+}
+
+// ---- Render Choice Row ----
+function renderChoiceRow(c, q) {
+    const isCorrect = q.correct_answer.trim().toUpperCase() === c.label.trim().toUpperCase();
+    return `
+        <div class="choice-row flex items-center gap-2 px-2.5 py-1.5 rounded-lg border border-white/[0.04] ${isCorrect ? 'is-correct' : ''}" id="choice-${c.id}">
+            ${isCorrect ? '<i class="ph-fill ph-check-circle text-emerald-400 text-sm flex-shrink-0"></i>' : '<div class="w-[14px] flex-shrink-0"></div>'}
+            <input class="editable-field text-xs py-1 font-bold text-center" style="width:36px; padding:0.25rem" value="${escAttr(c.label)}"
+                   onchange="updateChoice(${c.id}, 'label', this.value)">
+            <input class="editable-field text-xs py-1 flex-1" value="${escAttr(c.text)}"
+                   onchange="updateChoice(${c.id}, 'text', this.value)" placeholder="Choice text">
+            <button onclick="deleteChoice(${c.id}, ${q.id})" class="w-6 h-6 rounded flex items-center justify-center text-slate-600 hover:text-rose-400 transition-colors flex-shrink-0">
+                <i class="ph ph-x text-xs"></i>
+            </button>
+        </div>
+    `;
+}
+
+// ---- API Actions ----
+async function updatePart(partId, field, value) {
+    showSave('saving', 'Saving...');
+    try {
+        const data = {};
+        data[field] = value;
+        await apiCall(`/api/mentor/part/${partId}/update/`, data);
+        // Update local data
+        const part = testData.parts.find(p => p.id === partId);
+        if (part) part[field] = value;
+        showSave('saved', 'Saved');
+    } catch (e) {
+        showSave('error', 'Save failed');
+    }
+}
+
+async function updateSharedChoice(partId, idx, newText) {
+    const part = testData.parts.find(p => p.id === partId);
+    if (!part) return;
+    part.shared_choices_json[idx].text = newText;
+    await updatePart(partId, 'shared_choices_json', part.shared_choices_json);
+}
+
+async function uploadAudio(partId, input) {
+    if (!input.files.length) return;
+    showSave('saving', 'Uploading audio...');
+    try {
+        const fd = new FormData();
+        fd.append('audio_file', input.files[0]);
+        const result = await apiUpload(`/api/mentor/part/${partId}/upload-audio/`, fd);
+        if (result.success) {
+            const part = testData.parts.find(p => p.id === partId);
+            if (part) part.audio_file = result.audio_url;
+            renderPartEditor();
+            showSave('saved', 'Audio uploaded');
+        } else {
+            showSave('error', result.error || 'Upload failed');
+        }
+    } catch (e) {
+        showSave('error', 'Upload failed');
+    }
+}
+
+async function updateQuestion(questionId, field, value) {
+    showSave('saving', 'Saving...');
+    try {
+        const data = {};
+        data[field] = value;
+        await apiCall(`/api/mentor/question/${questionId}/update/`, data);
+        // Update local data
+        for (const part of testData.parts) {
+            const q = part.questions.find(q => q.id === questionId);
+            if (q) {
+                q[field] = value;
+                // If correct_answer changed, re-render to update choice highlights
+                if (field === 'correct_answer') {
+                    renderPartEditor();
+                }
+                break;
+            }
+        }
+        showSave('saved', 'Saved');
+    } catch (e) {
+        showSave('error', 'Save failed');
+    }
+}
+
+async function deleteQuestion(questionId) {
+    if (!confirm('Delete this question? This cannot be undone.')) return;
+    showSave('saving', 'Deleting...');
+    try {
+        await apiCall(`/api/mentor/question/${questionId}/delete/`);
+        // Remove from local data
+        for (const part of testData.parts) {
+            const idx = part.questions.findIndex(q => q.id === questionId);
+            if (idx !== -1) {
+                part.questions.splice(idx, 1);
+                break;
+            }
+        }
+        renderPartEditor();
+        renderSidebar();
+        // Re-activate sidebar button
+        if (activePart) {
+            const btn = document.getElementById(`part-btn-${activePart.id}`);
+            if (btn) btn.classList.add('active');
+        }
+        showSave('saved', 'Deleted');
+    } catch (e) {
+        showSave('error', 'Delete failed');
+    }
+}
+
+async function addQuestion(partId) {
+    showSave('saving', 'Creating...');
+    try {
+        const part = testData.parts.find(p => p.id === partId);
+        const qType = part.questions.length > 0 ? part.questions[0].question_type : 'multiple_choice';
+        const result = await apiCall(`/api/mentor/part/${partId}/question/create/`, {
+            question_type: qType,
+            question_text: '',
+            correct_answer: '',
+        });
+        if (result.success) {
+            // Add to local data
+            part.questions.push({
+                id: result.id,
+                question_number: result.question_number,
+                global_question_number: null,
+                question_text: '',
+                question_type: qType,
+                correct_answer: '',
+                group_label: '',
+                explanation: '',
+                choices: [],
+            });
+            renderPartEditor();
+            renderSidebar();
+            if (activePart) {
+                const btn = document.getElementById(`part-btn-${activePart.id}`);
+                if (btn) btn.classList.add('active');
+            }
+            showSave('saved', 'Question added');
+        }
+    } catch (e) {
+        showSave('error', 'Failed to add');
+    }
+}
+
+async function addChoice(questionId) {
+    showSave('saving', 'Creating...');
+    try {
+        // Determine next label
+        let part = null;
+        let question = null;
+        for (const p of testData.parts) {
+            const q = p.questions.find(q => q.id === questionId);
+            if (q) { question = q; part = p; break; }
+        }
+        const existingLabels = question.choices.map(c => c.label);
+        const nextLabel = String.fromCharCode(65 + existingLabels.length); // A, B, C...
+
+        const result = await apiCall(`/api/mentor/question/${questionId}/choice/create/`, {
+            label: nextLabel,
+            text: '',
+        });
+        if (result.success) {
+            question.choices.push({ id: result.id, label: nextLabel, text: '' });
+            // Re-render just the choices area
+            const container = document.getElementById(`choices-${questionId}`);
+            if (container) {
+                container.innerHTML = question.choices.map(c => renderChoiceRow(c, question)).join('');
+            }
+            showSave('saved', 'Choice added');
+        }
+    } catch (e) {
+        showSave('error', 'Failed to add');
+    }
+}
+
+async function updateChoice(choiceId, field, value) {
+    showSave('saving', 'Saving...');
+    try {
+        const data = {};
+        data[field] = value;
+        await apiCall(`/api/mentor/choice/${choiceId}/update/`, data);
+        // Update local data
+        for (const part of testData.parts) {
+            for (const q of part.questions) {
+                const c = q.choices.find(c => c.id === choiceId);
+                if (c) {
+                    c[field] = value;
+                    break;
+                }
+            }
+        }
+        showSave('saved', 'Saved');
+    } catch (e) {
+        showSave('error', 'Save failed');
+    }
+}
+
+async function deleteChoice(choiceId, questionId) {
+    showSave('saving', 'Deleting...');
+    try {
+        await apiCall(`/api/mentor/choice/${choiceId}/delete/`);
+        // Remove from local data
+        for (const part of testData.parts) {
+            const q = part.questions.find(q => q.id === questionId);
+            if (q) {
+                q.choices = q.choices.filter(c => c.id !== choiceId);
+                const container = document.getElementById(`choices-${questionId}`);
+                if (container) {
+                    container.innerHTML = q.choices.map(c => renderChoiceRow(c, q)).join('');
+                }
+                break;
+            }
+        }
+        showSave('saved', 'Deleted');
+    } catch (e) {
+        showSave('error', 'Delete failed');
+    }
+}
+
+// ---- Test-level actions ----
+async function editTestName() {
+    const newName = prompt('Enter new test name:', testData.name);
+    if (newName && newName !== testData.name) {
+        showSave('saving', 'Renaming...');
+        try {
+            await apiCall(`/api/mentor/test/${TEST_ID}/update/`, { name: newName });
+            testData.name = newName;
+            document.getElementById('test-title').textContent = newName;
+            showSave('saved', 'Renamed');
+        } catch (e) {
+            showSave('error', 'Rename failed');
+        }
+    }
+}
+
+async function toggleActive() {
+    showSave('saving', 'Updating...');
+    try {
+        const result = await apiCall(`/api/mentor/test/${TEST_ID}/toggle-active/`);
+        testData.is_active = result.is_active;
+        const btn = document.getElementById('toggle-active-btn');
+        if (result.is_active) {
+            btn.textContent = 'Active';
+            btn.className = 'px-4 py-2 rounded-xl text-xs font-semibold border transition-all bg-emerald-500/10 text-emerald-400 border-emerald-500/25 hover:bg-emerald-500/20';
+        } else {
+            btn.textContent = 'Draft';
+            btn.className = 'px-4 py-2 rounded-xl text-xs font-semibold border transition-all bg-slate-500/10 text-slate-500 border-slate-500/20 hover:bg-slate-500/15';
+        }
+        showSave('saved', result.is_active ? 'Activated' : 'Set to Draft');
+    } catch (e) {
+        showSave('error', 'Update failed');
+    }
+}
+
+// ---- Utilities ----
+function escHtml(str) {
+    if (!str) return '';
+    const p = document.createElement('p');
+    p.textContent = str;
+    return p.innerHTML;
+}
+
+function escAttr(str) {
+    if (!str) return '';
+    return str.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+</script>
+{% endblock %}

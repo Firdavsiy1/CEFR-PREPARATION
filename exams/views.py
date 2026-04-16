@@ -11,6 +11,7 @@ from django.contrib import messages
 from django.db import transaction
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
+import json
 
 from .models import Test, Question, UserAttempt, UserAnswer
 
@@ -201,16 +202,87 @@ def test_result_view(request, attempt_id):
 
 
 @login_required
-def exam_history_view(request):
+def exam_history_view(request, category=None):
     """
-    Display a list of all completed tests the user has taken.
+    Shows either the category selection page or the history for a specific category.
     """
-    attempts = UserAttempt.objects.filter(
+    if not category:
+        categories = [
+            {'id': 'listening', 'name': 'Listening', 'image': 'images/listening_card.png', 'active': True},
+            {'id': 'reading', 'name': 'Reading', 'image': 'images/reading_card.png', 'active': False},
+            {'id': 'writing', 'name': 'Writing', 'image': 'images/writing_card.png', 'active': False},
+            {'id': 'speaking', 'name': 'Speaking', 'image': 'images/speaking_card.png', 'active': False},
+        ]
+        return render(request, 'exams/history.html', {
+            'show_categories': True,
+            'categories': categories
+        })
+
+    if category != 'listening':
+        # Simple "Coming Soon" or redirect for non-listening categories
+        messages.info(request, f"{category.title()} history is coming soon!")
+        return redirect('exams:history')
+
+    # Existing logic for listening history
+    attempts = list(UserAttempt.objects.filter(
         user=request.user,
         completed_at__isnull=False
-    ).select_related('test').order_by('-started_at')
+    ).select_related('test').order_by('-started_at'))
     
+    best_overall = None
+    best_parts = {}
+
+    for attempt in attempts:
+        attempt.time_taken = attempt.completed_at - attempt.started_at
+        
+        # Check best overall
+        if best_overall is None:
+            best_overall = attempt
+        else:
+            if attempt.score_percentage > best_overall.score_percentage:
+                best_overall = attempt
+            elif attempt.score_percentage == best_overall.score_percentage:
+                if attempt.time_taken < best_overall.time_taken:
+                    best_overall = attempt
+                    
+        # Check best per part
+        part_results = attempt.get_part_results()
+        for pr in part_results:
+            part_num = pr['part_number']
+            part_pct = (pr['score'] / pr['max_score']) * 100 if pr['max_score'] > 0 else 0
+            
+            if part_num not in best_parts:
+                best_parts[part_num] = {'attempt': attempt, 'part': pr, 'pct': part_pct}
+            else:
+                if part_pct > best_parts[part_num]['pct']:
+                    best_parts[part_num] = {'attempt': attempt, 'part': pr, 'pct': part_pct}
+                elif part_pct == best_parts[part_num]['pct']:
+                    if attempt.time_taken < best_parts[part_num]['attempt'].time_taken:
+                        best_parts[part_num] = {'attempt': attempt, 'part': pr, 'pct': part_pct}
+                        
+        total_seconds = int(attempt.time_taken.total_seconds())
+        m = total_seconds // 60
+        s = total_seconds % 60
+        attempt.time_formatted = f"{m}m {s}s"
+
+    best_parts_list = [best_parts[k] for k in sorted(best_parts.keys())]
+
+    # Prepare chart data
+    chronological_attempts = reversed(attempts)
+    chart_labels = []
+    chart_data = []
+    for att in chronological_attempts:
+        label = f"{att.test.name} ({att.started_at.strftime('%b %d')})"
+        chart_labels.append(label)
+        chart_data.append(att.score_percentage)
+
     context = {
+        'show_categories': False,
+        'category': 'listening',
         'attempts': attempts,
+        'best_overall': best_overall,
+        'best_parts': best_parts_list,
+        'chart_labels_json': json.dumps(chart_labels),
+        'chart_data_json': json.dumps(chart_data),
     }
     return render(request, 'exams/history.html', context)
