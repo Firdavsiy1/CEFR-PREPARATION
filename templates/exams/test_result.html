@@ -1,127 +1,200 @@
 {% extends "base.html" %}
 
-{% block title %}Examination Results — {{ attempt.test.name }}{% endblock %}
+{% block title %}Результаты — {{ attempt.test.name }}{% endblock %}
 
 {% block content %}
-<div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-fade-in" id="overview">
+<div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 animate-fade-in" id="overview">
 
     <!-- Header Navigation -->
-    <div class="mb-8">
-        <a href="{% url 'exams:history' %}" class="inline-flex items-center gap-2 text-sm font-medium text-slate-400 hover:text-indigo-400 transition-colors">
+    <div class="mb-6">
+        <a href="{% url 'exams:history' %}" class="btn-duo-outline !py-2 !px-4 text-xs">
             <i class="ph-bold ph-arrow-left"></i>
-            Return to Examination History
+            <span data-i18n="res_back_hist">Назад к истории</span>
         </a>
     </div>
 
-    <!-- Main Score Highlight Box -->
-    <div class="bg-brand-900 border text-center relative border-white/5 shadow-xl rounded-xl px-10 py-12 mb-12">
-        
-        <h1 class="text-4xl font-display font-bold text-white mb-2">Final Evaluation Report</h1>
-        <p class="text-slate-400 font-medium tracking-wide text-sm mb-12 uppercase">{{ attempt.test.name }} &middot; {{ attempt.completed_at|date:"F j, Y" }}</p>
+    <!-- Main Score Card -->
+    <div class="card-duo p-8 sm:p-12 mb-10 text-center relative overflow-hidden !border-duo-green/30">
+        <!-- Decorative elements -->
+        <div class="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-duo-green via-duo-gold to-duo-blue"></div>
+        <div class="absolute -top-32 -right-32 w-64 h-64 bg-duo-green/5 rounded-full blur-3xl pointer-events-none"></div>
+        <div class="absolute -bottom-32 -left-32 w-64 h-64 bg-duo-gold/5 rounded-full blur-3xl pointer-events-none"></div>
 
-        <div class="flex flex-col md:flex-row items-center justify-center gap-16 relative z-10">
-            <div class="text-center">
-                <span class="block text-xs text-slate-500 uppercase tracking-widest font-bold mb-2">Raw Score</span>
-                <span class="text-4xl font-display font-bold text-indigo-400">{{ attempt.total_correct }}<span class="text-2xl text-slate-500 font-normal">/{{ attempt.total_questions }}</span></span>
+        <div class="relative">
+            <!-- Trophy -->
+            <div class="w-20 h-20 mx-auto mb-6 rounded-2xl flex items-center justify-center shadow-[0_4px_0_#E5B400] animate-bounce-in
+                {% if attempt.score_percentage >= 70 %}bg-duo-gold{% elif attempt.score_percentage >= 50 %}bg-duo-blue{% else %}bg-duo-surface-2{% endif %}">
+                {% if attempt.score_percentage >= 70 %}
+                <i class="ph-fill ph-trophy text-[#3C3100] text-4xl"></i>
+                {% elif attempt.score_percentage >= 50 %}
+                <i class="ph-fill ph-medal text-white text-4xl"></i>
+                {% else %}
+                <i class="ph-fill ph-target text-duo-text-dim text-4xl"></i>
+                {% endif %}
             </div>
-            
-            <div class="w-px h-16 bg-white/10 hidden md:block"></div>
-            
-            <div class="text-center">
-                <span class="block text-xs text-slate-500 uppercase tracking-widest font-bold mb-2">Weighted Points</span>
-                <span class="text-4xl font-display font-bold text-indigo-400">{{ attempt.total_score }}<span class="text-2xl text-slate-500 font-normal">/{{ attempt.max_possible_score }}</span></span>
-            </div>
 
-            <div class="w-px h-16 bg-white/10 hidden md:block"></div>
+            <h1 class="text-3xl font-black text-white mb-1" data-i18n="res_exam_results">Результаты экзамена</h1>
+            <p class="text-duo-text-dim font-bold text-sm mb-10 uppercase tracking-wider">{{ attempt.test.name }} · {{ attempt.completed_at|date:"d F Y" }}</p>
 
-            <!-- Percentage Certificate -->
-            <div class="text-center">
-                <span class="block text-xs text-slate-500 uppercase tracking-widest font-bold mb-2">Overall Proficiency</span>
-                <div class="flex flex-col items-center">
-                     <span class="text-6xl font-display font-bold text-accent drop-shadow-[0_0_15px_rgba(99,102,241,0.5)] leading-none">{{ attempt.score_percentage }}%</span>
+            <!-- Score display -->
+            <div class="flex flex-col md:flex-row items-center justify-center gap-10 md:gap-16">
+                <div class="text-center">
+                    <span class="block text-xs text-duo-text-muted font-extrabold uppercase tracking-widest mb-2" data-i18n="res_correct">Правильных</span>
+                    <span class="text-4xl font-black text-white">{{ attempt.total_correct }}<span class="text-2xl text-duo-text-muted">/{{ attempt.total_questions }}</span></span>
+                </div>
+
+                <div class="w-px h-16 bg-duo-border hidden md:block"></div>
+
+                <div class="text-center">
+                    <span class="block text-xs text-duo-text-muted font-extrabold uppercase tracking-widest mb-2" data-i18n="res_points">Баллы</span>
+                    <span class="text-4xl font-black text-white">{{ attempt.total_score }}<span class="text-2xl text-duo-text-muted">/{{ attempt.max_possible_score }}</span></span>
+                </div>
+
+                <div class="w-px h-16 bg-duo-border hidden md:block"></div>
+
+                <!-- Big percentage -->
+                <div class="text-center">
+                    <span class="block text-xs text-duo-text-muted font-extrabold uppercase tracking-widest mb-2" data-i18n="res_overall_result">Общий результат</span>
+                    <span class="text-6xl font-black leading-none
+                        {% if attempt.score_percentage >= 70 %}text-duo-green{% elif attempt.score_percentage >= 50 %}text-duo-gold{% else %}text-duo-red{% endif %}"
+                        style="text-shadow: 0 0 30px {% if attempt.score_percentage >= 70 %}rgba(88,204,2,0.3){% elif attempt.score_percentage >= 50 %}rgba(255,200,0,0.3){% else %}rgba(255,75,75,0.3){% endif %};">
+                        {{ attempt.score_percentage }}%
+                    </span>
                 </div>
             </div>
         </div>
     </div>
 
     <!-- Stats Breakdown by Part -->
-    <div class="mb-14">
-        <h2 class="text-2xl font-display font-bold text-white mb-6 pb-2 border-b border-white/10">Section Breakdown</h2>
+    <div class="mb-12">
+        <h2 class="text-xl font-black text-white mb-5 flex items-center gap-2">
+            <i class="ph-fill ph-chart-bar text-duo-blue"></i>
+            <span data-i18n="res_section_results">Результаты по секциям</span>
+        </h2>
         <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
             {% for part in part_results %}
-            <div class="bg-white/[0.02] backdrop-blur-2xl border border-white/[0.08] rounded-lg p-5 text-center shadow-lg">
-                <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Part {{ part.part_number }}</h3>
-                <div class="mb-1">
-                    <span class="text-2xl text-white font-display font-bold">
-                        {{ part.correct }}<span class="text-sm font-normal text-slate-500">/{{ part.total }}</span>
+            <div class="card-duo p-5 text-center !hover:transform-none">
+                <h3 class="text-xs font-extrabold text-duo-text-muted uppercase tracking-widest mb-3"><span data-i18n="tt_part">Часть</span> {{ part.part_number }}</h3>
+                <div class="mb-2">
+                    <span class="text-2xl text-white font-black">
+                        {{ part.correct }}<span class="text-sm font-bold text-duo-text-muted">/{{ part.total }}</span>
                     </span>
                 </div>
-                <p class="text-[11px] font-bold text-accent uppercase tracking-wide">{{ part.score }} / {{ part.max_score }} PTS</p>
+                <!-- Mini progress bar -->
+                <div class="h-2 rounded-full bg-duo-surface-2 overflow-hidden mb-2">
+                    <div class="h-full rounded-full {% if part.correct == part.total %}bg-duo-green{% elif part.correct > 0 %}bg-duo-gold{% else %}bg-duo-red{% endif %}" style="width: {% widthratio part.correct part.total 100 %}%"></div>
+                </div>
+                <p class="text-[11px] font-extrabold text-duo-blue uppercase tracking-wide">{{ part.score }} / {{ part.max_score }} <span data-i18n="res_pts">бл.</span></p>
             </div>
             {% endfor %}
         </div>
     </div>
 
     <!-- Detailed Question Review -->
-    <h2 class="text-2xl font-display font-bold text-white mb-6 pb-2 border-b border-white/10 mt-16">Comprehensive Review</h2>
-    
+    <h2 class="text-xl font-black text-white mb-5 flex items-center gap-2">
+        <i class="ph-fill ph-list-checks text-duo-green"></i>
+        <span data-i18n="res_ans_rev">Подробный разбор</span>
+    </h2>
+
     {% regroup answers by question.part as parts_list %}
-    
-    <div class="flex flex-col lg:flex-row gap-8 items-start">
-        
+
+    <div class="flex flex-col lg:flex-row gap-6 items-start">
+
         <!-- Sticky Navigation Sidebar -->
-        <aside class="w-full lg:w-64 flex-shrink-0 lg:sticky lg:top-28 hidden lg:block bg-white/[0.02] backdrop-blur-2xl border border-white/[0.08] shadow-[0_8px_30px_rgb(0,0,0,0.12)] rounded-[1.5rem] p-6 z-10">
-            <h3 class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-4">Quick Navigation</h3>
-            <nav class="space-y-1.5">
-                <a href="#overview" class="block px-4 py-2.5 text-sm font-bold text-slate-400 hover:text-white hover:bg-white/[0.05] rounded-xl transition-all">Score Overview</a>
+        <aside class="w-full lg:w-60 flex-shrink-0 lg:sticky lg:top-20 hidden lg:block card-duo p-5 z-10">
+            <h3 class="text-[10px] font-extrabold text-duo-text-muted uppercase tracking-widest mb-4" data-i18n="res_nav">Навигация</h3>
+            <nav class="space-y-1">
+                <a href="#overview" class="block px-3 py-2.5 text-sm font-bold text-duo-text-dim hover:text-white hover:bg-duo-surface-2 rounded-xl transition-all">
+                    <i class="ph-fill ph-chart-donut mr-2"></i><span data-i18n="res_overview">Обзор</span>
+                </a>
                 {% for part in part_results %}
-                <a href="#part-{{ part.part_number }}" class="flex items-center justify-between px-4 py-2.5 text-sm font-medium text-slate-400 hover:text-white hover:bg-white/[0.05] rounded-xl transition-all group">
-                    <span>Section {{ part.part_number }}</span>
-                    <span class="text-[10px] font-bold {% if part.score == part.max_score %}text-emerald-400/80{% else %}text-slate-600 group-hover:text-slate-400{% endif %} tracking-wider">{{ part.score|floatformat:0 }}/{{ part.max_score|floatformat:0 }}</span>
+                <a href="#part-{{ part.part_number }}" class="flex items-center justify-between px-3 py-2.5 text-sm font-semibold text-duo-text-dim hover:text-white hover:bg-duo-surface-2 rounded-xl transition-all group">
+                    <span><span data-i18n="tt_section">Секция</span> {{ part.part_number }}</span>
+                    <span class="text-[10px] font-extrabold {% if part.score == part.max_score %}text-duo-green{% else %}text-duo-text-muted group-hover:text-duo-text-dim{% endif %} tracking-wider">{{ part.score|floatformat:0 }}/{{ part.max_score|floatformat:0 }}</span>
                 </a>
                 {% endfor %}
             </nav>
         </aside>
 
         <!-- Main Content -->
-        <div class="flex-1 w-full min-w-0 space-y-10">
+        <div class="flex-1 w-full min-w-0 space-y-8">
         {% for part_entry in parts_list %}
-        <div id="part-{{ part_entry.grouper.part_number }}" class="bg-white/[0.02] backdrop-blur-2xl rounded-[1.5rem] border border-white/[0.08] shadow-[0_8px_30px_rgb(0,0,0,0.12)] overflow-hidden">
+        <div id="part-{{ part_entry.grouper.part_number }}" class="card-duo overflow-hidden">
             <!-- Part Header -->
-            <div class="bg-white/[0.02] px-8 py-5 border-b border-white/5 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div>
-                    <h3 class="text-xl font-display font-bold text-white">Part {{ part_entry.grouper.part_number }}</h3>
-                    <span class="text-xs font-bold uppercase tracking-widest text-slate-400">Weight: {{ part_entry.grouper.points_per_question }} pts / question</span>
+            <div class="bg-duo-surface-2/50 px-7 py-4 border-b-2 border-duo-border flex flex-col md:flex-row md:items-center justify-between gap-3">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-duo-green/15 flex items-center justify-center text-duo-green font-black">
+                        {{ part_entry.grouper.part_number }}
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-black text-white"><span data-i18n="tt_part">Часть</span> {{ part_entry.grouper.part_number }}</h3>
+                        <span class="text-xs font-bold text-duo-text-muted uppercase tracking-widest">{{ part_entry.grouper.points_per_question }} <span data-i18n="res_pts_ques">бл./вопрос</span></span>
+                    </div>
                 </div>
-                
+
                 {% if part_entry.grouper.transcript %}
                 <div class="w-full md:w-auto">
-                    <details class="group bg-[#1F2937] border border-white/10 rounded px-4 py-2 cursor-pointer shadow-sm">
+                    <details class="group card-duo !border-duo-border px-4 py-2 cursor-pointer">
                         <summary class="flex items-center gap-3 list-none">
-                            <span class="text-xs font-bold text-white uppercase tracking-widest">Audio Transcript</span>
-                            <span class="transition duration-300 group-open:rotate-180 text-slate-400">
+                            <i class="ph-fill ph-file-text text-duo-blue"></i>
+                            <span class="text-xs font-extrabold text-white uppercase tracking-widest" data-i18n="res_transcript">Транскрипт</span>
+                            <span class="transition duration-300 group-open:rotate-180 text-duo-text-dim ml-auto">
                                 <i class="ph-bold ph-caret-down text-lg"></i>
                             </span>
                         </summary>
-                        <p class="text-sm text-slate-300 leading-loose mt-4 pb-2 whitespace-pre-wrap font-medium">{{ part_entry.grouper.transcript }}</p>
+                        <p class="text-sm text-duo-text-dim leading-loose mt-4 pb-2 whitespace-pre-wrap font-semibold">{{ part_entry.grouper.transcript }}</p>
                     </details>
                 </div>
                 {% endif %}
             </div>
-            
-            <div class="divide-y divide-white/5">
+
+            {% if part_entry.grouper.audio_file %}
+            <div class="bg-duo-surface-2/20 px-7 py-5 border-b-2 border-duo-border">
+                <div class="flex flex-col gap-2 audio-player-container">
+                    <div class="flex items-center gap-5 bg-white/5 p-4 rounded-[1.25rem] border border-white/10 shadow-inner">
+                        <!-- Custom Play/Pause Button -->
+                        <button type="button" class="result-play-btn w-14 h-14 rounded-[1.1rem] bg-duo-green shadow-[0_4px_0_#46A302] flex items-center justify-center flex-shrink-0 hover:translate-y-[-2px] hover:shadow-[0_6px_0_#46A302] active:translate-y-[4px] active:shadow-none transition-all outline-none">
+                            <i class="ph-fill ph-play text-white text-2xl result-play-icon"></i>
+                        </button>
+                        
+                        <!-- Track / Progress -->
+                        <div class="flex-1 flex flex-col justify-center cursor-pointer relative group result-progress-container hover:brightness-110 transition-all">
+                            <div class="flex justify-between items-center text-xs font-black text-duo-text-dim mb-1.5 px-0.5 uppercase tracking-wide">
+                                <span class="result-current-time">0:00</span>
+                                <div class="flex items-center gap-1.5 text-duo-blue">
+                                    <i class="ph-fill ph-speaker-high"></i>
+                                    <span data-i18n="res_section_audio">Аудиодорожка к секции</span>
+                                </div>
+                                <span class="result-duration">0:00</span>
+                            </div>
+                            <!-- Bar track -->
+                            <div class="h-4 bg-[#1A2F35] rounded-full overflow-hidden border-2 border-[#2B4D56] relative group-hover:border-duo-green/50 transition-colors">
+                                <div class="result-progress-bar h-full bg-duo-green absolute top-0 left-0 rounded-full transition-all duration-100 ease-linear shadow-[0_0_10px_rgba(88,204,2,0.5)]" style="width: 0%;"></div>
+                            </div>
+                        </div>
+
+                        <!-- Hidden Audio Element -->
+                        <audio class="result-part-audio" preload="metadata">
+                            <source src="{{ part_entry.grouper.audio_file.url }}" type="audio/mpeg">
+                        </audio>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="divide-y-2 divide-duo-border/50">
                 {% for answer in part_entry.list %}
-                <div class="px-8 py-6 flex flex-col sm:flex-row gap-6 hover:bg-white/5 transition-colors">
-                    
+                <div class="px-7 py-5 flex flex-col sm:flex-row gap-5 hover:bg-duo-surface-2/30 transition-colors">
+
                     <!-- Question Marker -->
-                    <div class="flex-shrink-0 pt-1">
-                        <span class="inline-flex items-center justify-center w-8 h-8 rounded border text-sm font-bold shadow-sm
-                            {% if answer.is_correct %}bg-emerald-500/10 text-emerald-400 border-emerald-500/20
-                            {% else %}bg-rose-500/10 text-rose-400 border-rose-500/20{% endif %}">
-                            {% if answer.question.global_question_number %}
-                                {{ answer.question.global_question_number }}
+                    <div class="flex-shrink-0 pt-0.5">
+                        <span class="inline-flex items-center justify-center w-9 h-9 rounded-xl text-sm font-black
+                            {% if answer.is_correct %}bg-duo-green/15 text-duo-green border-2 border-duo-green/30
+                            {% else %}bg-duo-red/15 text-duo-red border-2 border-duo-red/30{% endif %}">
+                            {% if answer.is_correct %}
+                            <i class="ph-bold ph-check"></i>
                             {% else %}
-                                {{ answer.question.question_number }}
+                            <i class="ph-bold ph-x"></i>
                             {% endif %}
                         </span>
                     </div>
@@ -129,21 +202,21 @@
                     <!-- Question & Answers -->
                     <div class="flex-1">
                         {% if answer.question.question_text %}
-                        <p class="text-white font-medium mb-4 text-base">{{ answer.question.question_text }}</p>
+                        <p class="text-white font-bold mb-3 text-base">{{ answer.question.question_text }}</p>
                         {% endif %}
-                        
-                        <div class="flex flex-col sm:flex-row gap-6 mb-2">
+
+                        <div class="flex flex-col sm:flex-row gap-5 mb-1">
                             <!-- User's Answer -->
                             <div class="flex-1">
-                                <p class="text-[10px] text-slate-500 font-bold uppercase tracking-widest mb-1.5">Candidate Response</p>
+                                <p class="text-[10px] text-duo-text-muted font-extrabold uppercase tracking-widest mb-1.5" data-i18n="res_y_ans">Ваш ответ</p>
                                 <div class="flex items-center gap-2">
                                     {% if answer.is_correct %}
-                                    <i class="ph-bold ph-check text-emerald-400 text-base"></i>
-                                    <span class="text-emerald-400 font-bold">{{ answer.given_answer }}</span>
+                                    <i class="ph-fill ph-check-circle text-duo-green text-lg"></i>
+                                    <span class="text-duo-green font-extrabold">{{ answer.given_answer }}</span>
                                     {% else %}
-                                    <i class="ph-bold ph-x text-rose-400 text-base"></i>
-                                    <span class="text-rose-400 font-bold line-through decoration-rose-400/50">
-                                        {% if answer.given_answer %}{{ answer.given_answer }}{% else %}<span class="italic font-normal">Blank</span>{% endif %}
+                                    <i class="ph-fill ph-x-circle text-duo-red text-lg"></i>
+                                    <span class="text-duo-red font-extrabold line-through decoration-duo-red/40">
+                                        {% if answer.given_answer %}{{ answer.given_answer }}{% else %}<span class="italic font-semibold no-underline" data-i18n="res_empty">Пусто</span>{% endif %}
                                     </span>
                                     {% endif %}
                                 </div>
@@ -151,11 +224,11 @@
 
                             <!-- Correct Answer (only show if user was wrong) -->
                             {% if not answer.is_correct %}
-                            <div class="flex-1 pl-0 sm:pl-6 sm:border-l border-white/10">
-                                <p class="text-[10px] text-slate-500 font-bold uppercase tracking-widest mb-1.5">Key</p>
+                            <div class="flex-1 pl-0 sm:pl-5 sm:border-l-2 border-duo-border">
+                                <p class="text-[10px] text-duo-text-muted font-extrabold uppercase tracking-widest mb-1.5" data-i18n="res_c_ans">Правильный ответ</p>
                                 <div class="flex items-center gap-2">
-                                    <i class="ph-bold ph-check-circle text-emerald-400 text-base"></i>
-                                    <span class="text-emerald-400 font-bold">{{ answer.question.correct_answer }}</span>
+                                    <i class="ph-fill ph-check-circle text-duo-green text-lg"></i>
+                                    <span class="text-duo-green font-extrabold">{{ answer.question.correct_answer }}</span>
                                 </div>
                             </div>
                             {% endif %}
@@ -163,21 +236,22 @@
 
                         <!-- Explanation Block -->
                         {% if answer.question.explanation %}
-                        <div class="mt-5 p-5 rounded border bg-white/[0.02] border-white/5 shadow-inner relative mt-6">
-                            <span class="absolute -top-3 left-4 bg-[#1F2937] px-2 text-[10px] font-bold text-accent uppercase tracking-widest border border-white/10 rounded">Evaluator Feedback</span>
-                            <div class="mt-1">
-                                <p class="text-sm text-slate-300 leading-relaxed font-medium">{{ answer.question.explanation }}</p>
+                        <div class="mt-4 p-5 rounded-2xl bg-duo-blue/5 border-2 border-duo-blue/20 relative">
+                            <div class="flex items-center gap-2 mb-2">
+                                <i class="ph-fill ph-lightbulb text-duo-gold"></i>
+                                <span class="text-[10px] font-extrabold text-duo-blue uppercase tracking-widest" data-i18n="res_ai_exp">Объяснение</span>
                             </div>
+                            <p class="text-sm text-duo-text-dim leading-relaxed font-semibold">{{ answer.question.explanation }}</p>
                         </div>
                         {% endif %}
                     </div>
 
                     <!-- Points -->
-                    <div class="flex-shrink-0 text-right w-16 pt-1">
-                        <span class="block text-lg font-display font-bold {% if answer.is_correct %}text-emerald-400{% else %}text-slate-500{% endif %}">
+                    <div class="flex-shrink-0 text-right w-16 pt-0.5">
+                        <span class="block text-lg font-black {% if answer.is_correct %}text-duo-green{% else %}text-duo-text-muted{% endif %}">
                             {% if answer.is_correct %}+{{ part_entry.grouper.points_per_question|floatformat:1 }}{% else %}0.0{% endif %}
                         </span>
-                        <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Pts</span>
+                        <span class="text-[9px] font-extrabold text-duo-text-muted uppercase tracking-widest" data-i18n="res_pts">бл.</span>
                     </div>
 
                 </div>
@@ -189,4 +263,76 @@
 
     </div>
 </div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const formatTime = (time) => {
+            if (isNaN(time)) return "0:00";
+            const min = Math.floor(time / 60);
+            const sec = Math.floor(time % 60);
+            return `${min}:${sec.toString().padStart(2, '0')}`;
+        };
+
+        document.querySelectorAll('.audio-player-container').forEach(container => {
+            const audio = container.querySelector('.result-part-audio');
+            const playBtn = container.querySelector('.result-play-btn');
+            const playIcon = container.querySelector('.result-play-icon');
+            const progressContainer = container.querySelector('.result-progress-container');
+            const progressBar = container.querySelector('.result-progress-bar');
+            const currentTimeEl = container.querySelector('.result-current-time');
+            const durationEl = container.querySelector('.result-duration');
+
+            if (!audio) return;
+
+            audio.addEventListener('loadedmetadata', () => {
+                durationEl.textContent = formatTime(audio.duration);
+            });
+
+            const updatePlayState = () => {
+                if (audio.paused) {
+                    playIcon.classList.remove('ph-pause');
+                    playIcon.classList.add('ph-play');
+                } else {
+                    playIcon.classList.remove('ph-play');
+                    playIcon.classList.add('ph-pause');
+                }
+            };
+
+            playBtn.addEventListener('click', () => {
+                if (audio.paused) {
+                    // Pause other audios
+                    document.querySelectorAll('.result-part-audio').forEach(a => {
+                        if (a !== audio && !a.paused) a.pause();
+                    });
+                    audio.play();
+                } else {
+                    audio.pause();
+                }
+            });
+
+            audio.addEventListener('play', updatePlayState);
+            audio.addEventListener('pause', updatePlayState);
+
+            audio.addEventListener('timeupdate', () => {
+                currentTimeEl.textContent = formatTime(audio.currentTime);
+                if (audio.duration) {
+                    const percent = (audio.currentTime / audio.duration) * 100;
+                    progressBar.style.width = `${percent}%`;
+                }
+            });
+
+            // Re-enabled seek logic for results overview!
+            progressContainer.addEventListener('click', (e) => {
+                const rect = progressContainer.getBoundingClientRect();
+                const offsetX = e.clientX - rect.left;
+                const percent = Math.min(Math.max(offsetX / rect.width, 0), 1);
+                if (audio.duration) {
+                    audio.currentTime = percent * audio.duration;
+                }
+            });
+        });
+    });
+</script>
 {% endblock %}

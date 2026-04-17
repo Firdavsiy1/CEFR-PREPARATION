@@ -1,0 +1,402 @@
+{% extends "base.html" %}
+{% load profile_tags %}
+
+{% block title %}Profile — CEFR Prep{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+
+    <!-- Page header -->
+    <div class="text-center mb-10 animate-slide-up">
+        <h1 class="text-3xl sm:text-4xl font-black text-white mb-2" data-i18n="profile_title">Мой профиль</h1>
+        <p class="text-duo-text-dim font-semibold" data-i18n="profile_subtitle">Управляй своим аккаунтом</p>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+        <!-- ===== LEFT COLUMN: Avatar & Language ===== -->
+        <div class="lg:col-span-1 space-y-6">
+
+            <!-- Avatar Card -->
+            <div class="card-duo p-6 animate-slide-up" style="animation-delay: 0.05s">
+                <h2 class="text-lg font-black text-white mb-5 flex items-center gap-2">
+                    <i class="ph-fill ph-user-circle text-duo-green text-xl"></i>
+                    <span data-i18n="avatar_title">Аватар</span>
+                </h2>
+
+                <!-- Current avatar -->
+                <div class="flex justify-center mb-6">
+                    <div id="current-avatar-display" class="w-28 h-28 rounded-3xl flex items-center justify-center shadow-xl border-4 border-[#2B4D56] transition-all duration-300 relative overflow-hidden"
+                         style="background: {{ profile.avatar_gradient }};">
+                         {% if profile.avatar == 'custom' and profile.custom_avatar %}
+                         <img id="current-avatar-img" src="{{ profile.custom_avatar.url }}" class="w-full h-full object-cover">
+                         <i id="current-avatar-icon" class="ph-fill {{ profile.avatar_icon }} text-white text-5xl hidden"></i>
+                         {% else %}
+                         <img id="current-avatar-img" src="" class="w-full h-full object-cover hidden">
+                         <i id="current-avatar-icon" class="ph-fill {{ profile.avatar_icon }} text-white text-5xl"></i>
+                         {% endif %}
+                    </div>
+                </div>
+
+                <!-- Avatar grid -->
+                <form id="avatar-form" method="post" action="{% url 'accounts:update_avatar' %}" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <div class="grid grid-cols-4 gap-2.5">
+                        {% for key, label in avatar_choices %}
+                        {% if key == 'custom' %}
+                        <label class="avatar-option aspect-square rounded-2xl flex items-center justify-center cursor-pointer border-2 transition-all duration-200 hover:scale-110 hover:z-10 relative group overflow-hidden
+                                    {% if profile.avatar == key %}border-duo-green shadow-[0_0_15px_rgba(88,204,2,0.3)] scale-105{% else %}border-transparent hover:border-white/20{% endif %}"
+                                style="background: {{ avatar_meta|get_gradient:key }};"
+                                data-avatar="{{ key }}"
+                                data-icon="{{ avatar_meta|get_icon:key }}"
+                                data-gradient="{{ avatar_meta|get_gradient:key }}"
+                                title="{{ label }}">
+                            
+                                {% if profile.custom_avatar %}
+                                <img src="{{ profile.custom_avatar.url }}" class="w-full h-full object-cover">
+                                {% else %}
+                                <i class="ph-fill {{ avatar_meta|get_icon:key }} text-white text-xl"></i>
+                                {% endif %}
+                                <input type="file" name="custom_avatar_file" accept="image/*" id="custom-avatar-input" class="hidden" onchange="handleFileUpload(this)">
+
+                            {% if profile.avatar == key %}
+                            <div class="absolute -top-1 -right-1 w-5 h-5 bg-duo-green rounded-full flex items-center justify-center shadow-lg border-2 border-duo-surface">
+                                <i class="ph-bold ph-check text-white text-[10px]"></i>
+                            </div>
+                            {% endif %}
+                        </label>
+                        {% else %}
+                        <button type="button"
+                                class="avatar-option aspect-square rounded-2xl flex items-center justify-center cursor-pointer border-2 transition-all duration-200 hover:scale-110 hover:z-10 relative group overflow-hidden
+                                    {% if profile.avatar == key %}border-duo-green shadow-[0_0_15px_rgba(88,204,2,0.3)] scale-105{% else %}border-transparent hover:border-white/20{% endif %}"
+                                style="background: {{ avatar_meta|get_gradient:key }};"
+                                data-avatar="{{ key }}"
+                                data-icon="{{ avatar_meta|get_icon:key }}"
+                                data-gradient="{{ avatar_meta|get_gradient:key }}"
+                                title="{{ label }}">
+                            
+                                <i class="ph-fill {{ avatar_meta|get_icon:key }} text-white text-xl"></i>
+                            
+                            {% if profile.avatar == key %}
+                            <div class="absolute -top-1 -right-1 w-5 h-5 bg-duo-green rounded-full flex items-center justify-center shadow-lg border-2 border-duo-surface">
+                                <i class="ph-bold ph-check text-white text-[10px]"></i>
+                            </div>
+                            {% endif %}
+                        </button>
+                        {% endif %}
+                        {% endfor %}
+                    </div>
+                    <input type="hidden" name="avatar" id="avatar-input" value="{{ profile.avatar }}">
+                </form>
+            </div>
+
+            <!-- Language Card -->
+            <div class="card-duo p-6 animate-slide-up" style="animation-delay: 0.1s">
+                <h2 class="text-lg font-black text-white mb-5 flex items-center gap-2">
+                    <i class="ph-fill ph-translate text-duo-blue text-xl"></i>
+                    <span data-i18n="language_title">Язык интерфейса</span>
+                </h2>
+
+                <form id="language-form" method="post" action="{% url 'accounts:set_language' %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="language" id="language-input" value="{{ profile.language }}">
+                    <div class="space-y-2.5">
+                        <!-- English -->
+                        <button type="button" data-lang="en"
+                                class="lang-option w-full flex items-center gap-3.5 p-3.5 rounded-2xl border-2 transition-all duration-200 cursor-pointer group
+                                    {% if profile.language == 'en' %}border-duo-blue bg-duo-blue/10{% else %}border-duo-border hover:border-duo-blue/40 hover:bg-white/[0.03]{% endif %}">
+                            <span class="text-2xl">🇬🇧</span>
+                            <div class="flex-1 text-left">
+                                <span class="text-sm font-extrabold {% if profile.language == 'en' %}text-duo-blue{% else %}text-white{% endif %}">English</span>
+                            </div>
+                            {% if profile.language == 'en' %}
+                            <div class="w-6 h-6 rounded-full bg-duo-blue flex items-center justify-center">
+                                <i class="ph-bold ph-check text-white text-xs"></i>
+                            </div>
+                            {% endif %}
+                        </button>
+
+                        <!-- Russian -->
+                        <button type="button" data-lang="ru"
+                                class="lang-option w-full flex items-center gap-3.5 p-3.5 rounded-2xl border-2 transition-all duration-200 cursor-pointer group
+                                    {% if profile.language == 'ru' %}border-duo-blue bg-duo-blue/10{% else %}border-duo-border hover:border-duo-blue/40 hover:bg-white/[0.03]{% endif %}">
+                            <span class="text-2xl">🇷🇺</span>
+                            <div class="flex-1 text-left">
+                                <span class="text-sm font-extrabold {% if profile.language == 'ru' %}text-duo-blue{% else %}text-white{% endif %}">Русский</span>
+                            </div>
+                            {% if profile.language == 'ru' %}
+                            <div class="w-6 h-6 rounded-full bg-duo-blue flex items-center justify-center">
+                                <i class="ph-bold ph-check text-white text-xs"></i>
+                            </div>
+                            {% endif %}
+                        </button>
+
+                        <!-- Uzbek -->
+                        <button type="button" data-lang="uz"
+                                class="lang-option w-full flex items-center gap-3.5 p-3.5 rounded-2xl border-2 transition-all duration-200 cursor-pointer group
+                                    {% if profile.language == 'uz' %}border-duo-blue bg-duo-blue/10{% else %}border-duo-border hover:border-duo-blue/40 hover:bg-white/[0.03]{% endif %}">
+                            <span class="text-2xl">🇺🇿</span>
+                            <div class="flex-1 text-left">
+                                <span class="text-sm font-extrabold {% if profile.language == 'uz' %}text-duo-blue{% else %}text-white{% endif %}">O'zbek</span>
+                            </div>
+                            {% if profile.language == 'uz' %}
+                            <div class="w-6 h-6 rounded-full bg-duo-blue flex items-center justify-center">
+                                <i class="ph-bold ph-check text-white text-xs"></i>
+                            </div>
+                            {% endif %}
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+        </div>
+
+        <!-- ===== RIGHT COLUMN: Account & Password ===== -->
+        <div class="lg:col-span-2 space-y-6">
+
+            <!-- Account Info Card -->
+            <div class="card-duo p-6 sm:p-8 animate-slide-up" style="animation-delay: 0.15s">
+                <h2 class="text-lg font-black text-white mb-6 flex items-center gap-2">
+                    <i class="ph-fill ph-identification-card text-duo-gold text-xl"></i>
+                    <span data-i18n="account_title">Данные аккаунта</span>
+                </h2>
+
+                <form method="post" action="{% url 'accounts:update_profile' %}" class="space-y-5">
+                    {% csrf_token %}
+
+                    <!-- Username -->
+                    <div>
+                        <label class="block text-xs font-extrabold text-duo-text-dim mb-2 uppercase tracking-widest" data-i18n="username_label">Имя пользователя</label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                                <i class="ph-fill ph-user text-duo-text-muted text-lg"></i>
+                            </div>
+                            <input type="text" name="username" value="{{ user.username }}" required
+                                   class="input-duo input-duo-gold w-full"
+                                   id="id_username">
+                        </div>
+                    </div>
+
+                    <!-- Email -->
+                    <div>
+                        <label class="block text-xs font-extrabold text-duo-text-dim mb-2 uppercase tracking-widest" data-i18n="email_label">Электронная почта</label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                                <i class="ph-fill ph-envelope text-duo-text-muted text-lg"></i>
+                            </div>
+                            <input type="email" name="email" value="{{ user.email }}" required
+                                   class="input-duo input-duo-gold w-full"
+                                   id="id_email"
+                                   data-i18n-placeholder="email_placeholder"
+                                   placeholder="example@email.com">
+                        </div>
+                    </div>
+
+                    <!-- Member since -->
+                    <div class="flex items-center gap-2 text-sm text-duo-text-muted font-semibold pt-1">
+                        <i class="ph-fill ph-calendar-blank"></i>
+                        <span data-i18n="member_since">Дата регистрации:</span>
+                        <span class="text-white font-bold">{{ user.date_joined|date:"d.m.Y" }}</span>
+                    </div>
+
+                    <div class="pt-2">
+                        <button type="submit" class="btn-duo-gold !py-3 px-8">
+                            <i class="ph-fill ph-floppy-disk text-lg"></i>
+                            <span data-i18n="save_changes">Сохранить</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Password Change Card -->
+            <div class="card-duo p-6 sm:p-8 animate-slide-up" style="animation-delay: 0.2s">
+                <h2 class="text-lg font-black text-white mb-6 flex items-center gap-2">
+                    <i class="ph-fill ph-lock text-duo-red text-xl"></i>
+                    <span data-i18n="password_title">Смена пароля</span>
+                </h2>
+
+                <form method="post" action="{% url 'accounts:change_password' %}" class="space-y-5">
+                    {% csrf_token %}
+
+                    <!-- Current password -->
+                    <div>
+                        <label class="block text-xs font-extrabold text-duo-text-dim mb-2 uppercase tracking-widest" data-i18n="current_password">Текущий пароль</label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                                <i class="ph-fill ph-lock-key text-duo-text-muted text-lg"></i>
+                            </div>
+                            <input type="password" name="old_password" required
+                                   class="input-duo input-duo-red w-full"
+                                   id="id_old_password">
+                        </div>
+                    </div>
+
+                    <!-- New password -->
+                    <div>
+                        <label class="block text-xs font-extrabold text-duo-text-dim mb-2 uppercase tracking-widest" data-i18n="new_password">Новый пароль</label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                                <i class="ph-fill ph-lock text-duo-text-muted text-lg"></i>
+                            </div>
+                            <input type="password" name="new_password1" required
+                                   class="input-duo input-duo-red w-full"
+                                   id="id_new_password1">
+                        </div>
+                        <p class="mt-1.5 text-xs text-duo-text-muted font-semibold" data-i18n="password_hint">Минимум 8 символов, не только цифры</p>
+                    </div>
+
+                    <!-- Confirm new password -->
+                    <div>
+                        <label class="block text-xs font-extrabold text-duo-text-dim mb-2 uppercase tracking-widest" data-i18n="confirm_password">Подтвердите пароль</label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                                <i class="ph-fill ph-lock text-duo-text-muted text-lg"></i>
+                            </div>
+                            <input type="password" name="new_password2" required
+                                   class="input-duo input-duo-red w-full"
+                                   id="id_new_password2">
+                        </div>
+                    </div>
+
+                    <div class="pt-2">
+                        <button type="submit" class="btn-duo-red !py-3 px-8">
+                            <i class="ph-fill ph-key text-lg"></i>
+                            <span data-i18n="change_password_btn">Сменить пароль</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    function handleFileUpload(input) {
+        if (!input.files || !input.files[0]) return;
+        
+        document.getElementById('avatar-input').value = 'custom';
+        const form = document.getElementById('avatar-form');
+        const formData = new FormData(form);
+        
+        fetch(form.action, {
+            method: 'POST',
+            body: formData,
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        }).then(res => res.json()).then(data => {
+            if (data.status === 'ok') {
+                window.location.reload();
+            } else {
+                alert(data.message || 'Ошибка загрузки файла');
+                input.value = '';
+            }
+        }).catch(err => {
+            alert('Ошибка при загрузке');
+            input.value = '';
+        });
+    }
+
+    // ===== AVATAR SELECTION =====
+    document.querySelectorAll('.avatar-option').forEach(btn => {
+        if (btn.dataset.avatar === 'custom') return;
+
+        btn.addEventListener('click', function() {
+            const avatar = this.dataset.avatar;
+            const icon = this.dataset.icon;
+            const gradient = this.dataset.gradient;
+
+            // Update hidden input
+            document.getElementById('avatar-input').value = avatar;
+
+            // Update current avatar display
+            const display = document.getElementById('current-avatar-display');
+            display.style.background = gradient;
+            
+            const imgEl = document.getElementById('current-avatar-img');
+            const iconEl = document.getElementById('current-avatar-icon');
+            if (imgEl) imgEl.classList.add('hidden');
+            if (iconEl) {
+                iconEl.classList.remove('hidden');
+                iconEl.className = `ph-fill ${icon} text-white text-5xl`;
+            }
+
+            // Animate
+            display.style.transform = 'scale(0.9)';
+            setTimeout(() => display.style.transform = 'scale(1)', 150);
+
+            // Update selection UI
+            document.querySelectorAll('.avatar-option').forEach(b => {
+                b.classList.remove('border-duo-green', 'shadow-[0_0_15px_rgba(88,204,2,0.3)]', 'scale-105');
+                b.classList.add('border-transparent');
+                const check = b.querySelector('.absolute');
+                if (check) check.remove();
+            });
+            this.classList.remove('border-transparent');
+            this.classList.add('border-duo-green', 'shadow-[0_0_15px_rgba(88,204,2,0.3)]', 'scale-105');
+
+            // Add checkmark
+            const checkmark = document.createElement('div');
+            checkmark.className = 'absolute -top-1 -right-1 w-5 h-5 bg-duo-green rounded-full flex items-center justify-center shadow-lg border-2 border-duo-surface';
+            checkmark.innerHTML = '<i class="ph-bold ph-check text-white text-[10px]"></i>';
+            this.appendChild(checkmark);
+
+            // Submit via AJAX
+            const form = document.getElementById('avatar-form');
+            const formData = new FormData(form);
+
+            fetch(form.action, {
+                method: 'POST',
+                body: formData,
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            }).then(res => res.json()).then(data => {
+                if (data.status === 'ok') {
+                    // Update navbar avatar
+                    const navAvatar = document.getElementById('nav-avatar-icon');
+                    const navAvatarBg = document.getElementById('nav-avatar-bg');
+                    if (navAvatarBg) {
+                        navAvatarBg.style.background = data.gradient;
+                        const navImg = navAvatarBg.querySelector('img');
+                        if (navImg) navImg.remove();
+                    }
+                    if (navAvatar) {
+                        navAvatar.className = `ph-fill ${data.icon} text-white text-sm`;
+                        navAvatar.classList.remove('hidden');
+                    }
+                }
+            });
+        });
+    });
+
+    // ===== LANGUAGE SELECTION =====
+    document.querySelectorAll('.lang-option').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const lang = this.dataset.lang;
+            document.getElementById('language-input').value = lang;
+
+            // Submit via AJAX, then reload to apply translations
+            const form = document.getElementById('language-form');
+            const formData = new FormData(form);
+
+            fetch(form.action, {
+                method: 'POST',
+                body: formData,
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            }).then(res => res.json()).then(data => {
+                if (data.status === 'ok') {
+                    window.location.reload();
+                }
+            });
+        });
+    });
+
+    // Apply translations on page load
+    (function() {
+        const currentLang = '{{ profile.language|default:"ru" }}';
+        if (typeof applyGlobalTranslations === 'function') {
+            applyGlobalTranslations(currentLang);
+        }
+    })();
+</script>
+{% endblock %}

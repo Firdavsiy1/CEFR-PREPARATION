@@ -10,6 +10,8 @@ app_name = 'exams'
 urlpatterns = [
     # Student-facing views
     path('', views.dashboard_view, name='dashboard'),
+    path('dashboard/<str:category>/', views.dashboard_view, name='dashboard_category'),
+    path('test/<int:test_id>/tutorial/', views.test_tutorial_view, name='test_tutorial'),
     path('test/<int:test_id>/start/', views.start_test_view, name='start_test'),
     path('attempt/<int:attempt_id>/part/<int:part_number>/', views.take_test_part_view, name='take_test_part'),
     path('history/', views.exam_history_view, name='history'),

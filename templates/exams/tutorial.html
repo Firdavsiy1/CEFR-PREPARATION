@@ -1,0 +1,173 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Подготовка к тесту — {{ test.name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto px-4 sm:px-6 py-12 animate-fade-in text-center flex flex-col items-center">
+
+    <div class="w-24 h-24 bg-duo-green/15 rounded-3xl flex items-center justify-center shadow-[0_4px_0_rgba(88,204,2,0.3)] mb-8">
+        <i class="ph-fill ph-headphones text-duo-green text-6xl"></i>
+    </div>
+
+    <h1 class="text-3xl font-black text-white mb-3"><span data-i18n="tut_prep">Подготовка:</span> {{ test.name }}</h1>
+    <p class="text-duo-text-dim font-bold text-base mb-10 leading-relaxed max-w-lg" data-i18n="tut_desc">
+        Убедитесь, что вы находитесь в тихом месте. Экзамен состоит из 6 секций, прерываться или ставить на паузу таймер (60 мин) нельзя.
+    </p>
+
+    <!-- Sound Check Box -->
+    <div class="card-duo w-full p-6 sm:p-8 mb-10 flex flex-col items-center">
+        <h3 class="text-lg font-black text-white mb-2" data-i18n="tut_sound_check">Проверка звука</h3>
+        <p class="text-sm font-semibold text-duo-text-muted mb-6" data-i18n="tut_sound_desc">В тесте будет часть на аудирование. Нажмите кнопку ниже, чтобы проверить ваш звук.</p>
+
+        <!-- Custom Play Button for the test -->
+        <button type="button" id="test-sound-btn" class="w-16 h-16 rounded-[1.2rem] bg-duo-blue shadow-[0_4px_0_#1CB0F6] flex items-center justify-center flex-shrink-0 hover:translate-y-[-2px] hover:shadow-[0_6px_0_#1CB0F6] active:translate-y-[4px] active:shadow-none transition-all outline-none">
+            <i class="ph-fill ph-play text-white text-3xl" id="test-sound-icon"></i>
+        </button>
+        <span class="mt-4 text-xs font-bold text-duo-text-dim tracking-widest uppercase" id="sound-status" data-i18n="tut_play">Воспроизвести</span>
+
+        <!-- Audio Source -->
+        <audio id="test-sound-audio" preload="auto">
+            <source src="{% static 'sounds/bell.wav' %}" type="audio/wav">
+        </audio>
+    </div>
+
+    <!-- Start Action -->
+    <form action="{% url 'exams:start_test' test.id %}" method="POST" class="w-full" id="start-test-form">
+        {% csrf_token %}
+        <button type="submit" class="btn-duo-green w-full sm:w-auto text-lg !px-12 !py-4" id="start-btn" disabled>
+            <span data-i18n="tut_start_btn">Я всё слышу, Начать тест</span>
+            <i class="ph-bold ph-arrow-right ml-2"></i>
+        </button>
+        <p class="mt-4 text-xs font-bold text-duo-red hidden" id="sound-warning" data-i18n="tut_warn">Сначала проверьте звук!</p>
+    </form>
+
+</div>
+
+<!-- Fullscreen Countdown Overlay -->
+<div id="countdown-overlay" class="fixed inset-0 z-50 bg-[#131F24] flex flex-col items-center justify-center opacity-0 pointer-events-none transition-opacity duration-500">
+    <h2 class="text-3xl md:text-4xl font-black text-white mb-10 text-center drop-shadow-lg" data-i18n="tut_get_ready">Готовься</h2>
+    
+    <div class="relative w-48 h-48 md:w-56 md:h-56 flex items-center justify-center">
+        <!-- Background Circle -->
+        <svg class="w-full h-full transform -rotate-90 drop-shadow-[0_0_15px_rgba(88,204,2,0.3)]" viewBox="0 0 100 100">
+            <circle cx="50" cy="50" r="45" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="8" />
+            <!-- Animated Progress Circle -->
+            <circle id="countdown-circle" cx="50" cy="50" r="45" fill="none" stroke="#58CC02" stroke-width="8" stroke-dasharray="283" stroke-dashoffset="0" class="transition-all duration-1000 ease-linear" stroke-linecap="round" />
+        </svg>
+        <!-- Number -->
+        <div id="countdown-number" class="absolute text-7xl font-black text-white">5</div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const audio = document.getElementById('test-sound-audio');
+        const playBtn = document.getElementById('test-sound-btn');
+        const playIcon = document.getElementById('test-sound-icon');
+        const statusText = document.getElementById('sound-status');
+        const startBtn = document.getElementById('start-btn');
+        const soundWarning = document.getElementById('sound-warning');
+        
+        let soundPlayed = false;
+
+        playBtn.addEventListener('click', () => {
+            if (audio.paused) {
+                audio.play();
+            } else {
+                audio.pause();
+                audio.currentTime = 0;
+                audio.play();
+            }
+        });
+
+        audio.addEventListener('play', () => {
+            playIcon.classList.remove('ph-play');
+            playIcon.classList.add('ph-waveform');
+            playIcon.classList.add('animate-pulse');
+            statusText.setAttribute('data-i18n', 'tut_playing');
+            if (typeof _i18n !== 'undefined') {
+                const lang = '{{ current_language|default:"ru" }}';
+                if (_i18n[lang]) statusText.textContent = _i18n[lang]['tut_playing'];
+            } else {
+                statusText.textContent = 'Звучит...';
+            }
+            
+            // Mark as checked
+            soundPlayed = true;
+            startBtn.removeAttribute('disabled');
+            soundWarning.classList.add('hidden');
+        });
+
+        audio.addEventListener('ended', () => {
+            playIcon.classList.remove('ph-waveform', 'animate-pulse');
+            playIcon.classList.add('ph-check');
+            statusText.setAttribute('data-i18n', 'tut_success');
+            if (typeof _i18n !== 'undefined') {
+                const lang = '{{ current_language|default:"ru" }}';
+                if (_i18n[lang]) statusText.textContent = _i18n[lang]['tut_success'];
+            } else {
+                statusText.textContent = 'Успешно';
+            }
+            
+            playBtn.classList.remove('bg-duo-blue', 'shadow-[0_4px_0_#1CB0F6]', 'hover:shadow-[0_6px_0_#1CB0F6]');
+            playBtn.classList.add('bg-duo-green', 'shadow-[0_4px_0_#46A302]', 'hover:shadow-[0_6px_0_#46A302]');
+        });
+        
+        audio.addEventListener('pause', () => {
+            if (!soundPlayed) {
+                playIcon.classList.remove('ph-waveform', 'animate-pulse', 'ph-check');
+                playIcon.classList.add('ph-play');
+                statusText.setAttribute('data-i18n', 'tut_play');
+                if (typeof _i18n !== 'undefined') {
+                    const lang = '{{ current_language|default:"ru" }}';
+                    if (_i18n[lang]) statusText.textContent = _i18n[lang]['tut_play'];
+                } else {
+                    statusText.textContent = 'Воспроизвести';
+                }
+            }
+        });
+
+        // If they try to click disabled button
+        document.getElementById('start-test-form').addEventListener('submit', (e) => {
+            if (!soundPlayed) {
+                e.preventDefault();
+                soundWarning.classList.remove('hidden');
+                return;
+            }
+            
+            // Intercept form submission to show the countdown
+            e.preventDefault();
+            
+            const countdownOverlay = document.getElementById('countdown-overlay');
+            const countdownNumber = document.getElementById('countdown-number');
+            const countdownCircle = document.getElementById('countdown-circle');
+            
+            countdownOverlay.classList.remove('opacity-0', 'pointer-events-none');
+            
+            let current = 5;
+            countdownNumber.textContent = current;
+            countdownCircle.style.strokeDashoffset = '0';
+            
+            const interval = setInterval(() => {
+                current -= 1;
+                
+                if (current > 0) {
+                    countdownNumber.textContent = current;
+                    countdownCircle.style.strokeDashoffset = 283 - (283 * (current / 5));
+                } else if (current === 0) {
+                    countdownNumber.textContent = 'Go!';
+                    countdownNumber.classList.replace('text-7xl', 'text-5xl');
+                    countdownNumber.classList.add('text-duo-green');
+                    countdownCircle.style.strokeDashoffset = 283;
+                } else {
+                    clearInterval(interval);
+                    e.target.submit(); // Finally submit the logical form
+                }
+            }, 1000);
+        });
+    });
+</script>
+{% endblock %}

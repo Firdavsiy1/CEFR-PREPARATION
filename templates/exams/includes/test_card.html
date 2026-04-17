@@ -1,0 +1,64 @@
+<div class="card-duo p-0 flex flex-col animate-slide-up overflow-hidden group test-card-item"
+     style="animation-delay: {{ forloop.counter0 }}00ms"
+     id="test-card-{{ test.id }}"
+     data-test-name="{{ test.name|lower }}">
+
+    <!-- Card header colored strip -->
+    <div class="h-2 w-full {% cycle 'bg-duo-green' 'bg-duo-blue' 'bg-duo-gold' 'bg-duo-purple' %}"></div>
+
+    <div class="p-7 flex flex-col flex-1">
+        <!-- Test type badge & Date -->
+        <div class="flex items-center justify-between mb-5">
+            <span class="badge-duo {% if test.test_type == 'listening' %}bg-duo-blue/15 text-duo-blue border border-duo-blue/25{% elif test.test_type == 'reading' %}bg-duo-green/15 text-duo-green border border-duo-green/25{% elif test.test_type == 'writing' %}bg-duo-purple/15 text-duo-purple border border-duo-purple/25{% else %}bg-duo-gold/15 text-duo-gold border border-duo-gold/25{% endif %}">
+                {% if test.test_type == 'listening' %}
+                <i class="ph-fill ph-headphones"></i>
+                {% elif test.test_type == 'reading' %}
+                <i class="ph-fill ph-book-open-text"></i>
+                {% elif test.test_type == 'writing' %}
+                <i class="ph-fill ph-pencil-line"></i>
+                {% else %}
+                <i class="ph-fill ph-microphone-stage"></i>
+                {% endif %}
+                {{ test.get_test_type_display }}
+            </span>
+            <span class="text-xs text-duo-text-muted font-bold">{{ test.created_at|date:"d M Y" }}</span>
+        </div>
+
+        <!-- Test name -->
+        <h2 class="text-xl font-black text-white mb-5 group-hover:text-duo-green transition-colors duration-200">
+            {{ test.name }}
+        </h2>
+
+        <!-- Stats -->
+        <div class="flex flex-col gap-3 mb-6 text-sm font-bold text-duo-text-dim">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-xl bg-duo-surface-2 flex items-center justify-center">
+                    <i class="ph-fill ph-stack text-duo-blue text-base"></i>
+                </div>
+                {{ test.parts.count }} <span data-i18n="card_sections">секций</span>
+            </div>
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-xl bg-duo-surface-2 flex items-center justify-center">
+                    <i class="ph-fill ph-chat-centered-dots text-duo-gold text-base"></i>
+                </div>
+                {{ test.total_questions }} <span data-i18n="card_questions">вопросов</span>
+            </div>
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-xl bg-duo-surface-2 flex items-center justify-center">
+                    <i class="ph-fill ph-star text-duo-purple text-base"></i>
+                </div>
+                {{ test.max_possible_score|floatformat:0 }} <span data-i18n="card_pts_max">баллов макс.</span>
+            </div>
+        </div>
+
+        <!-- Action -->
+        <div class="mt-auto pt-5 border-t-2 border-duo-border">
+            <a href="{% url 'exams:test_tutorial' test.id %}"
+               class="btn-duo-green w-full text-sm"
+               id="start-test-{{ test.id }}">
+                <span data-i18n="card_start">НАЧАТЬ ТЕСТ</span>
+                <i class="ph-bold ph-arrow-right"></i>
+            </a>
+        </div>
+    </div>
+</div>

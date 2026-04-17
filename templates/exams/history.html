@@ -1,178 +1,213 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}Exam History — CEFR Exam Prep{% endblock %}
+{% block title %}Прогресс — CEFR Prep{% endblock %}
 
 {% block content %}
-<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-    <!-- Header Banner -->
-    <div class="relative w-full h-[320px] mb-16 rounded-2xl overflow-hidden shadow-2xl animate-fade-in group">
-        <img src="{% static 'images/history_banner.png' %}" alt="Exam History Banner" class="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:opacity-80 transition-opacity duration-1000">
-        <div class="absolute inset-0 bg-gradient-to-t from-[#0B0F19] via-[#0B0F19]/60 to-[#0B0F19]/20 pointer-events-none"></div>
-        <div class="absolute inset-0 flex flex-col items-center justify-center text-center px-6">
-            <h1 class="text-4xl md:text-5xl lg:text-6xl font-display font-bold text-white mb-6 animate-slide-up drop-shadow-lg">
-                Your Exam History
-            </h1>
-            <p class="text-lg text-slate-300 max-w-2xl mx-auto font-medium leading-relaxed animate-slide-up drop-shadow-md" style="animation-delay: 150ms;">
-                Review your past test attempts and track your progress over time.
-            </p>
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+
+    <!-- Header -->
+    <div class="card-duo p-8 mb-10 animate-fade-in !border-duo-gold/30 relative overflow-hidden">
+        <div class="absolute -top-20 -right-20 w-60 h-60 bg-duo-gold/5 rounded-full blur-3xl pointer-events-none"></div>
+        <div class="relative flex flex-col md:flex-row items-center gap-6">
+            <div class="w-20 h-20 rounded-2xl flex items-center justify-center bg-duo-gold shadow-[0_4px_0_#E5B400] flex-shrink-0 animate-bounce-in">
+                <i class="ph-fill ph-trophy text-[#3C3100] text-4xl"></i>
+            </div>
+            <div class="text-center md:text-left">
+                <h1 class="text-3xl md:text-4xl font-black text-white mb-2" data-i18n="hist_title">
+                    Твой прогресс 🏆
+                </h1>
+                <p class="text-duo-text-dim font-semibold text-base max-w-xl" data-i18n="hist_subtitle">
+                    Отслеживай свои результаты и смотри как ты растёшь с каждым экзаменом.
+                </p>
+            </div>
         </div>
     </div>
 
     {% if show_categories %}
     <!-- Category Selection -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 animate-slide-up">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 animate-slide-up">
         {% for cat in categories %}
-        <div class="relative group h-[400px] rounded-[2rem] overflow-hidden border border-white/[0.08] shadow-2xl transition-all duration-500 hover:scale-[1.02] hover:border-indigo-500/50">
+        <div class="card-duo overflow-hidden group relative {% if not cat.active %}opacity-60{% endif %}" style="animation-delay: {{ forloop.counter0 }}50ms">
             <!-- Background Image -->
-            <img src="{% static cat.image %}" alt="{{ cat.name }}" class="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110 {% if not cat.active %}grayscale opacity-20{% else %}opacity-40 group-hover:opacity-60{% endif %}">
-            
-            <!-- Overlay -->
-            <div class="absolute inset-0 bg-gradient-to-t from-brand-950 via-brand-950/40 to-transparent"></div>
-            
-            <!-- Content -->
-            <div class="absolute inset-0 p-8 flex flex-col justify-end">
-                <h2 class="text-3xl font-display font-bold text-white mb-2">{{ cat.name }}</h2>
-                {% if cat.active %}
-                <p class="text-sm text-slate-400 mb-6 font-medium">Review your progress and test scores in {{ cat.name|lower }}.</p>
-                <a href="{% url 'exams:history_category' cat.id %}" class="w-full py-4 bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl text-white font-bold text-center hover:bg-white hover:text-brand-950 transition-all duration-300">
-                    Enter History
-                </a>
-                {% else %}
-                <p class="text-sm text-indigo-400/80 mb-6 font-bold uppercase tracking-widest">Available Soon</p>
-                <div class="w-full py-4 bg-white/5 border border-white/5 rounded-2xl text-slate-500 font-bold text-center cursor-not-allowed">
-                    Locked
+            <div class="relative h-[350px]">
+                <img src="{% static cat.image %}?v=2" alt="{{ cat.name }}" class="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110 {% if not cat.active %}grayscale opacity-20{% else %}opacity-90 group-hover:opacity-100{% endif %}">
+
+                <!-- Overlay: Stronger bottom gradient -->
+                <div class="absolute inset-0 bg-gradient-to-t from-duo-surface via-duo-surface/80 to-transparent"></div>
+
+                <!-- Content -->
+                <div class="absolute inset-0 p-6 flex flex-col justify-end">
+                    <!-- Category icon -->
+                    <div class="w-14 h-14 rounded-2xl flex items-center justify-center mb-4 shadow-[0_3px_0_rgba(0,0,0,0.3)]
+                        {% if cat.id == 'listening' %}bg-duo-blue
+                        {% elif cat.id == 'reading' %}bg-duo-green
+                        {% elif cat.id == 'writing' %}bg-duo-purple
+                        {% else %}bg-duo-gold{% endif %}">
+                        {% if cat.id == 'listening' %}<i class="ph-fill ph-headphones text-white text-2xl"></i>
+                        {% elif cat.id == 'reading' %}<i class="ph-fill ph-book-open-text text-white text-2xl"></i>
+                        {% elif cat.id == 'writing' %}<i class="ph-fill ph-pencil-line text-white text-2xl"></i>
+                        {% else %}<i class="ph-fill ph-microphone-stage text-[#3C3100] text-2xl"></i>{% endif %}
+                    </div>
+
+                    <h2 class="text-2xl font-black text-white mb-1.5">{{ cat.name }}</h2>
+                    {% if cat.active %}
+                    <p class="text-sm text-duo-text-dim font-semibold mb-5"><span data-i18n="hist_view_prog">Смотри свой прогресс в</span> {{ cat.name|lower }}</p>
+                    <a href="{% url 'exams:history_category' cat.id %}" class="btn-duo-green w-full text-sm !py-3">
+                        <span data-i18n="hist_btn_open">Открыть</span>
+                        <i class="ph-bold ph-arrow-right"></i>
+                    </a>
+                    {% else %}
+                    <p class="text-sm text-duo-gold font-extrabold uppercase tracking-widest mb-5" data-i18n="dash_soon">Скоро</p>
+                    <div class="btn-duo-outline w-full !cursor-not-allowed !opacity-50 text-sm !py-3">
+                        <i class="ph-fill ph-lock"></i>
+                        <span data-i18n="hist_locked">Заблокировано</span>
+                    </div>
+                    {% endif %}
+                </div>
+
+                {% if not cat.active %}
+                <div class="absolute top-4 right-4">
+                    <div class="w-10 h-10 rounded-xl bg-duo-surface border-2 border-duo-border flex items-center justify-center">
+                        <i class="ph-fill ph-lock text-duo-text-muted"></i>
+                    </div>
                 </div>
                 {% endif %}
             </div>
-
-            {% if not cat.active %}
-            <div class="absolute top-6 right-6">
-                <div class="w-10 h-10 rounded-full bg-black/40 backdrop-blur-md border border-white/10 flex items-center justify-center">
-                    <i class="ph ph-lock text-slate-500"></i>
-                </div>
-            </div>
-            {% endif %}
         </div>
         {% endfor %}
     </div>
 
     {% else %}
     <!-- Specific Category History -->
-    <div class="mb-10">
-        <a href="{% url 'exams:history' %}" class="inline-flex items-center gap-2 text-sm font-medium text-slate-400 hover:text-white transition-colors">
-            <i class="ph ph-arrow-left"></i> Back to Categories
+    <div class="mb-8">
+        <a href="{% url 'exams:history' %}" class="btn-duo-outline text-xs !py-2 !px-4">
+            <i class="ph-bold ph-arrow-left"></i>
+            <span data-i18n="hist_back_cat">Назад к категориям</span>
         </a>
     </div>
 
     {% if attempts %}
     <!-- Global Statistics -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mb-8">
         {% if best_overall %}
-        <div class="bg-white/[0.02] backdrop-blur-2xl rounded-2xl border border-white/[0.08] p-6 shadow-[0_8px_30px_rgb(0,0,0,0.12)] flex items-center gap-5">
-            <div class="w-12 h-12 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
-                <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.562.562 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.562.562 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z" /></svg>
+        <div class="card-duo p-5 flex items-center gap-4">
+            <div class="w-12 h-12 rounded-2xl bg-duo-green/15 border-2 border-duo-green/30 flex items-center justify-center">
+                <i class="ph-fill ph-star text-duo-green text-xl"></i>
             </div>
             <div>
-                <span class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Best Overall Attempt</span>
-                <span class="block text-xl font-display font-bold text-white">{{ best_overall.score_percentage }}% <span class="text-xs text-slate-400 font-sans font-normal ml-1">in {{ best_overall.time_formatted }}</span></span>
+                <span class="block text-[10px] font-extrabold text-duo-text-muted uppercase tracking-widest mb-0.5" data-i18n="hist_best_res">Лучший результат</span>
+                <span class="block text-xl font-black text-white">{{ best_overall.score_percentage }}% <span class="text-xs text-duo-text-dim font-bold ml-1"><span data-i18n="hist_for">за</span> {{ best_overall.time_formatted }}</span></span>
             </div>
         </div>
         {% endif %}
 
-        <div class="bg-white/[0.02] backdrop-blur-2xl rounded-2xl border border-white/[0.08] p-6 shadow-[0_8px_30px_rgb(0,0,0,0.12)] flex items-center gap-5">
-            <div class="w-12 h-12 rounded-full bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
-                <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+        <div class="card-duo p-5 flex items-center gap-4">
+            <div class="w-12 h-12 rounded-2xl bg-duo-blue/15 border-2 border-duo-blue/30 flex items-center justify-center">
+                <i class="ph-fill ph-chart-line-up text-duo-blue text-xl"></i>
             </div>
             <div>
-                <span class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Total Assessments</span>
-                <span class="block text-xl font-display font-bold text-white">{{ attempts|length }} <span class="text-xs text-slate-400 font-sans font-normal ml-1">completed</span></span>
+                <span class="block text-[10px] font-extrabold text-duo-text-muted uppercase tracking-widest mb-0.5" data-i18n="hist_total_att">Всего попыток</span>
+                <span class="block text-xl font-black text-white">{{ attempts|length }} <span class="text-xs text-duo-text-dim font-bold ml-1" data-i18n="hist_completed">завершено</span></span>
             </div>
         </div>
     </div>
 
     {% if best_parts %}
-    <h3 class="text-lg font-display font-bold text-white mb-4">Personal Best by Section</h3>
-    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-12">
+    <h3 class="text-lg font-black text-white mb-4 flex items-center gap-2">
+        <i class="ph-fill ph-medal text-duo-gold"></i>
+        <span data-i18n="hist_best_sects">Лучшие по секциям</span>
+    </h3>
+    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-10">
         {% for bp in best_parts %}
-        <div class="bg-white/[0.02] backdrop-blur-2xl rounded-xl border border-white/[0.08] p-4 text-center shadow-[0_4px_15px_rgb(0,0,0,0.1)] hover:bg-white/[0.05] transition-colors">
-            <span class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Part {{ bp.part.part_number }}</span>
-            <span class="block text-xl font-display font-bold {% if bp.pct >= 70 %}text-emerald-400{% elif bp.pct >= 50 %}text-amber-400{% else %}text-rose-400{% endif %}">{{ bp.pct|floatformat:0 }}%</span>
-            <span class="block text-[9px] text-slate-500 uppercase tracking-widest mt-1">{{ bp.attempt.test.name }}</span>
+        <div class="card-duo p-4 text-center !hover:transform-none">
+            <span class="block text-[10px] font-extrabold text-duo-text-muted uppercase tracking-widest mb-1"><span data-i18n="hist_part">Часть</span> {{ bp.part.part_number }}</span>
+            <span class="block text-xl font-black {% if bp.pct >= 70 %}text-duo-green{% elif bp.pct >= 50 %}text-duo-gold{% else %}text-duo-red{% endif %}">{{ bp.pct|floatformat:0 }}%</span>
+            <span class="block text-[9px] text-duo-text-muted uppercase tracking-widest mt-1 font-bold">{{ bp.attempt.test.name }}</span>
         </div>
         {% endfor %}
     </div>
     {% endif %}
 
     {% if attempts %}
-    <h3 class="text-lg font-display font-bold text-white mb-4 mt-4">Progress Overview</h3>
-    <div class="bg-white/[0.02] backdrop-blur-2xl rounded-[1.5rem] p-6 border border-white/[0.08] shadow-[0_8px_30px_rgb(0,0,0,0.12)] mb-12">
+    <h3 class="text-lg font-black text-white mb-4 flex items-center gap-2">
+        <i class="ph-fill ph-chart-line text-duo-blue"></i>
+        <span data-i18n="hist_overview">Обзор прогресса</span>
+    </h3>
+    <div class="card-duo p-6 mb-10">
         <div class="relative h-64 w-full">
             <canvas id="progressChart"></canvas>
         </div>
     </div>
     {% endif %}
 
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {% for attempt in attempts %}
-        <div class="bg-white/[0.02] backdrop-blur-2xl rounded-[1.5rem] p-8 border border-white/[0.08] shadow-[0_8px_30px_rgb(0,0,0,0.12)] hover:border-indigo-500/50 hover:shadow-[0_8px_30px_rgba(99,102,241,0.15)] transition-all duration-500 hover:-translate-y-1 group flex flex-col animate-slide-up"
+        <div class="card-duo p-0 flex flex-col overflow-hidden animate-slide-up group"
              style="animation-delay: {{ forloop.counter0 }}00ms">
-            
-            <div class="flex items-center justify-between mb-6">
-                <span class="inline-flex items-center gap-2 px-3 py-1 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 text-xs font-bold uppercase tracking-widest shadow-[0_0_10px_rgba(99,102,241,0.1)]">
-                    <i class="ph ph-calendar-blank text-sm"></i>
-                    {{ attempt.started_at|date:"M d, Y" }}
-                </span>
-                
-                <!-- Score Percentage Badge -->
-                <span class="inline-flex items-center px-3 py-1 rounded-sm text-xs font-bold uppercase tracking-widest
-                    {% if attempt.score_percentage >= 70 %}bg-emerald-500/10 text-emerald-400 border border-emerald-500/20
-                    {% elif attempt.score_percentage >= 50 %}bg-amber-500/10 text-amber-400 border border-amber-500/20
-                    {% else %}bg-rose-500/10 text-rose-400 border border-rose-500/20{% endif %}">
-                    {{ attempt.score_percentage }}%
-                </span>
-            </div>
 
-            <h2 class="text-2xl font-display font-bold text-white mb-2 group-hover:text-accent transition-colors duration-200">{{ attempt.test.name }}</h2>
-            <p class="text-sm text-slate-500 mb-6 font-medium uppercase tracking-wide">{{ attempt.test.get_test_type_display }} Exam</p>
+            <!-- Score strip at top -->
+            <div class="h-2 w-full
+                {% if attempt.score_percentage >= 70 %}bg-duo-green
+                {% elif attempt.score_percentage >= 50 %}bg-duo-gold
+                {% else %}bg-duo-red{% endif %}"></div>
 
-            <div class="grid grid-cols-3 gap-3 mb-8">
-                <div class="p-3 rounded-xl bg-white/[0.02] border border-white/[0.05] shadow-inner text-center">
-                    <span class="block text-slate-500 mb-1 text-[9px] uppercase tracking-widest font-bold">Points</span>
-                    <span class="font-display font-bold text-lg text-white">{{ attempt.total_score }}<span class="text-slate-500 font-sans text-xs font-normal">/{{ attempt.max_possible_score }}</span></span>
-                </div>
-                <div class="p-3 rounded-xl bg-white/[0.02] border border-white/[0.05] shadow-inner text-center">
-                    <span class="block text-slate-500 mb-1 text-[9px] uppercase tracking-widest font-bold">Correct</span>
-                    <span class="font-display font-bold text-lg text-white">{{ attempt.total_correct }}<span class="text-slate-500 font-sans text-xs font-normal">/{{ attempt.total_questions }}</span></span>
-                </div>
-                <div class="p-3 rounded-xl bg-white/[0.02] border border-white/[0.05] shadow-inner text-center">
-                    <span class="block text-slate-500 mb-1 text-[9px] uppercase tracking-widest font-bold">Time</span>
-                    <span class="font-display font-bold text-lg text-white">{{ attempt.time_formatted }}</span>
-                </div>
-            </div>
+            <div class="p-7 flex flex-col flex-1">
+                <div class="flex items-center justify-between mb-5">
+                    <span class="badge-duo bg-duo-surface-2 text-duo-text-dim border border-duo-border">
+                        <i class="ph-fill ph-calendar-blank"></i>
+                        {{ attempt.started_at|date:"d M Y" }}
+                    </span>
 
-            <!-- Action -->
-            <div class="mt-auto pt-6 border-t border-white/[0.08]">
-                <a href="{% url 'exams:test_result' attempt.id %}" 
-                   class="inline-flex items-center justify-center w-full bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-bold px-4 py-3 rounded-xl shadow-[0_0_20px_rgba(99,102,241,0.2)] hover:shadow-[0_0_30px_rgba(99,102,241,0.4)] hover:scale-[1.02] transition-all duration-300 group/btn">
-                    <span>Detailed Results</span>
-                    <i class="ph-bold ph-arrow-right ml-2 transform group-hover/btn:translate-x-1 transition-transform"></i>
-                </a>
+                    <!-- Score Badge -->
+                    <span class="badge-duo
+                        {% if attempt.score_percentage >= 70 %}bg-duo-green/15 text-duo-green border border-duo-green/30
+                        {% elif attempt.score_percentage >= 50 %}bg-duo-gold/15 text-duo-gold border border-duo-gold/30
+                        {% else %}bg-duo-red/15 text-duo-red border border-duo-red/30{% endif %}">
+                        {{ attempt.score_percentage }}%
+                    </span>
+                </div>
+
+                <h2 class="text-xl font-black text-white mb-1 group-hover:text-duo-green transition-colors duration-200">{{ attempt.test.name }}</h2>
+                <p class="text-sm text-duo-text-muted mb-5 font-bold uppercase tracking-wide">{{ attempt.test.get_test_type_display }}</p>
+
+                <div class="grid grid-cols-3 gap-2 mb-6">
+                    <div class="p-3 rounded-xl bg-duo-surface-2/50 border border-duo-border text-center">
+                        <span class="block text-duo-text-muted mb-0.5 text-[9px] uppercase tracking-widest font-extrabold" data-i18n="hist_points">Баллы</span>
+                        <span class="font-black text-lg text-white">{{ attempt.total_score }}<span class="text-duo-text-muted text-xs font-bold">/{{ attempt.max_possible_score }}</span></span>
+                    </div>
+                    <div class="p-3 rounded-xl bg-duo-surface-2/50 border border-duo-border text-center">
+                        <span class="block text-duo-text-muted mb-0.5 text-[9px] uppercase tracking-widest font-extrabold" data-i18n="hist_correct">Верно</span>
+                        <span class="font-black text-lg text-white">{{ attempt.total_correct }}<span class="text-duo-text-muted text-xs font-bold">/{{ attempt.total_questions }}</span></span>
+                    </div>
+                    <div class="p-3 rounded-xl bg-duo-surface-2/50 border border-duo-border text-center">
+                        <span class="block text-duo-text-muted mb-0.5 text-[9px] uppercase tracking-widest font-extrabold" data-i18n="hist_time">Время</span>
+                        <span class="font-black text-lg text-white">{{ attempt.time_formatted }}</span>
+                    </div>
+                </div>
+
+                <div class="mt-auto pt-5 border-t-2 border-duo-border">
+                    <a href="{% url 'exams:test_result' attempt.id %}"
+                       class="btn-duo-blue w-full text-sm">
+                        <span data-i18n="hist_details">Подробности</span>
+                        <i class="ph-bold ph-arrow-right"></i>
+                    </a>
+                </div>
             </div>
         </div>
         {% endfor %}
     </div>
     {% else %}
     <!-- Empty state -->
-    <div class="bg-white/[0.02] backdrop-blur-2xl rounded-[2rem] border border-white/[0.08] p-16 text-center max-w-2xl mx-auto shadow-2xl animate-fade-in">
-        <div class="w-20 h-20 mx-auto mb-6 rounded-full bg-indigo-500/10 border border-indigo-500/20 shadow-[0_0_30px_rgba(99,102,241,0.15)] flex items-center justify-center">
-            <i class="ph ph-folder text-4xl text-indigo-400"></i>
+    <div class="card-duo p-14 text-center max-w-lg mx-auto animate-fade-in">
+        <div class="w-24 h-24 mx-auto mb-6 rounded-2xl flex items-center justify-center bg-duo-surface-2 border-2 border-duo-border">
+            <i class="ph-fill ph-folder-open text-5xl text-duo-text-muted"></i>
         </div>
-        <h2 class="text-2xl font-display font-bold text-white mb-3">No Exam History</h2>
-        <p class="text-slate-400 font-light mb-8">You haven't taken any tests yet.</p>
-        <a href="{% url 'exams:dashboard' %}" class="inline-flex items-center justify-center bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-bold px-6 py-3.5 rounded-xl shadow-[0_0_20px_rgba(99,102,241,0.2)] hover:shadow-[0_0_30px_rgba(99,102,241,0.4)] hover:scale-[1.02] transition-all duration-300 group/btn">
-            <span>Browse Available Tests</span>
-            <i class="ph-bold ph-arrow-right ml-2 transform group-hover/btn:translate-x-1 transition-transform"></i>
+        <h2 class="text-xl font-black text-white mb-2" data-i18n="hist_empty_title">Пока пусто</h2>
+        <p class="text-duo-text-dim font-semibold text-sm mb-6" data-i18n="hist_empty_desc">Ты ещё не проходил тестов. Самое время начать!</p>
+        <a href="{% url 'exams:dashboard' %}" class="btn-duo-green">
+            <span data-i18n="hist_start_prac">Начать практику</span>
+            <i class="ph-bold ph-arrow-right"></i>
         </a>
     </div>
     {% endif %}
@@ -195,16 +230,16 @@ document.addEventListener("DOMContentLoaded", function() {
         data: {
             labels: labels,
             datasets: [{
-                label: 'Overall Score (%)',
+                label: 'Результат (%)',
                 data: dataNum,
-                borderColor: '#10b981', // emerald-400
-                backgroundColor: 'rgba(16, 185, 129, 0.1)',
-                borderWidth: 2,
-                pointBackgroundColor: '#06080D',
-                pointBorderColor: '#10b981',
-                pointBorderWidth: 2,
-                pointRadius: 4,
-                pointHoverRadius: 6,
+                borderColor: '#58CC02',
+                backgroundColor: 'rgba(88, 204, 2, 0.08)',
+                borderWidth: 3,
+                pointBackgroundColor: '#131F24',
+                pointBorderColor: '#58CC02',
+                pointBorderWidth: 3,
+                pointRadius: 5,
+                pointHoverRadius: 7,
                 fill: true,
                 tension: 0.4
             }]
@@ -213,17 +248,18 @@ document.addEventListener("DOMContentLoaded", function() {
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
-                legend: {
-                    display: false
-                },
+                legend: { display: false },
                 tooltip: {
-                    backgroundColor: 'rgba(6, 8, 13, 0.9)',
-                    titleColor: '#94a3b8',
-                    bodyColor: '#fff',
-                    borderColor: 'rgba(255, 255, 255, 0.1)',
-                    borderWidth: 1,
-                    padding: 10,
+                    backgroundColor: '#1A2F35',
+                    titleColor: '#8BA5AE',
+                    bodyColor: '#FFFFFF',
+                    borderColor: '#2B4D56',
+                    borderWidth: 2,
+                    padding: 12,
+                    cornerRadius: 12,
                     displayColors: false,
+                    titleFont: { family: 'Nunito', weight: '700' },
+                    bodyFont: { family: 'Nunito', weight: '800', size: 14 },
                     callbacks: {
                         label: function(context) {
                             return context.parsed.y + '%';
@@ -236,24 +272,21 @@ document.addEventListener("DOMContentLoaded", function() {
                     suggestedMin: 0,
                     suggestedMax: 100,
                     grid: {
-                        color: 'rgba(255, 255, 255, 0.05)',
+                        color: 'rgba(43, 77, 86, 0.4)',
                         drawBorder: false
                     },
                     ticks: {
-                        color: '#64748b',   // slate-500
-                        font: { family: 'Outfit', size: 11 },
+                        color: '#56717A',
+                        font: { family: 'Nunito', size: 11, weight: '700' },
                         stepSize: 20,
                         callback: function(value) { return value + '%' }
                     }
                 },
                 x: {
-                    grid: {
-                        display: false,
-                        drawBorder: false
-                    },
+                    grid: { display: false, drawBorder: false },
                     ticks: {
-                        color: '#64748b',
-                        font: { family: 'Outfit', size: 11 },
+                        color: '#56717A',
+                        font: { family: 'Nunito', size: 11, weight: '700' },
                         maxRotation: 45,
                         minRotation: 0
                     }

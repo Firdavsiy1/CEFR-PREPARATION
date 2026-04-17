@@ -9,6 +9,7 @@ Views:
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db import transaction
+from django.db.models import Count
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 import json
@@ -21,8 +22,8 @@ from .models import Test, Question, UserAttempt, UserAnswer
 # ---------------------------------------------------------------------------
 
 @login_required
-def dashboard_view(request):
-    """Display all active tests so the student can choose one."""
+def dashboard_view(request, category=None):
+    """Display categories or tests within a category."""
     
     # Auto-cleanup abandoned tests for this user (older than 2 hours)
     cutoff = timezone.now() - timezone.timedelta(hours=2)
@@ -32,12 +33,40 @@ def dashboard_view(request):
         started_at__lt=cutoff
     ).delete()
 
-    tests = (
-        Test.objects
-        .filter(is_active=True)
-        .prefetch_related('parts__questions')
-    )
-    return render(request, 'exams/dashboard.html', {'tests': tests})
+    categories = [
+        {'id': 'listening', 'name': 'Listening', 'active': True, 'image': 'images/listening_card.png'},
+        {'id': 'reading', 'name': 'Reading', 'active': False, 'image': 'images/reading_card.png'},
+        {'id': 'writing', 'name': 'Writing', 'active': False, 'image': 'images/writing_card.png'},
+        {'id': 'speaking', 'name': 'Speaking', 'active': False, 'image': 'images/speaking_card.png'},
+    ]
+
+    context = {
+        'show_categories': category is None,
+        'categories': categories,
+    }
+
+    if category:
+        tests = (
+            Test.objects
+            .filter(is_active=True, test_type=category)
+            .annotate(num_parts=Count('parts'))
+            .prefetch_related('parts__questions')
+            .order_by('-pk')
+        )
+        
+        full_tests = [t for t in tests if t.num_parts >= 6]
+        micro_tests = [t for t in tests if t.num_parts > 0 and t.num_parts < 6]
+        
+        category_name = next((c['name'] for c in categories if c['id'] == category), category.capitalize())
+        
+        context.update({
+            'full_tests': full_tests,
+            'micro_tests': micro_tests,
+            'category_id': category,
+            'category_name': category_name,
+        })
+
+    return render(request, 'exams/dashboard.html', context)
 
 
 # ---------------------------------------------------------------------------
@@ -45,9 +74,17 @@ def dashboard_view(request):
 # ---------------------------------------------------------------------------
 
 @login_required
+def test_tutorial_view(request, test_id):
+    """
+    Displays a tutorial and sound check page before starting the actual test.
+    """
+    test = get_object_or_404(Test, pk=test_id, is_active=True)
+    return render(request, 'exams/tutorial.html', {'test': test})
+
+@login_required
 def start_test_view(request, test_id):
     """
-    Creates a new UserAttempt and redirects to Part 1.
+    Creates a new UserAttempt and redirects to the first available part.
     """
     test = get_object_or_404(Test, pk=test_id, is_active=True)
     
@@ -57,7 +94,12 @@ def start_test_view(request, test_id):
         test=test
     )
     
-    return redirect('exams:take_test_part', attempt_id=attempt.id, part_number=1)
+    first_part = test.parts.order_by('part_number').first()
+    if first_part:
+        return redirect('exams:take_test_part', attempt_id=attempt.id, part_number=first_part.part_number)
+    
+    # Edge case: test has zero parts
+    return _finalize_test(request, attempt)
 
 
 @login_required
@@ -89,6 +131,16 @@ def take_test_part_view(request, attempt_id, part_number):
         # If part doesn't exist, just finalize (or redirect to dashboard)
         return _finalize_test(request, attempt)
 
+    # Determine all parts to support dynamic lengths
+    all_parts = list(test.parts.all().order_by('part_number'))
+    part_numbers = [p.part_number for p in all_parts]
+    try:
+        current_idx = part_numbers.index(part_number)
+    except ValueError:
+        return _finalize_test(request, attempt)
+        
+    next_part_number = part_numbers[current_idx + 1] if current_idx + 1 < len(part_numbers) else None
+
     if request.method == 'POST':
         # Save answers for CURRENT part questions only
         questions = part.questions.all()
@@ -104,8 +156,8 @@ def take_test_part_view(request, attempt_id, part_number):
             )
         
         # Determine next step
-        if part_number < 6:
-            return redirect('exams:take_test_part', attempt_id=attempt.id, part_number=part_number + 1)
+        if next_part_number:
+            return redirect('exams:take_test_part', attempt_id=attempt.id, part_number=next_part_number)
         else:
             return _finalize_test(request, attempt)
 
@@ -118,6 +170,10 @@ def take_test_part_view(request, attempt_id, part_number):
         'test': test,
         'part': part_with_data,
         'part_number': part_number,
+        'all_parts': all_parts,
+        'next_part_number': next_part_number,
+        'total_parts': len(all_parts),
+        'current_part_num': current_idx + 1,
         'time_remaining': time_remaining_seconds,
         'endtime_iso': (attempt.started_at + timezone.timedelta(hours=1)).isoformat(),
     }

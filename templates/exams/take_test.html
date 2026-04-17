@@ -1,71 +1,158 @@
 {% extends "base.html" %}
 {% load exam_filters %}
 
-{% block title %}Part {{ part_number }} — {{ test.name }}{% endblock %}
+{% block title %}Часть {{ part_number }} — {{ test.name }}{% endblock %}
 
 {% block extra_head %}
 <style>
-    .passage-text { line-height: 2.2; font-size: 1.1rem; color: #E5E7EB; } /* text-gray-200 */
-    .passage-text input { border-bottom: 1px solid #6B7280; background: transparent; padding: 0 0.5rem; color: #F9FAFB; font-weight: 500; text-align: center; } /* text-gray-50 */
-    .passage-text input:focus { outline: none; border-bottom: 2px solid #6366f1; }
-    
+    /* Focus Mode: Hide the global navbar */
+    body > nav { display: none !important; }
+    body > main { padding-top: 0 !important; }
+
+    /* Custom Scrollbar for dropdowns */
+    .dropdown-scroll::-webkit-scrollbar { width: 6px; }
+    .dropdown-scroll::-webkit-scrollbar-track { background: transparent; }
+    .dropdown-scroll::-webkit-scrollbar-thumb { background: #2B4D56; border-radius: 99px; }
+    .dropdown-scroll::-webkit-scrollbar-thumb:hover { background: #58CC02; }
+
+    .passage-text { line-height: 2.2; font-size: 1.05rem; color: #FFFFFF; font-weight: 600; }
+    .passage-text input {
+        border-bottom: 2px solid #2B4D56;
+        background: transparent;
+        padding: 2px 8px;
+        color: #58CC02;
+        font-weight: 800;
+        text-align: center;
+        font-family: 'Nunito', sans-serif;
+        transition: border-color 0.15s;
+    }
+    .passage-text input:focus {
+        outline: none;
+        border-bottom-color: #58CC02;
+    }
+
     .timer-badge { font-variant-numeric: tabular-nums; }
-    
-    @keyframes pulse-gold {
-        0%, 100% { color: #F9FAFB; border-color: rgba(255,255,255,0.1); }
-        50% { color: #ef4444; border-color: rgba(239, 68, 68, 0.4); }
+
+    @keyframes pulse-danger {
+        0%, 100% { color: #FFFFFF; border-color: #2B4D56; }
+        50% { color: #FF4B4B; border-color: #FF4B4B; }
     }
     .timer-critical {
-        animation: pulse-gold 1.5s infinite;
-        font-weight: 700;
+        animation: pulse-danger 1s infinite;
+    }
+
+    /* Progress bar */
+    .progress-track {
+        height: 16px;
+        background: #1A2F35;
+        border-radius: 99px;
+        overflow: hidden;
+        border: 2px solid #2B4D56;
+    }
+    .progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #58CC02, #7FE034);
+        border-radius: 99px;
+        transition: width 0.5s ease;
+        box-shadow: 0 0 8px rgba(88, 204, 2, 0.3);
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+<div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mt-6">
 
     <!-- Header / Progress & Timer -->
-    <div class="bg-brand-900 border text-center relative border-white/5 shadow-lg rounded-xl py-6 px-8 mb-10 flex flex-col md:flex-row items-center justify-between gap-6">
-        <div class="flex items-center gap-6">
-            <div class="w-14 h-14 rounded-full border border-white/10 bg-white/[0.02] flex items-center justify-center font-display font-bold text-2xl text-white">
-                {{ part_number }}
+    <div class="card-duo p-5 mb-8 animate-fade-in sticky top-4 z-40 shadow-2xl">
+        <div class="flex flex-col md:flex-row items-center justify-between gap-4 mb-4">
+            <div class="flex items-center gap-4">
+                <div class="w-12 h-12 rounded-2xl bg-duo-green/15 border border-duo-green/30 flex items-center justify-center font-black text-xl text-duo-green">
+                    {{ current_part_num }}
+                </div>
+                <div>
+                    <h1 class="text-xl font-black text-white">{{ test.name }}</h1>
+                    <p class="text-xs font-bold text-duo-text-muted uppercase tracking-wide mt-0.5">
+                        <span data-i18n="tt_section">Секция</span> {{ current_part_num }}
+                        <span data-i18n="tt_of">из</span> {{ total_parts }} ·
+                        <span data-i18n="tt_exam_section">{{ part.get_part_type_display|default:"Экзаменационная секция" }}</span>
+                    </p>
+                </div>
             </div>
-            <div class="text-left">
-                <h1 class="text-2xl font-display font-bold text-white">{{ test.name }}</h1>
-                <p class="text-sm font-medium text-slate-400 tracking-wide uppercase mt-1">Section {{ part_number }} of 6 &middot; {{ part.get_part_type_display|default:"Assessment Section" }}</p>
+
+            <!-- Timer -->
+            <div class="flex items-center gap-2.5 px-4 py-2.5 rounded-2xl bg-white/5 border border-white/10" id="timer-container">
+                <i class="ph-fill ph-timer text-duo-gold text-xl"></i>
+                <div id="timer" class="timer-badge text-xl font-black tracking-tight text-white">
+                    --:--
+                </div>
             </div>
         </div>
 
-        <!-- Timer -->
-        <div class="flex items-center gap-3 px-5 py-2.5 rounded border border-white/10 bg-white/[0.02]" id="timer-container">
-            <i class="ph ph-timer text-slate-400 text-xl"></i>
-            <div id="timer" class="timer-badge text-xl font-medium tracking-tight text-white">
-                --:--
+        <!-- Progress bar -->
+        <div class="progress-track">
+            <div class="progress-fill" style="width: {% widthratio current_part_num total_parts 100 %}%"></div>
+        </div>
+        <div class="flex items-center justify-between mt-2">
+            {% for p in all_parts %}
+            <div class="w-6 h-6 rounded-full flex items-center justify-center text-xs font-black
+                {% if p.part_number <= part_number %}bg-duo-green text-white{% else %}bg-duo-surface-2 text-duo-text-muted border border-duo-border{% endif %}">
+                {% if p.part_number < part_number %}
+                <i class="ph-bold ph-check text-[10px]"></i>
+                {% else %}
+                {{ forloop.counter }}
+                {% endif %}
             </div>
+            {% endfor %}
         </div>
     </div>
 
     <!-- The Form -->
-    <form method="POST" id="test-form" class="space-y-10">
+    <form method="POST" id="test-form" class="space-y-8">
         {% csrf_token %}
 
-        <section class="part-section animate-fade-in" id="part-{{ part_number }}">
-            
+        <section class="part-section animate-slide-up" id="part-{{ part_number }}">
+
             {% if part.instructions or part.audio_file %}
-            <div class="bg-white/[0.02] backdrop-blur-2xl border border-white/[0.08] rounded-xl p-8 shadow-lg mb-10">
+            <div class="card-duo p-7 mb-8">
                 {% if part.instructions %}
-                <div class="mb-6">
-                    <h3 class="text-xs font-bold text-accent uppercase tracking-widest mb-3">Directions</h3>
-                    <p class="text-slate-300 leading-relaxed font-medium">{{ part.instructions }}</p>
+                <div class="mb-5">
+                    <div class="flex items-center gap-2 mb-3">
+                        <i class="ph-fill ph-info text-duo-blue text-lg"></i>
+                        <h3 class="text-xs font-extrabold text-duo-blue uppercase tracking-widest" data-i18n="tt_instructions">Инструкция</h3>
+                    </div>
+                    <p class="text-white/90 leading-relaxed font-semibold">{{ part.instructions }}</p>
                 </div>
                 {% endif %}
 
                 {% if part.audio_file %}
-                <div class="mt-4 pt-6 border-t border-white/10 flex items-center gap-4">
-                    <audio controls class="flex-1" id="part-audio">
-                        <source src="{{ part.audio_file.url }}" type="audio/mpeg">
-                    </audio>
+                <div class="{% if part.instructions %}mt-4 pt-5 border-t border-white/10{% endif %}">
+                    <div class="flex items-center gap-5 bg-white/5 p-4 rounded-[1.25rem] border border-white/10 shadow-inner">
+                        <!-- Custom Play/Pause Button -->
+                        <button type="button" id="custom-play-btn" class="w-14 h-14 rounded-[1.1rem] bg-duo-green shadow-[0_4px_0_#46A302] flex items-center justify-center flex-shrink-0 hover:translate-y-[-2px] hover:shadow-[0_6px_0_#46A302] active:translate-y-[4px] active:shadow-none transition-all outline-none">
+                            <i class="ph-fill ph-play text-white text-2xl" id="custom-play-icon"></i>
+                        </button>
+                        
+                        <!-- Track / Progress -->
+                        <div class="flex-1 flex flex-col justify-center relative group" id="custom-progress-container">
+                            <div class="flex justify-between items-center text-xs font-black text-duo-text-dim mb-1.5 px-0.5 uppercase tracking-wide">
+                                <span id="custom-current-time">0:00</span>
+                                <div class="flex items-center gap-1.5 text-duo-blue">
+                                    <i class="ph-fill ph-speaker-high"></i>
+                                    <span data-i18n="tt_audio_track">Аудиодорожка</span>
+                                </div>
+                                <span id="custom-duration">0:00</span>
+                            </div>
+                            <!-- Bar track -->
+                            <div class="h-4 bg-[#1A2F35] rounded-full overflow-hidden border-2 border-[#2B4D56] relative">
+                                <div id="custom-progress-bar" class="h-full bg-duo-green absolute top-0 left-0 rounded-full transition-all duration-100 ease-linear shadow-[0_0_10px_rgba(88,204,2,0.5)]" style="width: 0%;"></div>
+                            </div>
+                        </div>
+
+                        <!-- Hidden Audio Element -->
+                        <audio id="part-audio" preload="auto">
+                            <source src="{{ part.audio_file.url }}" type="audio/mpeg">
+                        </audio>
+                    </div>
                 </div>
                 {% endif %}
             </div>
@@ -73,40 +160,43 @@
 
             <!-- Optional Map (Part 4) -->
             {% if part.part_number == 4 and part.map_image %}
-            <div class="bg-white/[0.02] backdrop-blur-2xl border border-white/[0.08] shadow-lg rounded-xl p-4 mb-10">
-                <p class="text-xs text-slate-400 uppercase tracking-widest font-bold mb-4 ml-2">Reference Material</p>
-                <img src="{{ part.map_image.url }}" class="w-full rounded border border-white/10 opacity-90 hover:opacity-100 transition-opacity" loading="lazy">
+            <div class="card-duo p-5 mb-8">
+                <div class="flex items-center gap-2 mb-4">
+                    <i class="ph-fill ph-map-trifold text-duo-gold text-lg"></i>
+                    <p class="text-xs text-duo-gold uppercase tracking-widest font-extrabold">Справочный материал</p>
+                </div>
+                <img src="{{ part.map_image.url }}" class="w-full rounded-xl border border-white/10 opacity-90 hover:opacity-100 transition-opacity" loading="lazy">
             </div>
             {% endif %}
 
             <!-- Questions Render Logic -->
-            <div class="space-y-8">
-                
+            <div class="space-y-6">
+
                 <!-- Part 1 & 5: Multiple Choice -->
                 {% if part.part_number == 1 or part.part_number == 5 %}
                     {% regroup part.questions.all by group_label as grouped_questions %}
                     {% for group in grouped_questions %}
-                        <div class="bg-white/[0.02] backdrop-blur-2xl rounded-[1.5rem] p-8 border border-white/5 shadow-lg">
-                            {% if group.grouper %}<h3 class="text-xl font-display font-bold text-white mb-6 pb-3 border-b border-white/10">{{ group.grouper }}</h3>{% endif %}
-                            <div class="space-y-10">
+                        <div class="card-duo p-7">
+                            {% if group.grouper %}<h3 class="text-lg font-black text-white mb-5 pb-3 border-b border-white/10">{{ group.grouper }}</h3>{% endif %}
+                            <div class="space-y-8">
                                 {% for question in group.list %}
                                 <div class="question-block">
-                                    <p class="text-white font-medium mb-5 flex items-start gap-4">
-                                        <span class="inline-flex items-center justify-center w-7 h-7 rounded border border-white/20 bg-white/5 text-slate-300 text-sm font-bold flex-shrink-0 mt-0.5">
+                                    <p class="text-white font-bold mb-4 flex items-start gap-3">
+                                        <span class="inline-flex items-center justify-center w-8 h-8 rounded-xl bg-duo-green/15 text-duo-green text-sm font-black flex-shrink-0 mt-0.5">
                                             {{ question.global_question_number|default:question.question_number }}
                                         </span>
-                                        <span class="text-lg">{{ question.question_text }}</span>
+                                        <span class="text-base leading-relaxed">{{ question.question_text }}</span>
                                     </p>
                                     <div class="grid grid-cols-1 gap-3 ml-11">
                                         {% for choice in question.choices.all %}
-                                        <label class="choice-option relative flex items-center gap-4 px-5 py-4 rounded-lg border border-white/10 cursor-pointer">
-                                            <input type="radio" name="question_{{ question.id }}" value="{{ choice.label }}" class="w-4 h-4 text-accent focus:ring-indigo-500 border-slate-600 bg-white/[0.02]">
-                                            <span class="text-slate-300 font-medium"><span class="font-bold text-accent mr-2">{{ choice.label }}.</span> {{ choice.text }}</span>
+                                        <label class="choice-option relative flex items-center gap-3 cursor-pointer">
+                                            <input type="radio" name="question_{{ question.id }}" value="{{ choice.label }}" class="w-5 h-5 text-duo-green focus:ring-duo-green border-duo-border bg-duo-surface accent-[#58CC02]">
+                                            <span class="text-white/90 font-semibold"><span class="font-extrabold text-duo-green mr-1.5">{{ choice.label }}.</span> {{ choice.text }}</span>
                                         </label>
                                         {% endfor %}
                                     </div>
                                 </div>
-                                {% if not forloop.last %}<hr class="border-white/5">{% endif %}
+                                {% if not forloop.last %}<hr class="border-white/10 my-2">{% endif %}
                                 {% endfor %}
                             </div>
                         </div>
@@ -114,8 +204,8 @@
 
                 <!-- Part 2 & 6: Fill in Blank -->
                 {% elif part.part_number == 2 or part.part_number == 6 %}
-                    <div class="bg-white/[0.02] backdrop-blur-2xl rounded-[1.5rem] p-10 border border-white/5 shadow-lg">
-                        {% if part.passage_title %}<h2 class="text-2xl font-display font-bold text-white mb-8 text-center">{{ part.passage_title }}</h2>{% endif %}
+                    <div class="card-duo p-8 sm:p-10">
+                        {% if part.passage_title %}<h2 class="text-2xl font-black text-white mb-8 text-center">{{ part.passage_title }}</h2>{% endif %}
                         <div class="passage-text">
                             {{ part.passage_text|render_blanks:part.questions.all }}
                         </div>
@@ -123,21 +213,24 @@
 
                 <!-- Part 3: Speaker Matching -->
                 {% elif part.part_number == 3 %}
-                    <div class="bg-white/[0.02] backdrop-blur-2xl rounded-[1.5rem] p-8 border border-white/5 shadow-lg">
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-10 pb-8 border-b border-white/10">
+                    <div class="card-duo p-7">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-8 pb-6 border-b border-white/10">
                             {% for choice in part.shared_choices_json %}
-                            <div class="flex items-start gap-4">
-                                <span class="font-bold text-accent w-6">{{ choice.label }}.</span>
-                                <span class="text-slate-300 font-medium">{{ choice.text }}</span>
+                            <div class="flex items-start gap-3 p-3 rounded-xl bg-white/5 border border-white/10">
+                                <span class="font-extrabold text-duo-green w-7 flex-shrink-0">{{ choice.label }}.</span>
+                                <span class="text-white font-semibold text-sm">{{ choice.text }}</span>
                             </div>
                             {% endfor %}
                         </div>
-                        <div class="space-y-4">
+                        <div class="space-y-3">
                             {% for question in part.questions.all %}
-                            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded bg-white/[0.02] border border-white/10">
-                                <span class="font-bold text-white ml-2">Speaker {{ question.group_label|default:question.question_number }}</span>
-                                <select name="question_{{ question.id }}" class="w-full sm:w-64 bg-[#1F2937] border border-white/10 text-white font-medium rounded shadow-sm px-4 py-2 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none">
-                                    <option value="">Select an option...</option>
+                            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-xl bg-white/5 border border-white/10 hover:border-duo-green/50 hover:bg-white/10 transition-colors">
+                                <span class="font-extrabold text-white text-sm flex items-center gap-2">
+                                    <span class="w-8 h-8 rounded-xl bg-duo-green/15 flex items-center justify-center text-duo-green text-xs font-black">{{ question.question_number }}</span>
+                                    <span data-i18n="tt_speaker">Speaker</span> {{ question.group_label|default:question.question_number }}
+                                </span>
+                                <select name="question_{{ question.id }}" class="input-duo !w-full sm:!w-64 !py-2.5 !px-4">
+                                    <option value="" data-i18n="tt_select_answer">Выбрать ответ...</option>
                                     {% for choice in part.shared_choices_json %}
                                     <option value="{{ choice.label }}">{{ choice.label }}: {{ choice.text|truncatechars:40 }}</option>
                                     {% endfor %}
@@ -149,15 +242,15 @@
 
                 <!-- Part 4: Map -->
                 {% elif part.part_number == 4 %}
-                    <div class="bg-white/[0.02] backdrop-blur-2xl rounded-[1.5rem] p-8 border border-white/5 shadow-lg space-y-4">
+                    <div class="card-duo p-7 space-y-3">
                         {% for question in part.questions.all %}
-                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded bg-white/[0.02] border border-white/10">
-                            <div class="flex items-center gap-4">
-                                <span class="w-8 h-8 rounded border border-white/10 bg-[#1F2937] flex items-center justify-center text-slate-300 font-bold ml-2">{{ question.global_question_number|default:question.question_number }}</span>
-                                <span class="text-white font-medium">{{ question.question_text }}</span>
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-xl bg-white/5 border border-white/10 hover:border-duo-green/50 hover:bg-white/10 transition-colors">
+                            <div class="flex items-center gap-3">
+                                <span class="w-8 h-8 rounded-xl bg-duo-blue/15 flex items-center justify-center text-duo-blue font-black text-sm">{{ question.global_question_number|default:question.question_number }}</span>
+                                <span class="text-white font-bold text-sm">{{ question.question_text }}</span>
                             </div>
-                            <select name="question_{{ question.id }}" class="w-full sm:w-32 bg-[#1F2937] border border-white/10 text-white font-bold rounded shadow-sm px-4 py-2 text-center focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none">
-                                <option value="">---</option>
+                            <select name="question_{{ question.id }}" class="input-duo !w-full sm:!w-28 !py-2.5 !px-4 !text-center">
+                                <option value="">—</option>
                                 <option value="A">A</option>
                                 <option value="B">B</option>
                                 <option value="C">C</option>
@@ -175,15 +268,18 @@
         </section>
 
         <!-- Navigation Buttons -->
-        <div class="flex flex-col sm:flex-row items-center justify-between pt-6 mt-4 border-t border-white/10">
-            <div class="text-slate-500 text-xs sm:text-sm uppercase tracking-wide font-medium mb-6 sm:mb-0">
-                Responses are automatically saved upon advancing.
+        <div class="flex flex-col sm:flex-row items-center justify-between pt-5 mt-4 border-t-2 border-duo-border gap-4">
+            <div class="text-duo-text-muted text-xs font-bold uppercase tracking-wide">
+                <i class="ph-fill ph-floppy-disk mr-1"></i>
+                <span data-i18n="tt_auto_save">Ответы сохраняются автоматически</span>
             </div>
-            <button type="submit" class="w-full sm:w-auto px-10 py-4 rounded-xl shadow-[0_0_20px_rgba(99,102,241,0.2)] hover:shadow-[0_0_30px_rgba(99,102,241,0.4)] hover:scale-[1.02] bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-display font-bold text-lg tracking-wide transition-all duration-300 text-center">
-                {% if part_number < 6 %}
-                    Proceed to Part {{ part_number|add:1 }}
+            <button type="submit" class="{% if not next_part_number %}btn-duo-gold{% else %}btn-duo-green{% endif %} w-full sm:w-auto text-base !px-10 !py-3.5">
+                {% if not next_part_number %}
+                    <i class="ph-fill ph-flag-checkered"></i>
+                    <span data-i18n="tt_finish_exam">Завершить экзамен</span>
                 {% else %}
-                    Submit Assessment
+                    <span data-i18n="tt_part">Часть</span> {{ next_part_number }}
+                    <i class="ph-bold ph-arrow-right"></i>
                 {% endif %}
             </button>
         </div>
@@ -197,8 +293,7 @@
         const timerDisplay = document.getElementById('timer');
         const timerContainer = document.getElementById('timer-container');
         const testForm = document.getElementById('test-form');
-        
-        // Target ISO date passed from server
+
         const endTime = new Date("{{ endtime_iso }}").getTime();
 
         const updateTimer = () => {
@@ -209,34 +304,214 @@
                 clearInterval(interval);
                 timerDisplay.innerHTML = "00:00";
                 timerContainer.classList.add('timer-critical');
-                alert("Time has elapsed. Your responses are being submitted.");
-                testForm.submit();
+                DuoModal.alert("Время вышло! Ваши ответы отправляются.").then(() => {
+                    testForm.submit();
+                });
                 return;
             }
 
             const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
             const seconds = Math.floor((distance % (1000 * 60)) / 1000);
-
             const display = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
             timerDisplay.innerHTML = display;
 
-            // Highlight if under 5 minutes
             if (distance < 300000) {
                 timerContainer.classList.add('timer-critical');
             }
         };
 
-        updateTimer(); // Initial call
+        updateTimer();
         const interval = setInterval(updateTimer, 1000);
 
-        // Warn before navigation
-        window.onbeforeunload = function() {
-            return "Are you certain you wish to exit? Unsubmitted progress in this section will be lost.";
-        };
+        // Custom Audio Player Logic
+        const audio = document.getElementById('part-audio');
+        if (audio) {
+            const playBtn = document.getElementById('custom-play-btn');
+            const playIcon = document.getElementById('custom-play-icon');
+            const progressContainer = document.getElementById('custom-progress-container');
+            const progressBar = document.getElementById('custom-progress-bar');
+            const currentTimeEl = document.getElementById('custom-current-time');
+            const durationEl = document.getElementById('custom-duration');
 
-        testForm.onsubmit = () => {
-            window.onbeforeunload = null;
-        };
+            const formatTime = (time) => {
+                if (isNaN(time)) return "0:00";
+                const min = Math.floor(time / 60);
+                const sec = Math.floor(time % 60);
+                return `${min}:${sec.toString().padStart(2, '0')}`;
+            };
+
+            audio.addEventListener('loadedmetadata', () => {
+                durationEl.textContent = formatTime(audio.duration);
+            });
+
+            const updatePlayState = () => {
+                if (audio.paused) {
+                    playIcon.classList.remove('ph-pause');
+                    playIcon.classList.add('ph-play');
+                } else {
+                    playIcon.classList.remove('ph-play');
+                    playIcon.classList.add('ph-pause');
+                }
+            };
+
+            playBtn.addEventListener('click', () => {
+                if (audio.paused) {
+                    audio.play();
+                } else {
+                    audio.pause();
+                }
+            });
+
+            audio.addEventListener('play', updatePlayState);
+            audio.addEventListener('pause', updatePlayState);
+
+            audio.addEventListener('timeupdate', () => {
+                currentTimeEl.textContent = formatTime(audio.currentTime);
+                const percent = (audio.currentTime / audio.duration) * 100;
+                progressBar.style.width = `${percent}%`;
+            });
+            
+            // Attempt autoplay
+            const playPromise = audio.play();
+            if (playPromise !== undefined) {
+                playPromise.catch(error => {
+                    console.log("Autoplay was prevented. Waiting for user interaction.");
+                });
+            }
+        }
+
+        // Custom Select Logic
+        const selects = document.querySelectorAll('select.input-duo');
+        
+        selects.forEach(select => {
+            select.style.display = 'none';
+            
+            const wrapper = document.createElement('div');
+            wrapper.className = 'relative inline-block w-full z-10';
+            if (select.classList.contains('sm:!w-64')) wrapper.classList.add('sm:w-64');
+            if (select.classList.contains('sm:!w-28')) wrapper.classList.add('sm:w-28');
+            
+            select.parentNode.insertBefore(wrapper, select);
+            wrapper.appendChild(select); // move original completely inside
+            
+            const trigger = document.createElement('div');
+            trigger.className = 'bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.1)] rounded-xl px-4 py-3 flex items-center justify-between cursor-pointer hover:border-duo-green/50 transition-all';
+            trigger.tabIndex = 0;
+            
+            const selectedValue = document.createElement('span');
+            selectedValue.className = 'text-white font-bold text-sm truncate select-none';
+            selectedValue.textContent = select.options[select.selectedIndex].text;
+            if(select.value === '') selectedValue.classList.replace('text-white', 'text-white/50');
+
+            const caret = document.createElement('i');
+            caret.className = 'ph-bold ph-caret-down text-white/40 transition-transform duration-200 ml-3 flex-shrink-0';
+            
+            trigger.appendChild(selectedValue);
+            trigger.appendChild(caret);
+            wrapper.appendChild(trigger);
+            
+            const optionsList = document.createElement('div');
+            optionsList.className = 'dropdown-scroll absolute top-[calc(100%+8px)] left-0 w-full min-w-[max-content] bg-[#1A2F35] border-2 border-[#2B4D56] rounded-[1.25rem] shadow-[0_10px_40px_rgba(0,0,0,0.4)] z-50 overflow-hidden opacity-0 pointer-events-none transform -translate-y-2 transition-all duration-200 flex flex-col max-h-64 overflow-y-auto py-1.5';
+            
+            const updateOptions = () => {
+                optionsList.innerHTML = '';
+                Array.from(select.options).forEach(option => {
+                    const optDiv = document.createElement('div');
+                    optDiv.className = 'px-4 py-3 cursor-pointer text-white text-sm font-bold transition-colors flex items-center gap-2 mx-1.5 rounded-xl';
+                    
+                    const isSelected = select.value === option.value && option.value !== '';
+                    const isPlaceholder = option.value === '';
+
+                    if (isPlaceholder) {
+                        optDiv.classList.add('text-white/40', 'hover:bg-white/5');
+                    } else if (isSelected) {
+                        optDiv.classList.add('bg-duo-green/15', 'text-duo-green');
+                    } else {
+                        optDiv.classList.add('hover:bg-white/5');
+                    }
+                    
+                    const iconHtml = isSelected ? '<i class="ph-bold ph-check text-lg text-duo-green flex-shrink-0"></i>' : '<div class="w-[18px] flex-shrink-0"></div>';
+                    const textHtml = `<span class="truncate">${option.text}</span>`;
+                    
+                    optDiv.innerHTML = isPlaceholder ? textHtml : iconHtml + textHtml;
+                    
+                    optDiv.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        select.value = option.value;
+                        selectedValue.textContent = option.text;
+                        if(option.value === '') {
+                            selectedValue.classList.replace('text-white', 'text-white/50');
+                        } else {
+                            selectedValue.classList.replace('text-white/50', 'text-white');
+                        }
+                        
+                        updateOptions(); // Re-render checkmarks
+                        closeDropdown();
+                    });
+                    
+                    optionsList.appendChild(optDiv);
+                });
+            };
+            
+            updateOptions();
+            wrapper.appendChild(optionsList);
+            
+            const openDropdown = () => {
+                document.dispatchEvent(new Event('closeCustomSelects'));
+                
+                optionsList.classList.remove('opacity-0', 'pointer-events-none', '-translate-y-2');
+                wrapper.classList.remove('z-10');
+                wrapper.classList.add('z-50');
+                caret.classList.add('rotate-180', 'text-duo-green');
+                caret.classList.remove('text-white/40');
+                trigger.classList.add('border-duo-green', 'shadow-[0_0_0_3px_rgba(88,204,2,0.2)]', 'bg-[rgba(255,255,255,0.1)]');
+            };
+            
+            const closeDropdown = () => {
+                optionsList.classList.add('opacity-0', 'pointer-events-none', '-translate-y-2');
+                wrapper.classList.remove('z-50');
+                wrapper.classList.add('z-10');
+                caret.classList.remove('rotate-180', 'text-duo-green');
+                caret.classList.add('text-white/40');
+                trigger.classList.remove('border-duo-green', 'shadow-[0_0_0_3px_rgba(88,204,2,0.2)]', 'bg-[rgba(255,255,255,0.1)]');
+            };
+            
+            trigger.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (optionsList.classList.contains('opacity-0')) {
+                    openDropdown();
+                } else {
+                    closeDropdown();
+                }
+            });
+            
+            document.addEventListener('click', (e) => {
+                if (!wrapper.contains(e.target)) closeDropdown();
+            });
+            
+            document.addEventListener('closeCustomSelects', () => {
+                closeDropdown();
+            });
+        });
+
+        // Intercept internal link clicks to warn user instead of native onbeforeunload
+        document.querySelectorAll('a').forEach(link => {
+            if (link.getAttribute('target') !== '_blank' && link.href && !link.href.includes('javascript:')) {
+                link.addEventListener('click', async (e) => {
+                    e.preventDefault();
+                    let warningText = "Ваши ответы не сохранятся, если вы покинете страницу. Вы уверены?";
+                    if (typeof _i18n !== 'undefined') {
+                        const lang = '{{ current_language|default:"ru" }}';
+                        if (_i18n[lang] && _i18n[lang]['tt_leave_warning']) {
+                            warningText = _i18n[lang]['tt_leave_warning'];
+                        }
+                    }
+                    if (await DuoModal.confirm(warningText)) {
+                        window.location.href = link.href;
+                    }
+                });
+            }
+        });
     });
 </script>
 {% endblock %}

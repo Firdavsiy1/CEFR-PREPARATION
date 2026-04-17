@@ -1,86 +1,233 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}Dashboard — CEFR Exam Prep{% endblock %}
+{% block title %}Главная — CEFR Prep{% endblock %}
 
 {% block content %}
-<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-    <!-- Header Banner -->
-    <div class="relative w-full h-[320px] mb-16 rounded-2xl overflow-hidden shadow-2xl animate-fade-in group">
-        <img src="{% static 'images/dashboard_banner.png' %}" alt="Dashboard Banner" class="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:opacity-80 transition-opacity duration-1000">
-        <div class="absolute inset-0 bg-gradient-to-t from-[#0B0F19] via-[#0B0F19]/60 to-[#0B0F19]/20 pointer-events-none"></div>
-        <div class="absolute inset-0 flex flex-col items-center justify-center text-center px-6">
-            <h1 class="text-4xl md:text-5xl lg:text-6xl font-display font-bold text-white mb-6 animate-slide-up drop-shadow-lg">
-                Assessment Modules
-            </h1>
-            <p class="text-lg text-slate-300 max-w-2xl mx-auto font-medium leading-relaxed animate-slide-up drop-shadow-md" style="animation-delay: 150ms;">
-                Select a comprehensive examination module to begin your assessment. Ensure you are in a quiet environment before starting the listening sections.
-            </p>
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+
+    <!-- Welcome Section -->
+    <div class="card-duo p-8 mb-10 animate-fade-in !border-duo-green/30 relative overflow-hidden">
+        <!-- Decorative glow -->
+        <div class="absolute -top-20 -right-20 w-60 h-60 bg-duo-green/5 rounded-full blur-3xl pointer-events-none"></div>
+        <div class="absolute -bottom-20 -left-20 w-40 h-40 bg-duo-gold/5 rounded-full blur-3xl pointer-events-none"></div>
+        
+        <div class="relative flex flex-col md:flex-row items-center gap-6">
+            <div class="w-20 h-20 rounded-2xl flex items-center justify-center bg-duo-green shadow-[0_4px_0_#46A302] flex-shrink-0 animate-bounce-in">
+                <i class="ph-fill ph-graduation-cap text-white text-4xl"></i>
+            </div>
+            <div class="text-center md:text-left">
+                <h1 class="text-3xl md:text-4xl font-black text-white mb-2" data-i18n="dash_title">
+                    Готов к практике? 🔥
+                </h1>
+                <p class="text-duo-text-dim font-semibold text-base max-w-xl" data-i18n="dash_subtitle">
+                    Выбери нужный навык и начни прокачивать свой английский!
+                </p>
+            </div>
         </div>
     </div>
 
-    {% if tests %}
-    <!-- Test Grid -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8" id="test-grid">
-        {% for test in tests %}
-        <div class="bg-white/[0.02] backdrop-blur-2xl rounded-[1.5rem] p-8 border border-white/[0.08] shadow-[0_8px_30px_rgb(0,0,0,0.12)] hover:border-indigo-500/50 hover:shadow-[0_8px_30px_rgba(99,102,241,0.15)] transition-all duration-500 hover:-translate-y-1 group flex flex-col animate-slide-up"
-             style="animation-delay: {{ forloop.counter0 }}00ms"
-             id="test-card-{{ test.id }}">
+    {% if show_categories %}
+    <!-- Category Selection -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 animate-slide-up">
+        {% for cat in categories %}
+        <div class="card-duo overflow-hidden group relative {% if not cat.active %}opacity-60{% endif %}" style="animation-delay: {{ forloop.counter0 }}50ms">
+            <!-- Background Image -->
+            <div class="relative h-[350px]">
+                <img src="{% static cat.image %}?v=2" alt="{{ cat.name }}" class="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110 {% if not cat.active %}grayscale opacity-20{% else %}opacity-90 group-hover:opacity-100{% endif %}">
 
-            <!-- Test type badge & Date -->
-            <div class="flex items-center justify-between mb-6">
-                <span class="uppercase tracking-wider text-[10px] font-bold px-2.5 py-1 border rounded bg-indigo-500/10 text-indigo-400 border-indigo-500/20 shadow-[0_0_10px_rgba(99,102,241,0.1)]">
-                    {{ test.get_test_type_display }}
-                </span>
-                <span class="text-xs text-slate-500 font-medium">{{ test.created_at|date:"M d, Y" }}</span>
-            </div>
+                <!-- Overlay: Stronger bottom gradient for readability with vibrant images -->
+                <div class="absolute inset-0 bg-gradient-to-t from-duo-surface via-duo-surface/80 to-transparent"></div>
 
-            <!-- Test name -->
-            <h2 class="text-2xl font-display font-bold text-white mb-4 group-hover:text-accent transition-colors duration-300">
-                {{ test.name }}
-            </h2>
+                <!-- Content -->
+                <div class="absolute inset-0 p-6 flex flex-col justify-end">
+                    <!-- Category icon -->
+                    <div class="w-14 h-14 rounded-2xl flex items-center justify-center mb-4 shadow-[0_3px_0_rgba(0,0,0,0.3)]
+                        {% if cat.id == 'listening' %}bg-duo-blue
+                        {% elif cat.id == 'reading' %}bg-duo-green
+                        {% elif cat.id == 'writing' %}bg-duo-purple
+                        {% else %}bg-duo-gold{% endif %}">
+                        {% if cat.id == 'listening' %}<i class="ph-fill ph-headphones text-white text-2xl"></i>
+                        {% elif cat.id == 'reading' %}<i class="ph-fill ph-book-open-text text-white text-2xl"></i>
+                        {% elif cat.id == 'writing' %}<i class="ph-fill ph-pencil-line text-white text-2xl"></i>
+                        {% else %}<i class="ph-fill ph-microphone-stage text-[#3C3100] text-2xl"></i>{% endif %}
+                    </div>
 
-            <!-- Accent Divider -->
-            <hr class="w-12 border-t-2 border-accent/50 mb-6 group-hover:w-full transition-all duration-500 ease-out">
-
-            <!-- Stats -->
-            <div class="flex flex-col gap-3 mb-8 text-sm text-slate-400 font-medium">
-                <div class="flex items-center gap-3">
-                    <i class="ph ph-squares-four text-slate-500 text-lg"></i>
-                    {{ test.parts.count }} Sections
+                    <h2 class="text-2xl font-black text-white mb-1.5">{{ cat.name }}</h2>
+                    {% if cat.active %}
+                    <p class="text-sm text-duo-text-dim font-semibold mb-5"><span data-i18n="dash_available_tests">Доступны тесты по</span> {{ cat.name|lower }}</p>
+                    <a href="{% url 'exams:dashboard_category' cat.id %}" class="btn-duo-green w-full text-sm !py-3">
+                        <span data-i18n="dash_btn_all_tests">Все тесты</span>
+                        <i class="ph-bold ph-arrow-right"></i>
+                    </a>
+                    {% else %}
+                    <p class="text-sm text-duo-gold font-extrabold uppercase tracking-widest mb-5" data-i18n="dash_soon">Скоро</p>
+                    <div class="btn-duo-outline w-full !cursor-not-allowed !opacity-50 text-sm !py-3">
+                        <i class="ph-fill ph-lock"></i>
+                        <span data-i18n="dash_in_dev">В разработке</span>
+                    </div>
+                    {% endif %}
                 </div>
-                <div class="flex items-center gap-3">
-                    <i class="ph ph-question text-slate-500 text-lg"></i>
-                    {{ test.total_questions }} Questions
-                </div>
-                <div class="flex items-center gap-3">
-                    <i class="ph ph-star text-slate-500 text-lg"></i>
-                    {{ test.max_possible_score|floatformat:0 }} Points Maximum
-                </div>
-            </div>
 
-            <!-- Action -->
-            <div class="mt-auto pt-6 border-t border-white/[0.08]">
-                <a href="{% url 'exams:start_test' test.id %}"
-                   class="inline-flex items-center justify-center w-full bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-bold px-4 py-3 rounded-xl shadow-[0_0_20px_rgba(99,102,241,0.2)] hover:shadow-[0_0_30px_rgba(99,102,241,0.4)] hover:scale-[1.02] transition-all duration-300 group/btn"
-                   id="start-test-{{ test.id }}">
-                    <span>Begin Assessment</span>
-                    <i class="ph-bold ph-arrow-right ml-2 transform group-hover/btn:translate-x-1 transition-transform"></i>
-                </a>
+                {% if not cat.active %}
+                <div class="absolute top-4 right-4">
+                    <div class="w-10 h-10 rounded-xl bg-duo-surface border-2 border-duo-border flex items-center justify-center">
+                        <i class="ph-fill ph-lock text-duo-text-muted"></i>
+                    </div>
+                </div>
+                {% endif %}
             </div>
         </div>
         {% endfor %}
     </div>
 
     {% else %}
-    <!-- Empty state -->
-    <div class="bg-white/[0.02] backdrop-blur-2xl rounded-[2rem] border border-white/[0.08] p-16 text-center max-w-2xl mx-auto shadow-2xl animate-fade-in">
-        <div class="w-20 h-20 mx-auto mb-6 rounded-full bg-indigo-500/10 border border-indigo-500/20 shadow-[0_0_30px_rgba(99,102,241,0.15)] flex items-center justify-center">
-            <i class="ph ph-warning-circle text-4xl text-indigo-400"></i>
-        </div>
-        <h2 class="text-2xl font-display font-bold text-white mb-3">No Assessments Available</h2>
-        <p class="text-slate-400 font-light">There are no active examination modules at this time. Please check back later or contact your institution's administrator.</p>
+    <!-- Specific Category Dashboard -->
+    <div class="mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <a href="{% url 'exams:dashboard' %}" class="btn-duo-outline text-xs !py-2 !px-4">
+            <i class="ph-bold ph-arrow-left"></i>
+            <span data-i18n="dash_back_skills">Назад к навыкам</span>
+        </a>
+        
+        <h2 class="text-2xl font-black text-white flex items-center gap-2">
+            {% if category_id == 'listening' %}<i class="ph-fill ph-headphones text-duo-blue"></i>
+            {% elif category_id == 'reading' %}<i class="ph-fill ph-book-open-text text-duo-green"></i>
+            {% elif category_id == 'writing' %}<i class="ph-fill ph-pencil-line text-duo-purple"></i>
+            {% else %}<i class="ph-fill ph-microphone-stage text-duo-gold"></i>{% endif %}
+            {{ category_name }}
+        </h2>
+    </div>
+
+    <!-- Tab Toggles -->
+    <div class="flex items-center gap-2 mb-8 bg-duo-surface p-1.5 rounded-2xl w-full sm:w-fit border-2 border-duo-border">
+        <button onclick="toggleTab('full')" id="tab-btn-full" class="flex-1 sm:flex-none text-sm font-black uppercase tracking-widest px-6 py-2.5 rounded-xl transition-all duration-200 bg-duo-green/15 text-duo-green border border-duo-green/30 shadow-[0_2px_0_rgba(88,204,2,0.2)]" data-i18n="dash_tab_full">
+            Полный экзамен
+        </button>
+        <button onclick="toggleTab('micro')" id="tab-btn-micro" class="flex-1 sm:flex-none text-sm font-black uppercase tracking-widest px-6 py-2.5 rounded-xl transition-all duration-200 hover:bg-white/5 text-duo-text-muted border border-transparent" data-i18n="dash_tab_micro">
+            Отдельные части
+        </button>
+    </div>
+
+    <!-- Full Tests Grid -->
+    <div id="grid-full" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-fade-in block">
+        {% if full_tests %}
+            {% for test in full_tests %}
+                {% include "exams/includes/test_card.html" %}
+            {% endfor %}
+        {% else %}
+            <!-- Empty state -->
+            <div class="card-duo p-14 text-center col-span-full animate-fade-in">
+                <div class="w-20 h-20 mx-auto mb-5 rounded-2xl flex items-center justify-center bg-duo-surface-2 border-2 border-duo-border">
+                    <i class="ph-fill ph-magnifying-glass text-4xl text-duo-text-muted"></i>
+                </div>
+                <h2 class="text-xl font-black text-white mb-2" data-i18n="dash_no_full_title">Нет полных тестов</h2>
+                <p class="text-duo-text-dim font-semibold text-sm" data-i18n="dash_no_full_desc">В этой категории пока нет полноценных экзаменов.</p>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Micro Tests Grid & Filters -->
+    <div id="micro-filters" class="mb-6 flex flex-wrap gap-2 animate-fade-in hidden">
+        <button onclick="filterParts('all', this)" class="part-filter-btn active-filter px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 bg-duo-green text-white shadow-[0_2px_0_#46A302]">
+            <span data-i18n="dash_filter_all">Все</span>
+        </button>
+        {% for part_num in "123456"|make_list %}
+        <button onclick="filterParts('part {{ part_num }}', this)" class="part-filter-btn px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 bg-duo-surface-2 text-duo-text-dim border border-duo-border hover:bg-duo-surface-2/80">
+            <span data-i18n="dash_filter_part">Часть</span> {{ part_num }}
+        </button>
+        {% endfor %}
+    </div>
+
+    <div id="grid-micro" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-fade-in hidden">
+        {% if micro_tests %}
+            {% for test in micro_tests %}
+                {% include "exams/includes/test_card.html" %}
+            {% endfor %}
+        {% else %}
+            <!-- Empty state -->
+            <div id="micro-empty-state" class="card-duo p-14 text-center col-span-full animate-fade-in">
+                <div class="w-20 h-20 mx-auto mb-5 rounded-2xl flex items-center justify-center bg-duo-surface-2 border-2 border-duo-border">
+                    <i class="ph-fill ph-puzzle-piece text-4xl text-duo-text-muted"></i>
+                </div>
+                <h2 class="text-xl font-black text-white mb-2" data-i18n="dash_no_micro_title">Нет микро-тестов</h2>
+                <p class="text-duo-text-dim font-semibold text-sm" data-i18n="dash_no_micro_desc">Загрузите части отдельно, чтобы тренироваться по кусочкам.</p>
+            </div>
+        {% endif %}
     </div>
     {% endif %}
 </div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    function toggleTab(tab) {
+        const fullBtn = document.getElementById('tab-btn-full');
+        const microBtn = document.getElementById('tab-btn-micro');
+        const fullGrid = document.getElementById('grid-full');
+        const microGrid = document.getElementById('grid-micro');
+        const microFilters = document.getElementById('micro-filters');
+
+        const activeClasses = ['bg-duo-green/15', 'text-duo-green', 'border-duo-green/30', 'shadow-[0_2px_0_rgba(88,204,2,0.2)]'];
+        const inactiveClasses = ['hover:bg-white/5', 'text-duo-text-muted', 'border-transparent'];
+
+        if (tab === 'full') {
+            fullGrid.classList.remove('hidden');
+            microGrid.classList.add('hidden');
+            if (microFilters) microFilters.classList.add('hidden');
+            
+            fullBtn.classList.remove(...inactiveClasses);
+            fullBtn.classList.add(...activeClasses);
+            
+            microBtn.classList.remove(...activeClasses);
+            microBtn.classList.add(...inactiveClasses);
+        } else {
+            microGrid.classList.remove('hidden');
+            fullGrid.classList.add('hidden');
+            if (microFilters) microFilters.classList.remove('hidden');
+            
+            microBtn.classList.remove(...inactiveClasses);
+            microBtn.classList.add(...activeClasses);
+            
+            fullBtn.classList.remove(...activeClasses);
+            fullBtn.classList.add(...inactiveClasses);
+        }
+    }
+
+    function filterParts(filterStr, btn) {
+        // Update button states
+        document.querySelectorAll('.part-filter-btn').forEach(el => {
+            el.classList.remove('bg-duo-green', 'text-white', 'shadow-[0_2px_0_#46A302]', 'border-transparent');
+            el.classList.add('bg-duo-surface-2', 'text-duo-text-dim', 'border', 'border-duo-border', 'hover:bg-duo-surface-2/80');
+        });
+
+        if (btn) {
+            btn.classList.add('bg-duo-green', 'text-white', 'shadow-[0_2px_0_#46A302]', 'border-transparent');
+            btn.classList.remove('bg-duo-surface-2', 'text-duo-text-dim', 'border', 'border-duo-border', 'hover:bg-duo-surface-2/80');
+        }
+
+        // Filter cards in micro-grid
+        const cards = document.querySelectorAll('#grid-micro .test-card-item');
+        let visibleCount = 0;
+        
+        cards.forEach(card => {
+            const name = card.getAttribute('data-test-name') || '';
+            if (filterStr === 'all' || name.includes(filterStr)) {
+                card.style.display = 'flex';
+                visibleCount++;
+            } else {
+                card.style.display = 'none';
+            }
+        });
+
+        // Hide or show empty state based on visible count
+        const emptyState = document.getElementById('micro-empty-state');
+        if (emptyState) {
+            if (visibleCount === 0) {
+                emptyState.style.display = 'block';
+            } else {
+                emptyState.style.display = 'none';
+            }
+        }
+    }
+</script>
 {% endblock %}

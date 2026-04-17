@@ -1,75 +1,67 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}Mentor Panel — CEFR Prep{% endblock %}
+{% block title %}Панель Ментора — CEFR Prep{% endblock %}
 
 {% block content %}
 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
     <!-- Header -->
-    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-10 animate-fade-in">
-        <div>
-            <div class="flex items-center gap-3 mb-2">
-                <div class="w-12 h-12 rounded-2xl flex items-center justify-center bg-gradient-to-br from-amber-500/20 to-orange-600/20 border border-amber-500/30 shadow-[0_0_20px_rgba(245,158,11,0.2)]">
-                    <i class="ph-fill ph-chalkboard-teacher text-amber-400 text-2xl"></i>
-                </div>
-                <h1 class="text-3xl font-display font-bold text-white tracking-tight">Mentor Panel</h1>
+    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8 animate-fade-in">
+        <div class="flex items-center gap-4">
+            <div class="w-14 h-14 rounded-2xl flex items-center justify-center bg-duo-purple shadow-[0_4px_0_#A855F7] animate-bounce-in">
+                <i class="ph-fill ph-crown text-white text-2xl"></i>
             </div>
-            <p class="text-slate-400 text-sm ml-[60px]">
-                Manage your CEFR exam tests. Upload new tests, edit questions, and control visibility.
-            </p>
+            <div>
+                <h1 class="text-2xl font-black text-white tracking-tight">Панель Ментора</h1>
+                <p class="text-duo-text-dim text-sm font-semibold">
+                    Управляй тестами, загружай новые и контролируй доступ
+                </p>
+            </div>
         </div>
 
         <a href="{% url 'exams:mentor_upload' %}" id="btn-upload-test"
-           class="group flex items-center gap-2.5 px-5 py-3 rounded-xl font-semibold text-sm
-                  bg-gradient-to-r from-indigo-600 to-violet-600
-                  text-white shadow-[0_0_25px_rgba(99,102,241,0.3)]
-                  hover:shadow-[0_0_35px_rgba(99,102,241,0.5)]
-                  hover:from-indigo-500 hover:to-violet-500
-                  transition-all duration-300 transform hover:scale-[1.02]">
-            <i class="ph-fill ph-upload-simple text-lg group-hover:animate-bounce"></i>
-            Upload New Test
+           class="btn-duo-green text-sm">
+            <i class="ph-fill ph-upload-simple text-lg"></i>
+            Загрузить тест
         </a>
     </div>
 
     <!-- Stats Cards -->
     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8 animate-slide-up" style="animation-delay: 0.1s;">
-        <div class="relative overflow-hidden rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm p-5">
-            <div class="absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-indigo-500/10 to-transparent rounded-bl-full"></div>
-            <div class="flex items-center gap-3">
-                <div class="w-10 h-10 rounded-xl flex items-center justify-center bg-indigo-500/10 border border-indigo-500/20">
-                    <i class="ph-fill ph-exam text-indigo-400 text-lg"></i>
+        <div class="card-duo p-5 relative overflow-hidden">
+            <div class="absolute top-0 right-0 w-20 h-20 bg-duo-blue/5 rounded-bl-full"></div>
+            <div class="flex items-center gap-3 relative">
+                <div class="w-11 h-11 rounded-2xl flex items-center justify-center bg-duo-blue/15 border-2 border-duo-blue/25">
+                    <i class="ph-fill ph-exam text-duo-blue text-lg"></i>
                 </div>
                 <div>
-                    <p class="text-2xl font-display font-bold text-white">{{ tests|length }}</p>
-                    <p class="text-xs text-slate-500 uppercase tracking-widest">Total Tests</p>
+                    <p class="text-2xl font-black text-white">{{ tests|length }}</p>
+                    <p class="text-xs text-duo-text-muted uppercase tracking-widest font-bold">Всего тестов</p>
                 </div>
             </div>
         </div>
-        <div class="relative overflow-hidden rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm p-5">
-            <div class="absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-emerald-500/10 to-transparent rounded-bl-full"></div>
-            <div class="flex items-center gap-3">
-                <div class="w-10 h-10 rounded-xl flex items-center justify-center bg-emerald-500/10 border border-emerald-500/20">
-                    <i class="ph-fill ph-eye text-emerald-400 text-lg"></i>
+        <div class="card-duo p-5 relative overflow-hidden">
+            <div class="absolute top-0 right-0 w-20 h-20 bg-duo-green/5 rounded-bl-full"></div>
+            <div class="flex items-center gap-3 relative">
+                <div class="w-11 h-11 rounded-2xl flex items-center justify-center bg-duo-green/15 border-2 border-duo-green/25">
+                    <i class="ph-fill ph-eye text-duo-green text-lg"></i>
                 </div>
                 <div>
-                    {% with active_count=0 %}
-                    {% for t in tests %}{% if t.is_active %}{% with ''|center:1 as x %}{% endwith %}{% endif %}{% endfor %}
-                    <p class="text-2xl font-display font-bold text-white" id="active-count">—</p>
-                    {% endwith %}
-                    <p class="text-xs text-slate-500 uppercase tracking-widest">Active Tests</p>
+                    <p class="text-2xl font-black text-white" id="active-count">—</p>
+                    <p class="text-xs text-duo-text-muted uppercase tracking-widest font-bold">Активных</p>
                 </div>
             </div>
         </div>
-        <div class="relative overflow-hidden rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm p-5">
-            <div class="absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-violet-500/10 to-transparent rounded-bl-full"></div>
-            <div class="flex items-center gap-3">
-                <div class="w-10 h-10 rounded-xl flex items-center justify-center bg-violet-500/10 border border-violet-500/20">
-                    <i class="ph-fill ph-question text-violet-400 text-lg"></i>
+        <div class="card-duo p-5 relative overflow-hidden">
+            <div class="absolute top-0 right-0 w-20 h-20 bg-duo-purple/5 rounded-bl-full"></div>
+            <div class="flex items-center gap-3 relative">
+                <div class="w-11 h-11 rounded-2xl flex items-center justify-center bg-duo-purple/15 border-2 border-duo-purple/25">
+                    <i class="ph-fill ph-chat-centered-dots text-duo-purple text-lg"></i>
                 </div>
                 <div>
-                    <p class="text-2xl font-display font-bold text-white" id="total-questions">—</p>
-                    <p class="text-xs text-slate-500 uppercase tracking-widest">Total Questions</p>
+                    <p class="text-2xl font-black text-white" id="total-questions">—</p>
+                    <p class="text-xs text-duo-text-muted uppercase tracking-widest font-bold">Вопросов</p>
                 </div>
             </div>
         </div>
@@ -77,18 +69,21 @@
 
     <!-- Tests Table -->
     <div class="animate-slide-up" style="animation-delay: 0.2s;">
-        <div class="rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm overflow-hidden">
+        <div class="card-duo overflow-hidden !p-0">
             <!-- Table Header -->
-            <div class="px-6 py-4 border-b border-white/[0.06] flex items-center justify-between">
-                <h2 class="text-lg font-display font-semibold text-white flex items-center gap-2">
-                    <i class="ph ph-list-dashes text-slate-400"></i>
-                    {% if is_superuser %}All Tests{% else %}My Tests{% endif %}
+            <div class="px-6 py-4 border-b-2 border-duo-border flex items-center justify-between">
+                <h2 class="text-base font-black text-white flex items-center gap-2">
+                    <i class="ph-fill ph-list-dashes text-duo-text-dim"></i>
+                    {% if is_superuser %}Все тесты{% else %}Мои тесты{% endif %}
                 </h2>
                 <div class="flex items-center gap-2">
-                    <input type="text" id="search-tests" placeholder="Search tests..."
-                           class="text-sm bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-1.5
-                                  text-slate-300 placeholder-slate-500 focus:outline-none focus:border-indigo-500/40
-                                  focus:ring-1 focus:ring-indigo-500/20 transition-all w-48">
+                    <div class="relative">
+                        <i class="ph-fill ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-duo-text-muted text-sm"></i>
+                        <input type="text" id="search-tests" placeholder="Поиск..."
+                               class="text-sm bg-duo-surface border-2 border-duo-border rounded-xl pl-9 pr-3 py-2
+                                      text-white placeholder-duo-text-muted focus:outline-none focus:border-duo-green
+                                      transition-all w-44 font-semibold">
+                    </div>
                 </div>
             </div>
 
@@ -96,90 +91,87 @@
             <div class="overflow-x-auto">
                 <table class="w-full" id="tests-table">
                     <thead>
-                        <tr class="border-b border-white/[0.04] text-xs text-slate-500 uppercase tracking-widest">
-                            <th class="px-6 py-3 text-left font-medium">Test Name</th>
-                            <th class="px-6 py-3 text-left font-medium">Type</th>
-                            {% if is_superuser %}<th class="px-6 py-3 text-left font-medium">Author</th>{% endif %}
-                            <th class="px-6 py-3 text-center font-medium">Parts</th>
-                            <th class="px-6 py-3 text-center font-medium">Questions</th>
-                            <th class="px-6 py-3 text-center font-medium">Status</th>
-                            <th class="px-6 py-3 text-center font-medium">Created</th>
-                            <th class="px-6 py-3 text-right font-medium">Actions</th>
+                        <tr class="border-b-2 border-duo-border/50 text-xs text-duo-text-muted uppercase tracking-widest">
+                            <th class="px-6 py-3 text-left font-extrabold">Название</th>
+                            <th class="px-6 py-3 text-left font-extrabold">Тип</th>
+                            {% if is_superuser %}<th class="px-6 py-3 text-left font-extrabold">Автор</th>{% endif %}
+                            <th class="px-6 py-3 text-center font-extrabold">Части</th>
+                            <th class="px-6 py-3 text-center font-extrabold">Вопросы</th>
+                            <th class="px-6 py-3 text-center font-extrabold">Статус</th>
+                            <th class="px-6 py-3 text-center font-extrabold">Дата</th>
+                            <th class="px-6 py-3 text-right font-extrabold">Действия</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-white/[0.03]">
+                    <tbody class="divide-y-2 divide-duo-border/30">
                         {% for test in tests %}
-                        <tr class="group hover:bg-white/[0.02] transition-colors test-row" data-name="{{ test.name|lower }}">
+                        <tr class="group hover:bg-duo-surface-2/30 transition-colors test-row" data-name="{{ test.name|lower }}">
                             <td class="px-6 py-4">
                                 <div class="flex items-center gap-3">
-                                    <div class="w-9 h-9 rounded-lg flex items-center justify-center
-                                                bg-gradient-to-br from-indigo-500/15 to-purple-600/15
-                                                border border-indigo-500/20 text-sm font-bold text-indigo-400">
+                                    <div class="w-9 h-9 rounded-xl flex items-center justify-center
+                                                {% if test.test_type == 'listening' %}bg-duo-blue/15 border-2 border-duo-blue/25
+                                                {% else %}bg-duo-green/15 border-2 border-duo-green/25{% endif %}">
                                         {% if test.test_type == 'listening' %}
-                                        <i class="ph-fill ph-headphones text-base"></i>
+                                        <i class="ph-fill ph-headphones text-duo-blue text-base"></i>
                                         {% else %}
-                                        <i class="ph-fill ph-book-open text-base"></i>
+                                        <i class="ph-fill ph-book-open-text text-duo-green text-base"></i>
                                         {% endif %}
                                     </div>
-                                    <div>
-                                        <span class="text-sm font-semibold text-white group-hover:text-indigo-300 transition-colors">{{ test.name }}</span>
-                                    </div>
+                                    <span class="text-sm font-bold text-white group-hover:text-duo-green transition-colors">{{ test.name }}</span>
                                 </div>
                             </td>
                             <td class="px-6 py-4">
-                                <span class="text-xs font-medium px-2.5 py-1 rounded-full
-                                    {% if test.test_type == 'listening' %}bg-sky-500/10 text-sky-400 border border-sky-500/20
-                                    {% else %}bg-emerald-500/10 text-emerald-400 border border-emerald-500/20{% endif %}">
+                                <span class="badge-duo
+                                    {% if test.test_type == 'listening' %}bg-duo-blue/15 text-duo-blue border border-duo-blue/25
+                                    {% else %}bg-duo-green/15 text-duo-green border border-duo-green/25{% endif %}">
                                     {{ test.get_test_type_display }}
                                 </span>
                             </td>
                             {% if is_superuser %}
-                            <td class="px-6 py-4 text-sm text-slate-400">
+                            <td class="px-6 py-4 text-sm text-duo-text-dim font-semibold">
                                 {% if test.author %}
                                 <span class="flex items-center gap-1.5">
-                                    <i class="ph ph-user text-xs"></i>
+                                    <i class="ph-fill ph-user text-xs"></i>
                                     {{ test.author.username }}
                                 </span>
                                 {% else %}
-                                <span class="text-slate-600 italic">system</span>
+                                <span class="text-duo-text-muted italic">system</span>
                                 {% endif %}
                             </td>
                             {% endif %}
                             <td class="px-6 py-4 text-center">
-                                <span class="text-sm text-slate-300 font-mono">{{ test.parts.count }}</span>
+                                <span class="text-sm text-white font-black">{{ test.parts.count }}</span>
                             </td>
                             <td class="px-6 py-4 text-center">
-                                <span class="text-sm text-slate-300 font-mono test-q-count">{{ test.total_questions }}</span>
+                                <span class="text-sm text-white font-black test-q-count">{{ test.total_questions }}</span>
                             </td>
                             <td class="px-6 py-4 text-center">
                                 <button onclick="toggleActive({{ test.id }}, this)" data-active="{{ test.is_active|yesno:'true,false' }}"
-                                        class="status-badge text-xs font-semibold px-3 py-1 rounded-full cursor-pointer
-                                               transition-all duration-200 hover:scale-105
-                                    {% if test.is_active %}bg-emerald-500/15 text-emerald-400 border border-emerald-500/25
-                                    {% else %}bg-slate-500/10 text-slate-500 border border-slate-500/20{% endif %}">
-                                    {% if test.is_active %}Active{% else %}Draft{% endif %}
+                                        class="status-badge badge-duo cursor-pointer transition-all duration-200 hover:scale-105
+                                    {% if test.is_active %}bg-duo-green/15 text-duo-green border border-duo-green/30
+                                    {% else %}bg-duo-surface-2 text-duo-text-muted border border-duo-border{% endif %}">
+                                    {% if test.is_active %}Активен{% else %}Черновик{% endif %}
                                 </button>
                             </td>
-                            <td class="px-6 py-4 text-center text-xs text-slate-500">
-                                {{ test.created_at|date:"M d, Y" }}
+                            <td class="px-6 py-4 text-center text-xs text-duo-text-muted font-bold">
+                                {{ test.created_at|date:"d M Y" }}
                             </td>
                             <td class="px-6 py-4">
                                 <div class="flex items-center justify-end gap-2">
                                     <a href="{% url 'exams:mentor_test_builder' test.id %}"
-                                       class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium
-                                              bg-indigo-500/10 text-indigo-400 border border-indigo-500/20
-                                              hover:bg-indigo-500/20 hover:border-indigo-500/30 transition-all"
-                                       title="Edit test">
-                                        <i class="ph ph-pencil-simple"></i>
-                                        Edit
+                                       class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold
+                                              bg-duo-blue/15 text-duo-blue border border-duo-blue/25
+                                              hover:bg-duo-blue/25 transition-all"
+                                       title="Редактировать">
+                                        <i class="ph-fill ph-pencil-simple"></i>
+                                        Изменить
                                     </a>
                                     <a href="{% url 'exams:mentor_delete_test' test.id %}"
-                                       class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium
-                                              bg-rose-500/10 text-rose-400 border border-rose-500/20
-                                              hover:bg-rose-500/20 hover:border-rose-500/30 transition-all"
-                                       title="Delete test">
-                                        <i class="ph ph-trash"></i>
-                                        Delete
+                                       class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold
+                                              bg-duo-red/15 text-duo-red border border-duo-red/25
+                                              hover:bg-duo-red/25 transition-all"
+                                       title="Удалить">
+                                        <i class="ph-fill ph-trash"></i>
+                                        Удалить
                                     </a>
                                 </div>
                             </td>
@@ -190,20 +182,15 @@
             </div>
             {% else %}
             <!-- Empty state -->
-            <div class="py-20 text-center">
-                <div class="w-20 h-20 mx-auto mb-6 rounded-2xl flex items-center justify-center
-                            bg-gradient-to-br from-indigo-500/10 to-purple-600/10
-                            border border-indigo-500/20">
-                    <i class="ph ph-folder-notch-open text-4xl text-indigo-400/60"></i>
+            <div class="py-16 text-center">
+                <div class="w-20 h-20 mx-auto mb-5 rounded-2xl flex items-center justify-center bg-duo-surface-2 border-2 border-duo-border">
+                    <i class="ph-fill ph-folder-open text-4xl text-duo-text-muted"></i>
                 </div>
-                <h3 class="text-lg font-display font-semibold text-white mb-2">No tests yet</h3>
-                <p class="text-sm text-slate-500 mb-6">Upload your first CEFR test to get started.</p>
-                <a href="{% url 'exams:mentor_upload' %}"
-                   class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm
-                          bg-gradient-to-r from-indigo-600 to-violet-600 text-white
-                          hover:from-indigo-500 hover:to-violet-500 transition-all">
+                <h3 class="text-lg font-black text-white mb-2">Тестов пока нет</h3>
+                <p class="text-sm text-duo-text-dim font-semibold mb-6">Загрузите ваш первый CEFR тест</p>
+                <a href="{% url 'exams:mentor_upload' %}" class="btn-duo-green">
                     <i class="ph-fill ph-upload-simple"></i>
-                    Upload Your First Test
+                    Загрузить первый тест
                 </a>
             </div>
             {% endif %}
@@ -258,17 +245,17 @@
         .then(data => {
             btn.dataset.active = data.is_active ? 'true' : 'false';
             if (data.is_active) {
-                btn.textContent = 'Active';
+                btn.textContent = 'Активен';
                 btn.className = btn.className
-                    .replace('bg-slate-500/10', 'bg-emerald-500/15')
-                    .replace('text-slate-500', 'text-emerald-400')
-                    .replace('border-slate-500/20', 'border-emerald-500/25');
+                    .replace('bg-duo-surface-2', 'bg-duo-green/15')
+                    .replace('text-duo-text-muted', 'text-duo-green')
+                    .replace('border-duo-border', 'border-duo-green/30');
             } else {
-                btn.textContent = 'Draft';
+                btn.textContent = 'Черновик';
                 btn.className = btn.className
-                    .replace('bg-emerald-500/15', 'bg-slate-500/10')
-                    .replace('text-emerald-400', 'text-slate-500')
-                    .replace('border-emerald-500/25', 'border-slate-500/20');
+                    .replace('bg-duo-green/15', 'bg-duo-surface-2')
+                    .replace('text-duo-green', 'text-duo-text-muted')
+                    .replace('border-duo-green/30', 'border-duo-border');
             }
             // Recount
             let activeCount = 0;

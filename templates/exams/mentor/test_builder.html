@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}Test Builder — {{ test.name }} — Mentor Panel{% endblock %}
+{% block title %}Конструктор — {{ test.name }} — CEFR Prep{% endblock %}
 
 {% block extra_head %}
 <style>
@@ -20,27 +20,27 @@
 
     /* Sidebar */
     .part-nav-btn {
-        transition: all 0.2s ease;
+        transition: all 0.15s ease;
     }
     .part-nav-btn.active {
-        background: rgba(99, 102, 241, 0.12);
-        border-color: rgba(99, 102, 241, 0.35);
-        color: #a5b4fc;
+        background: rgba(88, 204, 2, 0.1);
+        border-color: rgba(88, 204, 2, 0.3) !important;
+        color: #58CC02;
     }
     .part-nav-btn:hover:not(.active) {
         background: rgba(255, 255, 255, 0.03);
-        border-color: rgba(255, 255, 255, 0.08);
+        border-color: #2B4D56;
     }
 
     /* Question card */
     .question-card {
-        transition: all 0.2s ease;
+        transition: all 0.15s ease;
     }
     .question-card:hover {
-        border-color: rgba(255, 255, 255, 0.08);
+        border-color: #2B4D56;
     }
     .question-card.correct-highlight {
-        border-left: 3px solid rgba(52, 211, 153, 0.5);
+        border-left: 3px solid rgba(88, 204, 2, 0.5);
     }
 
     /* Choice row */
@@ -48,25 +48,27 @@
         transition: all 0.15s ease;
     }
     .choice-row.is-correct {
-        background: rgba(52, 211, 153, 0.06);
-        border-color: rgba(52, 211, 153, 0.25);
+        background: rgba(88, 204, 2, 0.06);
+        border-color: rgba(88, 204, 2, 0.25);
     }
 
     /* Editable field */
     .editable-field {
-        background: rgba(255, 255, 255, 0.03);
-        border: 1px solid rgba(255, 255, 255, 0.06);
-        border-radius: 0.75rem;
+        background: #1A2F35;
+        border: 2px solid #2B4D56;
+        border-radius: 12px;
         padding: 0.5rem 0.75rem;
-        color: #e2e8f0;
+        color: #FFFFFF;
         font-size: 0.875rem;
+        font-weight: 600;
+        font-family: 'Nunito', sans-serif;
         width: 100%;
-        transition: all 0.2s ease;
+        transition: all 0.15s ease;
     }
     .editable-field:focus {
         outline: none;
-        border-color: rgba(99, 102, 241, 0.4);
-        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        border-color: #58CC02;
+        box-shadow: 0 0 0 3px rgba(88, 204, 2, 0.1);
     }
     .editable-textarea {
         min-height: 80px;
@@ -79,10 +81,10 @@
         bottom: 24px;
         right: 24px;
         z-index: 100;
-        padding: 10px 20px;
-        border-radius: 12px;
+        padding: 12px 20px;
+        border-radius: 16px;
         font-size: 0.8rem;
-        font-weight: 600;
+        font-weight: 800;
         display: flex;
         align-items: center;
         gap: 8px;
@@ -91,25 +93,27 @@
         opacity: 0;
         transform: translateY(10px);
         pointer-events: none;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
     }
     .save-indicator.show {
         opacity: 1;
         transform: translateY(0);
     }
     .save-indicator.saving {
-        background: rgba(99, 102, 241, 0.15);
-        border: 1px solid rgba(99, 102, 241, 0.3);
-        color: #a5b4fc;
+        background: rgba(28, 176, 246, 0.15);
+        border: 2px solid rgba(28, 176, 246, 0.3);
+        color: #1CB0F6;
     }
     .save-indicator.saved {
-        background: rgba(52, 211, 153, 0.15);
-        border: 1px solid rgba(52, 211, 153, 0.3);
-        color: #6ee7b7;
+        background: rgba(88, 204, 2, 0.15);
+        border: 2px solid rgba(88, 204, 2, 0.3);
+        color: #58CC02;
     }
     .save-indicator.error {
-        background: rgba(244, 63, 94, 0.15);
-        border: 1px solid rgba(244, 63, 94, 0.3);
-        color: #fda4af;
+        background: rgba(255, 75, 75, 0.15);
+        border: 2px solid rgba(255, 75, 75, 0.3);
+        color: #FF4B4B;
     }
 
     /* Loading spinner */
@@ -126,24 +130,24 @@
     <!-- Header -->
     <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 animate-fade-in">
         <div class="flex items-center gap-4">
-            <a href="{% url 'exams:mentor_dashboard' %}" class="w-10 h-10 rounded-xl flex items-center justify-center border border-white/[0.08] bg-white/[0.03] hover:bg-white/[0.06] text-slate-400 hover:text-white transition-all">
-                <i class="ph ph-arrow-left text-lg"></i>
+            <a href="{% url 'exams:mentor_dashboard' %}" class="w-10 h-10 rounded-xl flex items-center justify-center border-2 border-duo-border bg-duo-surface hover:bg-duo-surface-2 text-duo-text-dim hover:text-white transition-all">
+                <i class="ph-bold ph-arrow-left text-lg"></i>
             </a>
             <div>
                 <div class="flex items-center gap-3">
-                    <h1 class="text-2xl font-display font-bold text-white tracking-tight" id="test-title">{{ test.name }}</h1>
-                    <button onclick="editTestName()" class="text-slate-500 hover:text-indigo-400 transition-colors" title="Rename test">
-                        <i class="ph ph-pencil-simple text-sm"></i>
+                    <h1 class="text-2xl font-black text-white tracking-tight" id="test-title">{{ test.name }}</h1>
+                    <button onclick="editTestName()" class="text-duo-text-muted hover:text-duo-green transition-colors" title="Переименовать">
+                        <i class="ph-fill ph-pencil-simple text-sm"></i>
                     </button>
                 </div>
-                <p class="text-sm text-slate-500">Test Builder — Edit parts, questions, and choices</p>
+                <p class="text-sm text-duo-text-dim font-semibold">Конструктор тестов — редактируйте части, вопросы и варианты</p>
             </div>
         </div>
         <div class="flex items-center gap-3">
-            <span class="text-xs text-slate-500 font-mono" id="autosave-status">All changes saved</span>
+            <span class="text-xs text-duo-text-muted font-bold" id="autosave-status">Все изменения сохранены</span>
             <button onclick="toggleActive()" id="toggle-active-btn"
-                    class="px-4 py-2 rounded-xl text-xs font-semibold border transition-all {{ test.is_active|yesno:'bg-emerald-500/10 text-emerald-400 border-emerald-500/25 hover:bg-emerald-500/20,bg-slate-500/10 text-slate-500 border-slate-500/20 hover:bg-slate-500/15' }}">
-                {{ test.is_active|yesno:'Active,Draft' }}
+                    class="badge-duo cursor-pointer transition-all text-xs {{ test.is_active|yesno:'bg-duo-green/15 text-duo-green border border-duo-green/30 hover:bg-duo-green/25,bg-duo-surface-2 text-duo-text-muted border border-duo-border hover:bg-duo-surface-2' }}">
+                {{ test.is_active|yesno:'Активен,Черновик' }}
             </button>
         </div>
     </div>
@@ -152,13 +156,13 @@
     <div class="builder-layout animate-slide-up" style="animation-delay: 0.1s;">
 
         <!-- Sidebar: Parts Navigation -->
-        <aside class="rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm p-4 h-fit sticky top-28" id="parts-sidebar">
-            <h3 class="text-xs text-slate-500 uppercase tracking-widest font-semibold mb-4 px-2">Parts</h3>
+        <aside class="card-duo p-4 h-fit sticky top-20" id="parts-sidebar">
+            <h3 class="text-xs text-duo-text-muted uppercase tracking-widest font-extrabold mb-4 px-2">Части</h3>
             <nav class="space-y-1.5" id="parts-nav">
                 <!-- Populated by JS -->
-                <div class="text-center py-8 text-slate-500 text-sm" id="parts-loading">
+                <div class="text-center py-8 text-duo-text-muted text-sm" id="parts-loading">
                     <i class="ph ph-spinner text-2xl spin"></i>
-                    <p class="mt-2">Loading...</p>
+                    <p class="mt-2 font-bold">Загрузка...</p>
                 </div>
             </nav>
         </aside>
@@ -167,9 +171,11 @@
         <main class="min-w-0">
             <div id="part-editor" class="space-y-6">
                 <!-- Populated by JS when a part is selected -->
-                <div class="rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm p-12 text-center">
-                    <i class="ph ph-cursor-click text-4xl text-slate-600 mb-3"></i>
-                    <p class="text-slate-500">Select a part from the sidebar to start editing</p>
+                <div class="card-duo p-12 text-center">
+                    <div class="w-16 h-16 mx-auto mb-4 rounded-2xl bg-duo-surface-2 flex items-center justify-center">
+                        <i class="ph-fill ph-cursor-click text-3xl text-duo-text-muted"></i>
+                    </div>
+                    <p class="text-duo-text-dim font-bold">Выберите часть на панели слева для редактирования</p>
                 </div>
             </div>
         </main>
@@ -180,7 +186,7 @@
 <!-- Save Indicator -->
 <div class="save-indicator" id="save-indicator">
     <i class="ph ph-spinner spin" id="save-icon"></i>
-    <span id="save-text">Saving...</span>
+    <span id="save-text">Сохранение...</span>
 </div>
 {% endblock %}
 
@@ -270,16 +276,16 @@ function renderSidebar() {
         const qCount = part.questions.length;
         return `
             <button onclick="selectPart(${part.id})"
-                    class="part-nav-btn w-full flex items-center gap-3 px-3 py-3 rounded-xl border border-transparent text-left"
+                    class="part-nav-btn w-full flex items-center gap-3 px-3 py-3 rounded-xl border-2 border-transparent text-left"
                     id="part-btn-${part.id}">
-                <div class="w-9 h-9 rounded-lg flex items-center justify-center bg-indigo-500/10 border border-indigo-500/20 text-sm font-bold text-indigo-400 flex-shrink-0">
+                <div class="w-9 h-9 rounded-xl flex items-center justify-center bg-duo-green/10 border-2 border-duo-green/20 text-sm font-black text-duo-green flex-shrink-0">
                     ${part.part_number}
                 </div>
                 <div class="min-w-0">
-                    <p class="text-sm font-semibold text-slate-200 truncate">Part ${part.part_number}</p>
-                    <p class="text-xs text-slate-500">${qCount} question${qCount !== 1 ? 's' : ''} · ${part.points_per_question} pts</p>
+                    <p class="text-sm font-bold text-white truncate">Часть ${part.part_number}</p>
+                    <p class="text-xs text-duo-text-muted font-semibold">${qCount} вопр. · ${part.points_per_question} бл.</p>
                 </div>
-                ${part.audio_file ? '<i class="ph-fill ph-speaker-high text-emerald-500/50 text-xs ml-auto flex-shrink-0"></i>' : ''}
+                ${part.audio_file ? '<i class="ph-fill ph-speaker-high text-duo-green/40 text-xs ml-auto flex-shrink-0"></i>' : ''}
             </button>
         `;
     }).join('');
@@ -306,50 +312,50 @@ function renderPartEditor() {
     const hasPassage = p.part_number === 2 || p.part_number === 6;
     const hasSharedChoices = p.part_number === 3;
     const questionTypeLabel = {
-        'multiple_choice': 'Multiple Choice',
-        'fill_blank': 'Fill in the Blank',
-        'map_label': 'Map Labeling',
+        'multiple_choice': 'Множественный выбор',
+        'fill_blank': 'Заполнение пропусков',
+        'map_label': 'Карта',
     };
 
     editor.innerHTML = `
         <!-- Part Header Card -->
-        <div class="rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm overflow-hidden">
-            <div class="px-6 py-4 border-b border-white/[0.06] flex items-center justify-between">
+        <div class="card-duo overflow-hidden !p-0">
+            <div class="px-6 py-4 border-b-2 border-duo-border flex items-center justify-between">
                 <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 rounded-xl flex items-center justify-center bg-gradient-to-br from-indigo-500/15 to-purple-600/15 border border-indigo-500/20 text-lg font-bold text-indigo-400">${p.part_number}</div>
+                    <div class="w-10 h-10 rounded-xl flex items-center justify-center bg-duo-green/15 border-2 border-duo-green/25 text-lg font-black text-duo-green">${p.part_number}</div>
                     <div>
-                        <h2 class="text-lg font-display font-semibold text-white">Part ${p.part_number}</h2>
-                        <p class="text-xs text-slate-500">${questionTypeLabel[p.questions[0]?.question_type] || 'Unknown'} · ${p.points_per_question} pts/question</p>
+                        <h2 class="text-lg font-black text-white">Часть ${p.part_number}</h2>
+                        <p class="text-xs text-duo-text-muted font-semibold">${questionTypeLabel[p.questions[0]?.question_type] || '—'} · ${p.points_per_question} бл./вопрос</p>
                     </div>
                 </div>
                 <div class="flex items-center gap-2">
-                    ${p.question_image ? `<a href="${p.question_image}" target="_blank" class="text-xs px-3 py-1.5 rounded-lg bg-white/[0.04] border border-white/[0.06] text-slate-400 hover:text-white hover:border-white/[0.12] transition-all"><i class="ph ph-image mr-1"></i>Screenshot</a>` : ''}
-                    ${p.map_image ? `<a href="${p.map_image}" target="_blank" class="text-xs px-3 py-1.5 rounded-lg bg-white/[0.04] border border-white/[0.06] text-slate-400 hover:text-white hover:border-white/[0.12] transition-all"><i class="ph ph-map-trifold mr-1"></i>Map</a>` : ''}
+                    ${p.question_image ? `<a href="${p.question_image}" target="_blank" class="badge-duo bg-duo-surface-2 text-duo-text-dim border border-duo-border hover:text-white hover:border-duo-green/40 transition-all"><i class="ph-fill ph-image mr-1"></i>Скриншот</a>` : ''}
+                    ${p.map_image ? `<a href="${p.map_image}" target="_blank" class="badge-duo bg-duo-surface-2 text-duo-text-dim border border-duo-border hover:text-white hover:border-duo-green/40 transition-all"><i class="ph-fill ph-map-trifold mr-1"></i>Карта</a>` : ''}
                 </div>
             </div>
 
             <div class="p-6 space-y-5">
                 <!-- Instructions -->
                 <div>
-                    <label class="block text-xs font-semibold text-slate-400 uppercase tracking-widest mb-2">
-                        <i class="ph ph-note-pencil text-indigo-400 mr-1"></i> Instructions
+                    <label class="block text-xs font-extrabold text-duo-text-dim uppercase tracking-widest mb-2">
+                        <i class="ph-fill ph-note-pencil text-duo-blue mr-1"></i> Инструкции
                     </label>
                     <textarea class="editable-field editable-textarea"
                               onchange="updatePart(${p.id}, 'instructions', this.value)"
-                              placeholder="Part instructions...">${escHtml(p.instructions)}</textarea>
+                              placeholder="Инструкции к части...">${escHtml(p.instructions)}</textarea>
                 </div>
 
                 <!-- Audio -->
                 <div>
-                    <label class="block text-xs font-semibold text-slate-400 uppercase tracking-widest mb-2">
-                        <i class="ph ph-speaker-high text-indigo-400 mr-1"></i> Audio
+                    <label class="block text-xs font-extrabold text-duo-text-dim uppercase tracking-widest mb-2">
+                        <i class="ph-fill ph-speaker-high text-duo-green mr-1"></i> Аудио
                     </label>
                     <div class="flex items-center gap-4">
                         ${p.audio_file
                             ? `<audio controls class="flex-1" style="height:40px"><source src="${p.audio_file}" type="audio/mpeg"></audio>`
-                            : '<span class="text-xs text-slate-500 italic">No audio uploaded</span>'}
-                        <label class="cursor-pointer flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 hover:bg-indigo-500/20 transition-all">
-                            <i class="ph ph-upload-simple"></i> Replace
+                            : '<span class="text-xs text-duo-text-muted italic font-semibold">Аудио не загружено</span>'}
+                        <label class="cursor-pointer btn-duo-outline !py-1.5 !px-3 text-xs !rounded-xl">
+                            <i class="ph-fill ph-upload-simple"></i> Заменить
                             <input type="file" accept=".mp3,audio/*" class="hidden" onchange="uploadAudio(${p.id}, this)">
                         </label>
                     </div>
@@ -357,36 +363,36 @@ function renderPartEditor() {
 
                 ${hasPassage ? `
                 <!-- Passage -->
-                <div class="pt-2 border-t border-white/[0.04]">
-                    <label class="block text-xs font-semibold text-slate-400 uppercase tracking-widest mb-2">
-                        <i class="ph ph-book-open-text text-indigo-400 mr-1"></i> Passage Title
+                <div class="pt-3 border-t-2 border-duo-border">
+                    <label class="block text-xs font-extrabold text-duo-text-dim uppercase tracking-widest mb-2">
+                        <i class="ph-fill ph-book-open-text text-duo-gold mr-1"></i> Заголовок пассажа
                     </label>
                     <input class="editable-field" type="text"
                            value="${escAttr(p.passage_title)}"
                            onchange="updatePart(${p.id}, 'passage_title', this.value)"
-                           placeholder="e.g. Working in a Forest in New Zealand">
+                           placeholder="Например: Working in a Forest in New Zealand">
                 </div>
                 <div>
-                    <label class="block text-xs font-semibold text-slate-400 uppercase tracking-widest mb-2">
-                        <i class="ph ph-text-align-left text-indigo-400 mr-1"></i> Passage Text
-                        <span class="text-slate-600 normal-case font-normal ml-1">(Use {N} for blanks)</span>
+                    <label class="block text-xs font-extrabold text-duo-text-dim uppercase tracking-widest mb-2">
+                        <i class="ph-fill ph-text-align-left text-duo-gold mr-1"></i> Текст пассажа
+                        <span class="text-duo-text-muted normal-case font-semibold ml-1">(Используйте {N} для пропусков)</span>
                     </label>
                     <textarea class="editable-field editable-textarea" style="min-height:150px"
                               onchange="updatePart(${p.id}, 'passage_text', this.value)"
-                              placeholder="Full passage text with {30}, {31} blanks...">${escHtml(p.passage_text)}</textarea>
+                              placeholder="Полный текст с {30}, {31} пропусками...">${escHtml(p.passage_text)}</textarea>
                 </div>
                 ` : ''}
 
                 ${hasSharedChoices ? `
                 <!-- Shared Choices (Part 3) -->
-                <div class="pt-2 border-t border-white/[0.04]">
-                    <label class="block text-xs font-semibold text-slate-400 uppercase tracking-widest mb-2">
-                        <i class="ph ph-list-checks text-indigo-400 mr-1"></i> Shared Choices (A-F)
+                <div class="pt-3 border-t-2 border-duo-border">
+                    <label class="block text-xs font-extrabold text-duo-text-dim uppercase tracking-widest mb-2">
+                        <i class="ph-fill ph-list-checks text-duo-purple mr-1"></i> Общие варианты (A-F)
                     </label>
                     <div class="space-y-2" id="shared-choices-list">
                         ${(p.shared_choices_json || []).map((sc, idx) => `
                             <div class="flex items-center gap-2">
-                                <span class="w-8 h-8 rounded-lg flex items-center justify-center bg-violet-500/10 border border-violet-500/20 text-xs font-bold text-violet-400">${sc.label}</span>
+                                <span class="w-8 h-8 rounded-xl flex items-center justify-center bg-duo-purple/10 border-2 border-duo-purple/20 text-xs font-black text-duo-purple">${sc.label}</span>
                                 <input class="editable-field flex-1" value="${escAttr(sc.text)}" onchange="updateSharedChoice(${p.id}, ${idx}, this.value)">
                             </div>
                         `).join('')}
@@ -395,32 +401,30 @@ function renderPartEditor() {
                 ` : ''}
 
                 <!-- Transcript -->
-                <div class="pt-2 border-t border-white/[0.04]">
+                <div class="pt-3 border-t-2 border-duo-border">
                     <details>
-                        <summary class="text-xs font-semibold text-slate-400 uppercase tracking-widest cursor-pointer hover:text-slate-300 transition-colors">
-                            <i class="ph ph-subtitles text-indigo-400 mr-1"></i> Transcript
+                        <summary class="text-xs font-extrabold text-duo-text-dim uppercase tracking-widest cursor-pointer hover:text-duo-green transition-colors">
+                            <i class="ph-fill ph-subtitles text-duo-blue mr-1"></i> Транскрипт
                         </summary>
                         <textarea class="editable-field editable-textarea mt-2" style="min-height:120px"
                                   onchange="updatePart(${p.id}, 'transcript', this.value)"
-                                  placeholder="Audio transcript...">${escHtml(p.transcript)}</textarea>
+                                  placeholder="Транскрипт аудио...">${escHtml(p.transcript)}</textarea>
                     </details>
                 </div>
             </div>
         </div>
 
         <!-- Questions List -->
-        <div class="rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm overflow-hidden">
-            <div class="px-6 py-4 border-b border-white/[0.06] flex items-center justify-between">
-                <h3 class="text-base font-display font-semibold text-white flex items-center gap-2">
-                    <i class="ph ph-list-numbers text-indigo-400"></i>
-                    Questions
-                    <span class="text-xs font-normal text-slate-500">(${p.questions.length})</span>
+        <div class="card-duo overflow-hidden !p-0">
+            <div class="px-6 py-4 border-b-2 border-duo-border flex items-center justify-between">
+                <h3 class="text-base font-black text-white flex items-center gap-2">
+                    <i class="ph-fill ph-list-numbers text-duo-green"></i>
+                    Вопросы
+                    <span class="text-xs font-bold text-duo-text-muted">(${p.questions.length})</span>
                 </h3>
                 <button onclick="addQuestion(${p.id})"
-                        class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium
-                               bg-indigo-500/10 text-indigo-400 border border-indigo-500/20
-                               hover:bg-indigo-500/20 transition-all">
-                    <i class="ph ph-plus-circle"></i> Add Question
+                        class="btn-duo-outline !py-1.5 !px-3 text-xs !rounded-xl">
+                    <i class="ph-fill ph-plus-circle"></i> Добавить
                 </button>
             </div>
             <div class="p-4 space-y-3" id="questions-list">
@@ -434,26 +438,26 @@ function renderPartEditor() {
 function renderQuestionCard(q, part) {
     const isCorrectHighlight = q.correct_answer ? 'correct-highlight' : '';
     const typeBadge = {
-        'multiple_choice': '<span class="text-sky-400 bg-sky-500/10 border-sky-500/20">MC</span>',
-        'fill_blank': '<span class="text-amber-400 bg-amber-500/10 border-amber-500/20">Fill</span>',
-        'map_label': '<span class="text-violet-400 bg-violet-500/10 border-violet-500/20">Map</span>',
+        'multiple_choice': '<span class="text-duo-blue bg-duo-blue/10 border-duo-blue/20">MC</span>',
+        'fill_blank': '<span class="text-duo-gold bg-duo-gold/10 border-duo-gold/20">Fill</span>',
+        'map_label': '<span class="text-duo-purple bg-duo-purple/10 border-duo-purple/20">Map</span>',
     };
 
     return `
-        <div class="question-card ${isCorrectHighlight} rounded-xl border border-white/[0.05] bg-white/[0.01] p-4" id="q-card-${q.id}">
+        <div class="question-card ${isCorrectHighlight} rounded-xl border-2 border-duo-border/50 bg-duo-surface/50 p-4" id="q-card-${q.id}">
             <!-- Question Header -->
             <div class="flex items-start justify-between gap-3 mb-3">
                 <div class="flex items-center gap-2.5">
-                    <div class="w-8 h-8 rounded-lg flex items-center justify-center bg-white/[0.04] border border-white/[0.06] text-xs font-bold text-slate-300">
+                    <div class="w-8 h-8 rounded-xl flex items-center justify-center bg-duo-green/10 border-2 border-duo-green/20 text-xs font-black text-duo-green">
                         Q${q.question_number}
                     </div>
-                    ${q.global_question_number ? `<span class="text-[10px] text-slate-600 font-mono">#${q.global_question_number}</span>` : ''}
-                    <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full border ${typeBadge[q.question_type] || ''}">${q.question_type}</span>
-                    ${q.group_label ? `<span class="text-[10px] text-slate-500 italic">${escHtml(q.group_label)}</span>` : ''}
+                    ${q.global_question_number ? `<span class="text-[10px] text-duo-text-muted font-bold">#${q.global_question_number}</span>` : ''}
+                    <span class="text-[10px] font-bold px-2 py-0.5 rounded-lg border ${typeBadge[q.question_type] || ''}">${q.question_type}</span>
+                    ${q.group_label ? `<span class="text-[10px] text-duo-text-muted italic font-semibold">${escHtml(q.group_label)}</span>` : ''}
                 </div>
                 <div class="flex items-center gap-1.5">
-                    <button onclick="deleteQuestion(${q.id})" class="w-7 h-7 rounded-lg flex items-center justify-center text-slate-600 hover:text-rose-400 hover:bg-rose-500/10 transition-all" title="Delete question">
-                        <i class="ph ph-trash text-sm"></i>
+                    <button onclick="deleteQuestion(${q.id})" class="w-7 h-7 rounded-xl flex items-center justify-center text-duo-text-muted hover:text-duo-red hover:bg-duo-red/10 transition-all" title="Удалить">
+                        <i class="ph-fill ph-trash text-sm"></i>
                     </button>
                 </div>
             </div>
@@ -462,43 +466,43 @@ function renderQuestionCard(q, part) {
             <div class="space-y-2.5">
                 ${q.group_label !== undefined ? `
                 <div class="flex items-center gap-2">
-                    <label class="text-[10px] text-slate-500 w-20 flex-shrink-0 uppercase tracking-widest">Group</label>
+                    <label class="text-[10px] text-duo-text-muted w-20 flex-shrink-0 uppercase tracking-widest font-extrabold">Группа</label>
                     <input class="editable-field text-xs py-1.5" value="${escAttr(q.group_label)}"
-                           onchange="updateQuestion(${q.id}, 'group_label', this.value)" placeholder="e.g. Extract One">
+                           onchange="updateQuestion(${q.id}, 'group_label', this.value)" placeholder="Напр. Extract One">
                 </div>` : ''}
 
                 <div class="flex items-start gap-2">
-                    <label class="text-[10px] text-slate-500 w-20 flex-shrink-0 uppercase tracking-widest pt-2">Text</label>
+                    <label class="text-[10px] text-duo-text-muted w-20 flex-shrink-0 uppercase tracking-widest font-extrabold pt-2">Текст</label>
                     <textarea class="editable-field text-xs py-1.5" style="min-height:50px"
                               onchange="updateQuestion(${q.id}, 'question_text', this.value)"
-                              placeholder="Question text (OCR result)...">${escHtml(q.question_text)}</textarea>
+                              placeholder="Текст вопроса...">${escHtml(q.question_text)}</textarea>
                 </div>
 
                 <div class="flex items-center gap-2">
-                    <label class="text-[10px] text-slate-500 w-20 flex-shrink-0 uppercase tracking-widest">Answer</label>
-                    <input class="editable-field text-xs py-1.5 font-mono font-bold text-emerald-400" style="max-width:200px"
+                    <label class="text-[10px] text-duo-text-muted w-20 flex-shrink-0 uppercase tracking-widest font-extrabold">Ответ</label>
+                    <input class="editable-field text-xs py-1.5 font-black text-duo-green" style="max-width:200px"
                            value="${escAttr(q.correct_answer)}"
                            onchange="updateQuestion(${q.id}, 'correct_answer', this.value)"
-                           placeholder="Correct answer">
+                           placeholder="Правильный ответ">
                 </div>
 
                 <!-- Explanation -->
                 <details class="mt-1">
-                    <summary class="text-[10px] text-slate-600 cursor-pointer hover:text-slate-400 transition-colors">
-                        Explanation
+                    <summary class="text-[10px] text-duo-text-muted cursor-pointer hover:text-duo-green transition-colors font-extrabold uppercase tracking-widest">
+                        Объяснение
                     </summary>
                     <textarea class="editable-field text-xs py-1.5 mt-1" style="min-height:40px"
                               onchange="updateQuestion(${q.id}, 'explanation', this.value)"
-                              placeholder="Why this answer is correct...">${escHtml(q.explanation)}</textarea>
+                              placeholder="Почему этот ответ правильный...">${escHtml(q.explanation)}</textarea>
                 </details>
 
                 <!-- Choices (if applicable) -->
                 ${q.question_type === 'multiple_choice' || q.question_type === 'map_label' ? `
-                <div class="mt-3 pt-3 border-t border-white/[0.04]">
+                <div class="mt-3 pt-3 border-t-2 border-duo-border/30">
                     <div class="flex items-center justify-between mb-2">
-                        <label class="text-[10px] text-slate-500 uppercase tracking-widest">Choices</label>
-                        <button onclick="addChoice(${q.id})" class="text-[10px] text-indigo-400 hover:text-indigo-300 transition-colors flex items-center gap-1">
-                            <i class="ph ph-plus-circle text-xs"></i> Add
+                        <label class="text-[10px] text-duo-text-muted uppercase tracking-widest font-extrabold">Варианты</label>
+                        <button onclick="addChoice(${q.id})" class="text-[10px] text-duo-green hover:text-duo-gold transition-colors flex items-center gap-1 font-extrabold">
+                            <i class="ph-fill ph-plus-circle text-xs"></i> Добавить
                         </button>
                     </div>
                     <div class="space-y-1.5" id="choices-${q.id}">
@@ -515,14 +519,14 @@ function renderQuestionCard(q, part) {
 function renderChoiceRow(c, q) {
     const isCorrect = q.correct_answer.trim().toUpperCase() === c.label.trim().toUpperCase();
     return `
-        <div class="choice-row flex items-center gap-2 px-2.5 py-1.5 rounded-lg border border-white/[0.04] ${isCorrect ? 'is-correct' : ''}" id="choice-${c.id}">
-            ${isCorrect ? '<i class="ph-fill ph-check-circle text-emerald-400 text-sm flex-shrink-0"></i>' : '<div class="w-[14px] flex-shrink-0"></div>'}
-            <input class="editable-field text-xs py-1 font-bold text-center" style="width:36px; padding:0.25rem" value="${escAttr(c.label)}"
+        <div class="choice-row flex items-center gap-2 px-2.5 py-1.5 rounded-xl border-2 border-duo-border/30 ${isCorrect ? 'is-correct' : ''}" id="choice-${c.id}">
+            ${isCorrect ? '<i class="ph-fill ph-check-circle text-duo-green text-sm flex-shrink-0"></i>' : '<div class="w-[14px] flex-shrink-0"></div>'}
+            <input class="editable-field text-xs py-1 font-black text-center" style="width:36px; padding:0.25rem" value="${escAttr(c.label)}"
                    onchange="updateChoice(${c.id}, 'label', this.value)">
             <input class="editable-field text-xs py-1 flex-1" value="${escAttr(c.text)}"
-                   onchange="updateChoice(${c.id}, 'text', this.value)" placeholder="Choice text">
-            <button onclick="deleteChoice(${c.id}, ${q.id})" class="w-6 h-6 rounded flex items-center justify-center text-slate-600 hover:text-rose-400 transition-colors flex-shrink-0">
-                <i class="ph ph-x text-xs"></i>
+                   onchange="updateChoice(${c.id}, 'text', this.value)" placeholder="Текст варианта">
+            <button onclick="deleteChoice(${c.id}, ${q.id})" class="w-6 h-6 rounded-lg flex items-center justify-center text-duo-text-muted hover:text-duo-red transition-colors flex-shrink-0">
+                <i class="ph-bold ph-x text-xs"></i>
             </button>
         </div>
     `;
@@ -530,7 +534,7 @@ function renderChoiceRow(c, q) {
 
 // ---- API Actions ----
 async function updatePart(partId, field, value) {
-    showSave('saving', 'Saving...');
+    showSave('saving', 'Сохранение...');
     try {
         const data = {};
         data[field] = value;
@@ -538,9 +542,9 @@ async function updatePart(partId, field, value) {
         // Update local data
         const part = testData.parts.find(p => p.id === partId);
         if (part) part[field] = value;
-        showSave('saved', 'Saved');
+        showSave('saved', 'Сохранено');
     } catch (e) {
-        showSave('error', 'Save failed');
+        showSave('error', 'Ошибка');
     }
 }
 
@@ -553,7 +557,7 @@ async function updateSharedChoice(partId, idx, newText) {
 
 async function uploadAudio(partId, input) {
     if (!input.files.length) return;
-    showSave('saving', 'Uploading audio...');
+    showSave('saving', 'Загрузка аудио...');
     try {
         const fd = new FormData();
         fd.append('audio_file', input.files[0]);
@@ -562,17 +566,17 @@ async function uploadAudio(partId, input) {
             const part = testData.parts.find(p => p.id === partId);
             if (part) part.audio_file = result.audio_url;
             renderPartEditor();
-            showSave('saved', 'Audio uploaded');
+            showSave('saved', 'Аудио загружено');
         } else {
-            showSave('error', result.error || 'Upload failed');
+            showSave('error', result.error || 'Ошибка загрузки');
         }
     } catch (e) {
-        showSave('error', 'Upload failed');
+        showSave('error', 'Ошибка загрузки');
     }
 }
 
 async function updateQuestion(questionId, field, value) {
-    showSave('saving', 'Saving...');
+    showSave('saving', 'Сохранение...');
     try {
         const data = {};
         data[field] = value;
@@ -589,15 +593,15 @@ async function updateQuestion(questionId, field, value) {
                 break;
             }
         }
-        showSave('saved', 'Saved');
+        showSave('saved', 'Сохранено');
     } catch (e) {
-        showSave('error', 'Save failed');
+        showSave('error', 'Ошибка');
     }
 }
 
 async function deleteQuestion(questionId) {
-    if (!confirm('Delete this question? This cannot be undone.')) return;
-    showSave('saving', 'Deleting...');
+    if (!(await DuoModal.confirm('Удалить этот вопрос? Это действие нельзя отменить.'))) return;
+    showSave('saving', 'Удаление...');
     try {
         await apiCall(`/api/mentor/question/${questionId}/delete/`);
         // Remove from local data
@@ -615,14 +619,14 @@ async function deleteQuestion(questionId) {
             const btn = document.getElementById(`part-btn-${activePart.id}`);
             if (btn) btn.classList.add('active');
         }
-        showSave('saved', 'Deleted');
+        showSave('saved', 'Удалено');
     } catch (e) {
-        showSave('error', 'Delete failed');
+        showSave('error', 'Ошибка удаления');
     }
 }
 
 async function addQuestion(partId) {
-    showSave('saving', 'Creating...');
+    showSave('saving', 'Создание...');
     try {
         const part = testData.parts.find(p => p.id === partId);
         const qType = part.questions.length > 0 ? part.questions[0].question_type : 'multiple_choice';
@@ -650,15 +654,15 @@ async function addQuestion(partId) {
                 const btn = document.getElementById(`part-btn-${activePart.id}`);
                 if (btn) btn.classList.add('active');
             }
-            showSave('saved', 'Question added');
+            showSave('saved', 'Вопрос добавлен');
         }
     } catch (e) {
-        showSave('error', 'Failed to add');
+        showSave('error', 'Ошибка');
     }
 }
 
 async function addChoice(questionId) {
-    showSave('saving', 'Creating...');
+    showSave('saving', 'Создание...');
     try {
         // Determine next label
         let part = null;
@@ -681,15 +685,15 @@ async function addChoice(questionId) {
             if (container) {
                 container.innerHTML = question.choices.map(c => renderChoiceRow(c, question)).join('');
             }
-            showSave('saved', 'Choice added');
+            showSave('saved', 'Вариант добавлен');
         }
     } catch (e) {
-        showSave('error', 'Failed to add');
+        showSave('error', 'Ошибка');
     }
 }
 
 async function updateChoice(choiceId, field, value) {
-    showSave('saving', 'Saving...');
+    showSave('saving', 'Сохранение...');
     try {
         const data = {};
         data[field] = value;
@@ -704,14 +708,14 @@ async function updateChoice(choiceId, field, value) {
                 }
             }
         }
-        showSave('saved', 'Saved');
+        showSave('saved', 'Сохранено');
     } catch (e) {
-        showSave('error', 'Save failed');
+        showSave('error', 'Ошибка');
     }
 }
 
 async function deleteChoice(choiceId, questionId) {
-    showSave('saving', 'Deleting...');
+    showSave('saving', 'Удаление...');
     try {
         await apiCall(`/api/mentor/choice/${choiceId}/delete/`);
         // Remove from local data
@@ -726,44 +730,44 @@ async function deleteChoice(choiceId, questionId) {
                 break;
             }
         }
-        showSave('saved', 'Deleted');
+        showSave('saved', 'Удалено');
     } catch (e) {
-        showSave('error', 'Delete failed');
+        showSave('error', 'Ошибка');
     }
 }
 
 // ---- Test-level actions ----
 async function editTestName() {
-    const newName = prompt('Enter new test name:', testData.name);
+    const newName = await DuoModal.prompt('Введите новое название теста:', testData.name);
     if (newName && newName !== testData.name) {
-        showSave('saving', 'Renaming...');
+        showSave('saving', 'Переименование...');
         try {
             await apiCall(`/api/mentor/test/${TEST_ID}/update/`, { name: newName });
             testData.name = newName;
             document.getElementById('test-title').textContent = newName;
-            showSave('saved', 'Renamed');
+            showSave('saved', 'Переименовано');
         } catch (e) {
-            showSave('error', 'Rename failed');
+            showSave('error', 'Ошибка');
         }
     }
 }
 
 async function toggleActive() {
-    showSave('saving', 'Updating...');
+    showSave('saving', 'Обновление...');
     try {
         const result = await apiCall(`/api/mentor/test/${TEST_ID}/toggle-active/`);
         testData.is_active = result.is_active;
         const btn = document.getElementById('toggle-active-btn');
         if (result.is_active) {
-            btn.textContent = 'Active';
-            btn.className = 'px-4 py-2 rounded-xl text-xs font-semibold border transition-all bg-emerald-500/10 text-emerald-400 border-emerald-500/25 hover:bg-emerald-500/20';
+            btn.textContent = 'Активен';
+            btn.className = 'badge-duo cursor-pointer transition-all text-xs bg-duo-green/15 text-duo-green border border-duo-green/30 hover:bg-duo-green/25';
         } else {
-            btn.textContent = 'Draft';
-            btn.className = 'px-4 py-2 rounded-xl text-xs font-semibold border transition-all bg-slate-500/10 text-slate-500 border-slate-500/20 hover:bg-slate-500/15';
+            btn.textContent = 'Черновик';
+            btn.className = 'badge-duo cursor-pointer transition-all text-xs bg-duo-surface-2 text-duo-text-muted border border-duo-border hover:bg-duo-surface-2';
         }
-        showSave('saved', result.is_active ? 'Activated' : 'Set to Draft');
+        showSave('saved', result.is_active ? 'Активирован' : 'В черновик');
     } catch (e) {
-        showSave('error', 'Update failed');
+        showSave('error', 'Ошибка');
     }
 }
 

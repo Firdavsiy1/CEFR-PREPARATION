@@ -116,17 +116,19 @@ def mentor_upload(request):
             return redirect('exams:mentor_upload')
 
         test_name = request.POST.get('test_name', '').strip()
+        split_parts = request.POST.get('split_parts') == 'on'
         if not test_name:
             messages.error(request, "Please provide a test name.")
             return redirect('exams:mentor_upload')
 
         # Save ZIP to a temp directory and extract
         try:
-            result = _process_zip_upload(zip_file, test_name, request.user)
+            result = _process_zip_upload(zip_file, test_name, request.user, split_parts=split_parts)
             if result['success']:
+                extra_msg = " и отдельные части!" if split_parts else "!"
                 messages.success(
                     request,
-                    f"✅ Test «{test_name}» ingested successfully! "
+                    f"Test «{test_name}» ingested successfully{extra_msg} "
                     f"{result.get('questions', 0)} questions across "
                     f"{result.get('parts', 0)} parts."
                 )
@@ -141,7 +143,7 @@ def mentor_upload(request):
     return render(request, 'exams/mentor/upload.html')
 
 
-def _process_zip_upload(zip_file, test_name, user):
+def _process_zip_upload(zip_file, test_name, user, split_parts=False):
     """
     Unpack the ZIP into the materials/ directory structure and
     run the ingestion logic inline (synchronously).
@@ -226,12 +228,45 @@ def _process_zip_upload(zip_file, test_name, user):
 
     # Assign the author to the newly created test
     try:
+        from exams.models import Test, Part, Question, Choice
         test_obj = Test.objects.get(name=test_name)
         test_obj.author = user
         test_obj.save(update_fields=['author'])
 
         parts_count = test_obj.parts.count()
         questions_count = Question.objects.filter(part__test=test_obj).count()
+
+        if split_parts:
+            # Clone each part to its own individual test
+            for part in test_obj.parts.all():
+                new_test_name = f"{test_name} - Part {part.part_number}"
+                Test.objects.filter(name=new_test_name).delete()
+                
+                new_test = Test.objects.create(
+                    name=new_test_name,
+                    test_type=test_obj.test_type,
+                    is_active=True,
+                    author=user
+                )
+
+                part_clone = Part.objects.get(id=part.id)
+                part_clone.id = None
+                part_clone.test = new_test
+                # Re-assign part number to 1 since it's a standalone test now
+                # Or keep it as original so we know the type? We keep it as original to preserve UI type logic
+                part_clone.save()
+
+                for q in part.questions.all():
+                    q_clone = Question.objects.get(id=q.id)
+                    q_clone.id = None
+                    q_clone.part = part_clone
+                    q_clone.save()
+                    
+                    for c in q.choices.all():
+                        c_clone = Choice.objects.get(id=c.id)
+                        c_clone.id = None
+                        c_clone.question = q_clone
+                        c_clone.save()
 
         return {
             'success': True,
