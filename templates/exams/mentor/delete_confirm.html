@@ -8,7 +8,7 @@
     <!-- Back link -->
     <a href="{% url 'exams:mentor_dashboard' %}" class="btn-duo-outline text-xs !py-2 !px-4 mb-8 inline-flex">
         <i class="ph-bold ph-arrow-left"></i>
-        Назад к панели
+        <span data-i18n="mnt_back_panel">Назад к панели</span>
     </a>
 
     <!-- Delete Card -->
@@ -20,8 +20,8 @@
                     <i class="ph-fill ph-trash text-white text-2xl"></i>
                 </div>
                 <div>
-                    <h1 class="text-2xl font-black text-white tracking-tight">Удалить тест</h1>
-                    <p class="text-sm text-duo-text-dim font-semibold mt-0.5">Это действие нельзя отменить</p>
+                    <h1 class="text-2xl font-black text-white tracking-tight" data-i18n="mnt_delete_title">Удалить тест</h1>
+                    <p class="text-sm text-duo-text-dim font-semibold mt-0.5" data-i18n="mnt_delete_warning">Это действие необратимо!</p>
                 </div>
             </div>
         </div>
@@ -35,7 +35,7 @@
                     </div>
                     <div>
                         <p class="text-lg font-black text-white">{{ test.name }}</p>
-                        <p class="text-xs text-duo-text-muted font-bold">{{ test.get_test_type_display }} • {{ test.total_questions }} вопросов • {{ test.parts.count }} частей</p>
+                        <p class="text-xs text-duo-text-muted font-bold">{{ test.get_test_type_display }} • {{ test.total_questions }} <span data-i18n="mnt_questions">вопросов</span> • {{ test.parts.count }} <span data-i18n="mnt_col_parts">частей</span></p>
                     </div>
                 </div>
             </div>
@@ -46,8 +46,8 @@
                         <i class="ph-fill ph-warning text-duo-gold text-base"></i>
                     </div>
                     <div>
-                        <p class="text-sm font-extrabold text-duo-gold mb-1">Внимание</p>
-                        <p class="text-xs text-duo-text-dim font-semibold">Тест, все его части, вопросы, варианты ответов и данные попыток студентов будут безвозвратно удалены.</p>
+                        <p class="text-sm font-extrabold text-duo-gold mb-1"><span data-i18n="mnt_delete_confirm">Вы уверены, что хотите удалить тест</span> «{{ test.name }}»?</p>
+                        <p class="text-xs text-duo-text-dim font-semibold" data-i18n="mnt_delete_all_data">Все части, вопросы и попытки учеников будут безвозвратно удалены.</p>
                     </div>
                 </div>
             </div>
@@ -57,11 +57,11 @@
                 <div class="flex items-center justify-between">
                     <a href="{% url 'exams:mentor_dashboard' %}"
                        class="btn-duo-outline text-xs">
-                        Отмена
+                        <span data-i18n="mnt_cancel">Отмена</span>
                     </a>
                     <button type="submit" class="btn-duo-red text-sm">
                         <i class="ph-fill ph-trash text-lg"></i>
-                        Да, удалить тест
+                        <span data-i18n="mnt_delete_btn">Удалить навсегда</span>
                     </button>
                 </div>
             </form>

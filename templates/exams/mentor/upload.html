@@ -9,37 +9,11 @@
     <!-- Back link -->
     <a href="{% url 'exams:mentor_dashboard' %}" class="btn-duo-outline text-xs !py-2 !px-4 mb-8 inline-flex">
         <i class="ph-bold ph-arrow-left"></i>
-        Назад к панели
+        <span data-i18n="mnt_back_panel">Назад к панели</span>
     </a>
 
     <!-- Upload Card -->
     <div class="card-duo overflow-hidden !p-0 animate-fade-in relative min-h-[500px]">
-        
-        <!-- Loading Overlay (Hidden by Default) -->
-        <div id="processing-overlay" class="hidden absolute inset-0 z-50 bg-[#131F24]/95 backdrop-blur-sm flex-col items-center justify-center p-8 animate-fade-in text-center">
-            <div class="relative w-32 h-32 mb-8">
-                <!-- Spinning animation -->
-                <svg class="w-full h-full animate-spin text-duo-green drop-shadow-[0_0_10px_rgba(88,204,2,0.3)]" viewBox="0 0 100 100">
-                    <circle cx="50" cy="50" r="45" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="8" />
-                    <circle cx="50" cy="50" r="45" fill="none" stroke="currentColor" stroke-width="8" stroke-dasharray="200" stroke-dashoffset="50" stroke-linecap="round" />
-                </svg>
-                <div class="absolute inset-0 flex items-center justify-center">
-                    <i class="ph-fill ph-brain text-4xl text-white animate-pulse"></i>
-                </div>
-            </div>
-            
-            <h2 class="text-2xl font-black text-white mb-2" id="processing-title">ИИ обрабатывает тест...</h2>
-            <p class="text-sm font-bold text-duo-text-dim mb-8">Пожалуйста, не закрывайте страницу.</p>
-            
-            <!-- Progress Bar -->
-            <div class="w-full max-w-sm h-4 bg-duo-surface-2 rounded-full overflow-hidden border-2 border-duo-border">
-                <div id="processing-bar" class="h-full bg-duo-green transition-all duration-1000 ease-linear shadow-[0_0_10px_rgba(88,204,2,0.5)]" style="width: 2%"></div>
-            </div>
-            <div class="mt-4 text-[10px] font-extrabold text-duo-blue uppercase tracking-widest flex items-center gap-2">
-                <i class="ph ph-spinner animate-spin text-lg"></i>
-                <span id="processing-stage">Подготовка...</span>
-            </div>
-        </div>
 
         <!-- Header -->
         <div class="px-8 py-6 border-b-2 border-duo-border bg-duo-purple/5">
@@ -48,8 +22,8 @@
                     <i class="ph-fill ph-upload-simple text-white text-2xl"></i>
                 </div>
                 <div>
-                    <h1 class="text-2xl font-black text-white tracking-tight">Загрузить тест</h1>
-                    <p class="text-sm text-duo-text-dim font-semibold mt-0.5">Загрузите ZIP-архив с материалами CEFR экзамена</p>
+                    <h1 class="text-2xl font-black text-white tracking-tight" data-i18n="mnt_upload_title">Загрузить тест</h1>
+                    <p class="text-sm text-duo-text-dim font-semibold mt-0.5" data-i18n="mnt_upload_subtitle">Загрузите ZIP-архив с материалами CEFR экзамена</p>
                 </div>
             </div>
         </div>
@@ -62,19 +36,20 @@
             <div>
                 <label for="test_name" class="block text-xs font-extrabold text-duo-text-dim mb-2 uppercase tracking-widest">
                     <i class="ph-fill ph-text-t text-duo-green mr-1"></i>
-                    Название теста
+                    <span data-i18n="mnt_test_name_label">Название теста</span>
                 </label>
                 <input type="text" id="test_name" name="test_name" required
+                       data-i18n-placeholder="mnt_test_name_placeholder"
                        placeholder="Например: Test 12"
                        class="input-duo !pl-4">
-                <p class="mt-1.5 text-xs text-duo-text-muted font-semibold">Это будет отображаемое имя теста</p>
+                <p class="mt-1.5 text-xs text-duo-text-muted font-semibold" data-i18n="mnt_test_name_hint">Это будет отображаемое имя теста</p>
             </div>
 
             <!-- ZIP File Upload -->
             <div>
                 <label class="block text-xs font-extrabold text-duo-text-dim mb-2 uppercase tracking-widest">
                     <i class="ph-fill ph-file-zip text-duo-gold mr-1"></i>
-                    Архив материалов (.zip)
+                    <span data-i18n="mnt_zip_label">Архив материалов (.zip)</span>
                 </label>
 
                 <!-- Drop Zone -->
@@ -93,8 +68,8 @@
                                     group-hover:border-duo-green/40 group-hover:bg-duo-green/5 transition-all">
                             <i class="ph-fill ph-cloud-arrow-up text-3xl text-duo-text-muted group-hover:text-duo-green transition-colors"></i>
                         </div>
-                        <p class="text-sm font-bold text-white mb-1">Перетащите .zip файл сюда или нажмите для выбора</p>
-                        <p class="text-xs text-duo-text-muted font-semibold">Максимальный размер: 500MB</p>
+                        <p class="text-sm font-bold text-white mb-1" data-i18n="mnt_drop_text">Перетащите .zip файл сюда или нажмите для выбора</p>
+                        <p class="text-xs text-duo-text-muted font-semibold" data-i18n="mnt_drop_max">Максимальный размер: 500MB</p>
                     </div>
 
                     <div id="file-selected" class="hidden">
@@ -112,7 +87,7 @@
             <div class="card-duo !bg-duo-surface/50 p-5">
                 <h3 class="text-xs font-extrabold text-duo-text-dim mb-3 flex items-center gap-2 uppercase tracking-widest">
                     <i class="ph-fill ph-folder-notch text-duo-blue"></i>
-                    Структура ZIP архива
+                    <span data-i18n="mnt_zip_structure">Структура ZIP архива</span>
                 </h3>
                 <pre class="text-xs text-duo-text-dim font-mono leading-relaxed bg-duo-bg rounded-xl p-4 border-2 border-duo-border overflow-x-auto"><code>TestName/
   └── Listening/
@@ -129,7 +104,7 @@
       ├── Part 4/
       │   ├── audio.mp3
       │   ├── questions.jpg
-      │   ├── map.jpg          ← необязательно
+      │   ├── map.jpg          ← optional
       │   └── answers.txt
       ├── Part 5/
       │   └── ...
@@ -137,7 +112,7 @@
           └── ...</code></pre>
                 <p class="mt-3 text-xs text-duo-text-muted font-semibold">
                     <i class="ph-fill ph-info text-duo-blue mr-1"></i>
-                    Формат <strong class="text-white">answers.txt</strong>: одна строка на вопрос, напр. <code class="bg-duo-surface-2 px-1.5 py-0.5 rounded-lg text-duo-green font-bold">1 B</code>
+                    <span data-i18n="mnt_zip_format_hint">Формат</span> <strong class="text-white">answers.txt</strong>: <span data-i18n="mnt_zip_one_line">одна строка на вопрос, напр.</span> <code class="bg-duo-surface-2 px-1.5 py-0.5 rounded-lg text-duo-green font-bold">1 B</code>
                 </p>
             </div>
 
@@ -148,19 +123,19 @@
                     <i class="ph-bold ph-check absolute text-white opacity-0 peer-checked:opacity-100 pointer-events-none text-sm drop-shadow-sm"></i>
                 </div>
                 <div>
-                    <span class="text-sm font-bold text-white block">Выложить все части отдельно</span>
-                    <span class="text-xs font-semibold text-duo-text-muted mt-0.5 block leading-tight">Помимо общего полного теста, будут созданы микро-тесты по одной части.</span>
+                    <span class="text-sm font-bold text-white block" data-i18n="mnt_split_title">Выложить все части отдельно</span>
+                    <span class="text-xs font-semibold text-duo-text-muted mt-0.5 block leading-tight" data-i18n="mnt_split_desc">Помимо общего полного теста, будут созданы микро-тесты по одной части.</span>
                 </div>
             </label>
 
             <!-- Submit -->
             <div class="flex items-center justify-between pt-2">
-                <a href="{% url 'exams:mentor_dashboard' %}" class="text-sm text-duo-text-dim hover:text-white transition-colors font-bold">
+                <a href="{% url 'exams:mentor_dashboard' %}" class="text-sm text-duo-text-dim hover:text-white transition-colors font-bold" data-i18n="mnt_cancel">
                     Отмена
                 </a>
                 <button type="submit" id="submit-btn" class="btn-duo-green text-sm">
                     <i class="ph-fill ph-rocket-launch text-lg"></i>
-                    <span id="submit-text">Загрузить и обработать</span>
+                    <span id="submit-text" data-i18n="mnt_submit_upload">Загрузить и обработать</span>
                 </button>
             </div>
         </form>
@@ -173,11 +148,12 @@
                 <i class="ph-fill ph-warning text-duo-gold text-lg"></i>
             </div>
             <div>
-                <p class="text-sm font-extrabold text-duo-gold mb-1">Важные замечания</p>
+                <p class="text-sm font-extrabold text-duo-gold mb-1" data-i18n="mnt_warn_title">Важные замечания</p>
                 <ul class="text-xs text-duo-text-dim space-y-1.5 font-semibold">
-                    <li class="flex items-start gap-2"><i class="ph-fill ph-dot text-duo-gold mt-0.5"></i> Обработка использует <strong class="text-white">Gemini AI OCR</strong> и может занять 2-5 минут.</li>
-                    <li class="flex items-start gap-2"><i class="ph-fill ph-dot text-duo-gold mt-0.5"></i> Тест с таким же именем будет <strong class="text-white">перезаписан</strong>.</li>
-                    <li class="flex items-start gap-2"><i class="ph-fill ph-dot text-duo-gold mt-0.5"></i> Результаты OCR можно редактировать в <strong class="text-white">Конструкторе тестов</strong>.</li>
+                    <li class="flex items-start gap-2"><i class="ph-fill ph-dot text-duo-gold mt-0.5"></i> <span data-i18n="mnt_warn_ai">Обработка использует</span> <strong class="text-white">Gemini AI OCR</strong> <span data-i18n="mnt_warn_ai_suffix">и выполняется в фоновом режиме.</span></li>
+                    <li class="flex items-start gap-2"><i class="ph-fill ph-dot text-duo-gold mt-0.5"></i> <span data-i18n="mnt_warn_overwrite">Тест с таким же именем будет</span> <strong class="text-white" data-i18n="mnt_warn_overwrite_val">перезаписан</strong>.</li>
+                    <li class="flex items-start gap-2"><i class="ph-fill ph-dot text-duo-gold mt-0.5"></i> <span data-i18n="mnt_warn_edit">Результаты OCR можно редактировать в</span> <strong class="text-white" data-i18n="mnt_warn_edit_val">Конструкторе тестов</strong>.</li>
+                    <li class="flex items-start gap-2"><i class="ph-fill ph-dot text-duo-green mt-0.5"></i> <span data-i18n="mnt_warn_close">Вы можете</span> <strong class="text-white" data-i18n="mnt_warn_close_val">закрыть страницу</strong> <span data-i18n="mnt_warn_close_suffix">— обработка не прервётся.</span></li>
                 </ul>
             </div>
         </div>
@@ -224,36 +200,12 @@
         });
     });
 
-    // Loading state on submit
+    // Show uploading state on submit
     form.addEventListener('submit', () => {
-        // Show loader overlay
-        const overlay = document.getElementById('processing-overlay');
-        overlay.classList.remove('hidden');
-        overlay.classList.add('flex');
-        
-        // Disable submit button logic so it doesn't get double clicked right before overlay covers it
+        const lang = document.documentElement.lang || 'ru';
+        const dict = (typeof _i18n !== 'undefined' && _i18n[lang]) ? _i18n[lang] : {};
         submitBtn.disabled = true;
-        
-        const bar = document.getElementById('processing-bar');
-        const stage = document.getElementById('processing-stage');
-        
-        const stages = [
-            { time: 0, width: '5%', text: 'Загрузка архива на сервер...' },
-            { time: 2000, width: '15%', text: 'Распаковка материалов (.zip)...' },
-            { time: 4000, width: '25%', text: 'Проверка структуры папок...' },
-            { time: 6000, width: '40%', text: 'Анализ документов через Gemini AI...' },
-            { time: 15000, width: '60%', text: 'Распознавание транскриптов и вопросов...' },
-            { time: 25000, width: '80%', text: 'Загрузка аудиодорожек...' },
-            { time: 35000, width: '90%', text: 'Формирование базы данных...' },
-            { time: 42000, width: '99%', text: 'Сохранение завершается...' }
-        ];
-        
-        stages.forEach(s => {
-            setTimeout(() => {
-                bar.style.width = s.width;
-                stage.textContent = s.text;
-            }, s.time);
-        });
+        submitText.innerHTML = '<i class="ph ph-spinner animate-spin"></i> ' + (dict.mnt_uploading || 'Загрузка...');
     });
 </script>
 {% endblock %}

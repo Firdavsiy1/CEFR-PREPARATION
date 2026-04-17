@@ -403,3 +403,66 @@ class UserAnswer(models.Model):
         """Automatically grade the answer on save."""
         self.is_correct = self.question.check_answer(self.given_answer)
         super().save(*args, **kwargs)
+
+
+# ---------------------------------------------------------------------------
+# Background ingestion task tracking
+# ---------------------------------------------------------------------------
+
+class IngestionTask(models.Model):
+    """
+    Tracks the progress of a background test ingestion job.
+
+    Created when a mentor uploads a ZIP. The background thread updates
+    status, progress, and stage fields as it works. The frontend polls
+    the API endpoint to display real-time progress.
+    """
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('running', 'Running'),
+        ('completed', 'Completed'),
+        ('failed', 'Failed'),
+    ]
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='ingestion_tasks',
+    )
+    test_name = models.CharField(max_length=200)
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='pending',
+    )
+    progress = models.PositiveIntegerField(
+        default=0,
+        help_text="Progress percentage (0-100).",
+    )
+    stage = models.CharField(
+        max_length=300,
+        default='В очереди...',
+        help_text="Human-readable description of the current processing stage.",
+    )
+    split_parts = models.BooleanField(default=False)
+    result_test_id = models.IntegerField(
+        null=True, blank=True,
+        help_text="ID of the created Test object on success.",
+    )
+    parts_count = models.PositiveIntegerField(default=0)
+    questions_count = models.PositiveIntegerField(default=0)
+    error_message = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Ingestion: {self.test_name} ({self.get_status_display()})"
+
+    def update_progress(self, progress, stage):
+        """Thread-safe progress update."""
+        self.progress = min(progress, 100)
+        self.stage = stage
+        self.save(update_fields=['progress', 'stage'])

@@ -1,0 +1,2505 @@
+[
+{
+    "model": "auth.group",
+    "fields": {
+        "name": "Mentors",
+        "permissions": []
+    }
+},
+{
+    "model": "auth.user",
+    "fields": {
+        "password": "pbkdf2_sha256$600000$SDjt6RZ0uHzeR5w9FAVxpN$dxxqIri72gYCq6IKunK6TSQyEWSSwoCN17pqLGdnD9w=",
+        "last_login": "2026-04-16T15:47:53.707Z",
+        "is_superuser": true,
+        "username": "admin",
+        "first_name": "",
+        "last_name": "",
+        "email": "admin@test.com",
+        "is_staff": true,
+        "is_active": true,
+        "date_joined": "2026-04-11T22:10:14.999Z",
+        "groups": [],
+        "user_permissions": []
+    }
+},
+{
+    "model": "auth.user",
+    "fields": {
+        "password": "pbkdf2_sha256$1200000$N0JjpqIwMQUcc7xO4EQaW5$qO+PSmMJQzTFBMxBQbm1Gx1M1fmhgfSgDlOnZMaFwRc=",
+        "last_login": "2026-04-17T06:37:03.114Z",
+        "is_superuser": false,
+        "username": "student",
+        "first_name": "",
+        "last_name": "",
+        "email": "",
+        "is_staff": false,
+        "is_active": true,
+        "date_joined": "2026-04-17T06:37:02.849Z",
+        "groups": [],
+        "user_permissions": []
+    }
+},
+{
+    "model": "auth.user",
+    "fields": {
+        "password": "pbkdf2_sha256$600000$6e7OPRORAyehI2FUO8P2os$tvqyiM01qP+g+5ONqgQf1+VcXjM+haEcXoXexssZZR4=",
+        "last_login": "2026-04-17T09:23:59.188Z",
+        "is_superuser": false,
+        "username": "new_tester",
+        "first_name": "",
+        "last_name": "",
+        "email": "new_tester@cefrprep.com",
+        "is_staff": false,
+        "is_active": true,
+        "date_joined": "2026-04-17T09:23:59.043Z",
+        "groups": [],
+        "user_permissions": []
+    }
+},
+{
+    "model": "accounts.userprofile",
+    "pk": 1,
+    "fields": {
+        "user": [
+            "admin"
+        ],
+        "avatar": "owl",
+        "language": "ru",
+        "custom_avatar": ""
+    }
+},
+{
+    "model": "accounts.userprofile",
+    "pk": 2,
+    "fields": {
+        "user": [
+            "student"
+        ],
+        "avatar": "owl",
+        "language": "ru",
+        "custom_avatar": ""
+    }
+},
+{
+    "model": "accounts.userprofile",
+    "pk": 3,
+    "fields": {
+        "user": [
+            "new_tester"
+        ],
+        "avatar": "planet",
+        "language": "en",
+        "custom_avatar": "avatars/speaker2.png"
+    }
+},
+{
+    "model": "exams.test",
+    "pk": 5,
+    "fields": {
+        "name": "Test 1",
+        "test_type": "listening",
+        "author": [
+            "admin"
+        ],
+        "created_at": "2026-04-17T03:45:07.456Z",
+        "is_active": true
+    }
+},
+{
+    "model": "exams.test",
+    "pk": 6,
+    "fields": {
+        "name": "Test 1 - Part 1",
+        "test_type": "listening",
+        "author": [
+            "admin"
+        ],
+        "created_at": "2026-04-17T03:47:42.479Z",
+        "is_active": true
+    }
+},
+{
+    "model": "exams.test",
+    "pk": 7,
+    "fields": {
+        "name": "Test 1 - Part 2",
+        "test_type": "listening",
+        "author": [
+            "admin"
+        ],
+        "created_at": "2026-04-17T03:47:42.569Z",
+        "is_active": true
+    }
+},
+{
+    "model": "exams.test",
+    "pk": 8,
+    "fields": {
+        "name": "Test 1 - Part 3",
+        "test_type": "listening",
+        "author": [
+            "admin"
+        ],
+        "created_at": "2026-04-17T03:47:42.591Z",
+        "is_active": true
+    }
+},
+{
+    "model": "exams.test",
+    "pk": 9,
+    "fields": {
+        "name": "Test 1 - Part 4",
+        "test_type": "listening",
+        "author": [
+            "admin"
+        ],
+        "created_at": "2026-04-17T03:47:42.610Z",
+        "is_active": true
+    }
+},
+{
+    "model": "exams.test",
+    "pk": 10,
+    "fields": {
+        "name": "Test 1 - Part 5",
+        "test_type": "listening",
+        "author": [
+            "admin"
+        ],
+        "created_at": "2026-04-17T03:47:42.636Z",
+        "is_active": true
+    }
+},
+{
+    "model": "exams.test",
+    "pk": 11,
+    "fields": {
+        "name": "Test 1 - Part 6",
+        "test_type": "listening",
+        "author": [
+            "admin"
+        ],
+        "created_at": "2026-04-17T03:47:42.706Z",
+        "is_active": true
+    }
+},
+{
+    "model": "exams.part",
+    "pk": 163,
+    "fields": {
+        "test": 5,
+        "part_number": 1,
+        "instructions": "You will hear some sentences. You will hear each sentence twice. Choose the correct reply to each sentence (A, B, or C). Mark your answers on the answer sheet.",
+        "audio_file": "exams/audio/test_1_part1_lbsHXv9.mp3",
+        "question_image": "exams/questions/test_1_part1_questions_QpYlZAk.jpg",
+        "map_image": "",
+        "passage_title": "",
+        "passage_text": "",
+        "shared_choices_json": [],
+        "transcript": "Speaker 1: Go down the stairs and then turn left. \nSpeaker 2: Excuse me, can you tell me where the restaurant is, please? \nSpeaker 3: Excuse me, can you tell me where the book department is, please? \nSpeaker 4: Can you tell me where the ticket office is? \nSpeaker 5: Sorry, the fourth floor? \nSpeaker 6: Turn left, go down the corridor, and through the first door on the left. \nSpeaker 7: Can you tell me where the shopping center is? \nSpeaker 8: So, can I just check? I go up the stairs to the third floor.",
+        "points_per_question": 2.0
+    }
+},
+{
+    "model": "exams.part",
+    "pk": 164,
+    "fields": {
+        "test": 5,
+        "part_number": 2,
+        "instructions": "You will hear someone giving a talk. For each question, fill in the missing information in the numbered space.\nWrite ONE WORD and / or A NUMBER for each answer.",
+        "audio_file": "exams/audio/test_1_part2_PMwlYcF.mp3",
+        "question_image": "exams/questions/test_1_part2_questions_zK1nLg8.jpg",
+        "map_image": "",
+        "passage_title": "Working in a forest in New Zealand",
+        "passage_text": "Steve had accommodation in a shared {9}. Steve says it was important to have good {10} at the end of each day. Steve worked with a team that made a {11} through the forest. Steve also collected information needed for a {12} of the forest area. In the morning Steve was surprised to hear the sound of {13} in the forest. When he did the trip, Steve only had to pay for his {14}.",
+        "shared_choices_json": [],
+        "transcript": "I've always wanted to go to New Zealand, so when I saw an advertisement asking for people to work in a forest near Auckland, I applied. I was accepted and flew out to New Zealand in January. At the airport, I met other people going to work in the forest, and a bus came to collect us and take us there. Eventually, there's going to be a really big tourist centre where we were. I thought I'd be staying in a wooden hut, but in fact, I was in a tent, which I shared with four other boys, two American and two Japanese. It was summer, so I was a bit disappointed that the weather was rather wet and windy. But at least you could have hot showers in the evening. There was also a professional cook, and every evening he made us great meals. That's important when you're working outside all day. We always worked as a team, so progress was fast. Our main job was creating a path in the forest to make access easier. They'll need it when the tourist centre opens to groups in another year or two. I also enjoyed getting the information to make a map of the forest area, something else that was a good experience for me. I'll always remember how quiet the forest was early in the morning. The birds were singing as you'd expect, but I couldn't believe I could actually hear the rabbits. They ran around in the long grass early in the morning. If you like nature and you want a taste of life outside a city, try this trip. You have to find the money for your own flight, but everything else, including special boots, is provided. Anyway, I was gonna say...",
+        "points_per_question": 2.5
+    }
+},
+{
+    "model": "exams.part",
+    "pk": 165,
+    "fields": {
+        "test": 5,
+        "part_number": 3,
+        "instructions": "You will hear people apologising about something. For questions choose from the list A-F the reason for each speaker's apology. There are TWO EXTRA places which you do not need to use. Mark your answers on the answer sheet.",
+        "audio_file": "exams/audio/test_1_part3_hfbhIDI.mp3",
+        "question_image": "exams/questions/test_1_part3_questions_FAxeNKr.jpg",
+        "map_image": "",
+        "passage_title": "",
+        "passage_text": "",
+        "shared_choices_json": [
+            {
+                "label": "A",
+                "text": "disturbing someone"
+            },
+            {
+                "label": "B",
+                "text": "cancelling a theatre booking"
+            },
+            {
+                "label": "C",
+                "text": "leaving something behind"
+            },
+            {
+                "label": "D",
+                "text": "forgetting to write something down"
+            },
+            {
+                "label": "E",
+                "text": "arriving very late"
+            },
+            {
+                "label": "F",
+                "text": "dropping something"
+            }
+        ],
+        "transcript": "",
+        "points_per_question": 3.0
+    }
+},
+{
+    "model": "exams.part",
+    "pk": 166,
+    "fields": {
+        "test": 5,
+        "part_number": 4,
+        "instructions": "",
+        "audio_file": "exams/audio/test_1_part4_XDyzBWw.mp3",
+        "question_image": "exams/questions/test_1_part4_questions_8HgLi42.jpg",
+        "map_image": "exams/maps/test_1_part4_map_yeQGyuL.jpg",
+        "passage_title": "",
+        "passage_text": "",
+        "shared_choices_json": [],
+        "transcript": "As the final matter for today's meeting, I am delighted to show you the plans for our proposed new extension to the reception area. Please turn your attention to the plan in front of you. If you enter through the entrance doors and go around the sharp corner, you will find on your left the new box office. From this position, the box office manager can both sell tickets and ensure that no visitors are able to enter the museum without paying. From here, if you walk towards the door on the far left wall, you will come across our new children's room, where visitors can leave their children to play whilst they explore our displays. Directly to the right of the children's room is where we originally intended to locate the café. But we felt that it would be better placed in the bottom right corner of the plan, where we can create a more intimate atmosphere. Due to generous donations, we now have the available funds to build a fantastic new multimedia room, where visitors will have access to computers, cameras, and TVs. This exciting new space will be in the top right corner, where it is safely away from the entrance doors. Finally, the showroom will be built in the top left corner, directly opposite the new multimedia room. I hope that you are all as excited about this new space as I am. And now that I am finished, I would be happy to answer any questions.",
+        "points_per_question": 3.0
+    }
+},
+{
+    "model": "exams.part",
+    "pk": 167,
+    "fields": {
+        "test": 5,
+        "part_number": 5,
+        "instructions": "You will hear three extracts. Choose the correct answer (A, B or C) for each question (24-29). There are TWO questions for each extract.",
+        "audio_file": "exams/audio/test_1_part5_geDBIAX.mp3",
+        "question_image": "exams/questions/test_1_part5_questions_kjml0Qp.jpg",
+        "map_image": "",
+        "passage_title": "",
+        "passage_text": "",
+        "shared_choices_json": [],
+        "transcript": "Part five. You will hear three extracts. Choose the correct answer for each question. There are two questions for each extract. Mark your answers on the answer sheet. You have 30 seconds before you listen to the recording.\n\nNow, we are ready to start.\n\nExtract One.\nYou know, I find it quite astounding the way people flock through this area to go birdwatching, and yet on route they are completely oblivious to the marvel of the birds here on the lowlands.\nI know. Every Friday night when I'm driving home from the shop, the motorway plays host to a rush of weekend visitors buzzing past the flat lowlands on their way to the hillier areas of Dartmoor and Exmoor.\nIt seems it's a local's well-kept secret that the starlings' dance in the sky here is probably one of the best natural sights there is to be seen in the area. It makes me want to stop them all and tell them.\nMaybe it's not such a bad thing. They'd start to build tea shops and car parks and the whole area would be ruined.\n\nExtract Two.\nDid you hear that terrible racket last night?\nYes, it woke me up.\nIt sounded like a battleground! I thought it was a gang of youngsters messing around at first.\nI went to investigate because I thought we might have prowlers.\nThere has been a spate of burglaries in this area recently. I did consider calling the police, but I couldn't see anyone out of the window.\nWell, from the mess around our rubbish bins this morning, it was obvious what it was, as there was litter everywhere where it had been looking for food.\nOur bins weren't touched, but I'm glad my cat was in or it could have been eaten!\n\nExtract Three.\nI can see why people are campaigning to block the new landfill site, as the one just outside town is pretty smelly and unsightly. But on the other hand, it provides food for many species of birds.\nWell, yes, it's a fact that some species have seen their numbers increase substantially due to the abundance of insects and worms found on or around the dumps.\nIf the new site isn't opened, and in fact the original one may be closed, it could send the bird population into decline again in this area.\nBut it has been argued that birds feeding on these sites regularly die of poisoning.\nI don't know if the council will opt for incineration instead of creating more tips, but I think that the smoke from the incinerators causes more pollution than the tips do.\nI've heard that the whole thing has been put on hold until more research can be carried out.",
+        "points_per_question": 3.0
+    }
+},
+{
+    "model": "exams.part",
+    "pk": 168,
+    "fields": {
+        "test": 5,
+        "part_number": 6,
+        "instructions": "You will hear a part of a lecture. For each question, fill in the missing information in the numbered space. Write no more than ONE WORD for each answer.",
+        "audio_file": "exams/audio/test_1_part6_D7MJrUm.mp3",
+        "question_image": "exams/questions/test_1_part6_questions_SeaRxdD.jpg",
+        "map_image": "",
+        "passage_title": "BRITISH MARINE LIFE IN CRISIS",
+        "passage_text": "Pollution, coastal developments and {30} are the conventional threats to marine life. Pink coral is most in danger along with turtles, sharks and salmon. {31} passed by the UK and EU protects some areas of UK waters. 0.002 percent of UK waters are currently fully protected. WWF-UK is calling for a {32} of protected marine reserves to be established. The way that marine life has been protected up until now is {33} . If fisheries were {34} into the planning process, it would be more successful. A general {35} is needed for better marine management",
+        "shared_choices_json": [],
+        "transcript": "Now we are ready to start. Nowhere is the need for the ecosystem-based management more pressing than in British waters. According to WWF-UK, our marine environment is facing more problems than ever, not only from conventional threats such as overfishing, pollution, and coastal development, but also from sand and gravel extraction and construction associated with offshore wind farms and the sequestration of carbon dioxide. Those species most endangered include the turtle, shark, Atlantic salmon, and pink coral, while such habitats as salt marshes and seagrass and marl beds also face considerable pressure. At present, specific areas within UK waters are protected according to UK and EU legislation as marine nature reserves or special areas of conservation. But these areas are failing to halt the decline. Scientists recommend that 20 to 30 percent of the marine environment should be fully protected from damaging and extractive activities. However, at present, the only region in which all species and their habitats are managed in this way is a 3.3 square kilometer area off the east coast of Lundy Island in the Bristol Channel, a mere 0.002 percent of our waters. Organizations such as the MCS, the British Sub-Aqua Club, and WWF-UK are currently campaigning for the creation of a network of highly protected marine reserves. What the fishing industry would call no-take zones, where all extractive activities are prohibited. Case studies from around the world show that fully protected reserves are the only way to maintain marine biodiversity. It's quite clear that the current system is inadequate. We have to protect a representative number of habitats as a whole if we are to stop the decline of wildlife in UK waters. Not only do we need a network of protected areas, we should also manage fisheries from the perspective of biodiversity and the health of the ecosystem. Historically, we've always looked at these things independently. So at the policy level, fisheries aren't integrated into the planning process. They are considered separately from environmental issues. So when fisheries councils consider stocks and quotas and so on, they don't consider the environmental impact unless they have some impact on the stock. We need an overall strategy for marine spatial management that considers the impacts on biodiversity and ecosystems, not just the stocks. That is the end of the listening test.",
+        "points_per_question": 4.0
+    }
+},
+{
+    "model": "exams.part",
+    "pk": 169,
+    "fields": {
+        "test": 6,
+        "part_number": 1,
+        "instructions": "You will hear some sentences. You will hear each sentence twice. Choose the correct reply to each sentence (A, B, or C). Mark your answers on the answer sheet.",
+        "audio_file": "exams/audio/test_1_part1_lbsHXv9.mp3",
+        "question_image": "exams/questions/test_1_part1_questions_QpYlZAk.jpg",
+        "map_image": "",
+        "passage_title": "",
+        "passage_text": "",
+        "shared_choices_json": [],
+        "transcript": "Speaker 1: Go down the stairs and then turn left. \nSpeaker 2: Excuse me, can you tell me where the restaurant is, please? \nSpeaker 3: Excuse me, can you tell me where the book department is, please? \nSpeaker 4: Can you tell me where the ticket office is? \nSpeaker 5: Sorry, the fourth floor? \nSpeaker 6: Turn left, go down the corridor, and through the first door on the left. \nSpeaker 7: Can you tell me where the shopping center is? \nSpeaker 8: So, can I just check? I go up the stairs to the third floor.",
+        "points_per_question": 2.0
+    }
+},
+{
+    "model": "exams.part",
+    "pk": 170,
+    "fields": {
+        "test": 7,
+        "part_number": 2,
+        "instructions": "You will hear someone giving a talk. For each question, fill in the missing information in the numbered space.\nWrite ONE WORD and / or A NUMBER for each answer.",
+        "audio_file": "exams/audio/test_1_part2_PMwlYcF.mp3",
+        "question_image": "exams/questions/test_1_part2_questions_zK1nLg8.jpg",
+        "map_image": "",
+        "passage_title": "Working in a forest in New Zealand",
+        "passage_text": "Steve had accommodation in a shared {9}. Steve says it was important to have good {10} at the end of each day. Steve worked with a team that made a {11} through the forest. Steve also collected information needed for a {12} of the forest area. In the morning Steve was surprised to hear the sound of {13} in the forest. When he did the trip, Steve only had to pay for his {14}.",
+        "shared_choices_json": [],
+        "transcript": "I've always wanted to go to New Zealand, so when I saw an advertisement asking for people to work in a forest near Auckland, I applied. I was accepted and flew out to New Zealand in January. At the airport, I met other people going to work in the forest, and a bus came to collect us and take us there. Eventually, there's going to be a really big tourist centre where we were. I thought I'd be staying in a wooden hut, but in fact, I was in a tent, which I shared with four other boys, two American and two Japanese. It was summer, so I was a bit disappointed that the weather was rather wet and windy. But at least you could have hot showers in the evening. There was also a professional cook, and every evening he made us great meals. That's important when you're working outside all day. We always worked as a team, so progress was fast. Our main job was creating a path in the forest to make access easier. They'll need it when the tourist centre opens to groups in another year or two. I also enjoyed getting the information to make a map of the forest area, something else that was a good experience for me. I'll always remember how quiet the forest was early in the morning. The birds were singing as you'd expect, but I couldn't believe I could actually hear the rabbits. They ran around in the long grass early in the morning. If you like nature and you want a taste of life outside a city, try this trip. You have to find the money for your own flight, but everything else, including special boots, is provided. Anyway, I was gonna say...",
+        "points_per_question": 2.5
+    }
+},
+{
+    "model": "exams.part",
+    "pk": 171,
+    "fields": {
+        "test": 8,
+        "part_number": 3,
+        "instructions": "You will hear people apologising about something. For questions choose from the list A-F the reason for each speaker's apology. There are TWO EXTRA places which you do not need to use. Mark your answers on the answer sheet.",
+        "audio_file": "exams/audio/test_1_part3_hfbhIDI.mp3",
+        "question_image": "exams/questions/test_1_part3_questions_FAxeNKr.jpg",
+        "map_image": "",
+        "passage_title": "",
+        "passage_text": "",
+        "shared_choices_json": [
+            {
+                "label": "A",
+                "text": "disturbing someone"
+            },
+            {
+                "label": "B",
+                "text": "cancelling a theatre booking"
+            },
+            {
+                "label": "C",
+                "text": "leaving something behind"
+            },
+            {
+                "label": "D",
+                "text": "forgetting to write something down"
+            },
+            {
+                "label": "E",
+                "text": "arriving very late"
+            },
+            {
+                "label": "F",
+                "text": "dropping something"
+            }
+        ],
+        "transcript": "",
+        "points_per_question": 3.0
+    }
+},
+{
+    "model": "exams.part",
+    "pk": 172,
+    "fields": {
+        "test": 9,
+        "part_number": 4,
+        "instructions": "",
+        "audio_file": "exams/audio/test_1_part4_XDyzBWw.mp3",
+        "question_image": "exams/questions/test_1_part4_questions_8HgLi42.jpg",
+        "map_image": "exams/maps/test_1_part4_map_yeQGyuL.jpg",
+        "passage_title": "",
+        "passage_text": "",
+        "shared_choices_json": [],
+        "transcript": "As the final matter for today's meeting, I am delighted to show you the plans for our proposed new extension to the reception area. Please turn your attention to the plan in front of you. If you enter through the entrance doors and go around the sharp corner, you will find on your left the new box office. From this position, the box office manager can both sell tickets and ensure that no visitors are able to enter the museum without paying. From here, if you walk towards the door on the far left wall, you will come across our new children's room, where visitors can leave their children to play whilst they explore our displays. Directly to the right of the children's room is where we originally intended to locate the café. But we felt that it would be better placed in the bottom right corner of the plan, where we can create a more intimate atmosphere. Due to generous donations, we now have the available funds to build a fantastic new multimedia room, where visitors will have access to computers, cameras, and TVs. This exciting new space will be in the top right corner, where it is safely away from the entrance doors. Finally, the showroom will be built in the top left corner, directly opposite the new multimedia room. I hope that you are all as excited about this new space as I am. And now that I am finished, I would be happy to answer any questions.",
+        "points_per_question": 3.0
+    }
+},
+{
+    "model": "exams.part",
+    "pk": 173,
+    "fields": {
+        "test": 10,
+        "part_number": 5,
+        "instructions": "You will hear three extracts. Choose the correct answer (A, B or C) for each question (24-29). There are TWO questions for each extract.",
+        "audio_file": "exams/audio/test_1_part5_geDBIAX.mp3",
+        "question_image": "exams/questions/test_1_part5_questions_kjml0Qp.jpg",
+        "map_image": "",
+        "passage_title": "",
+        "passage_text": "",
+        "shared_choices_json": [],
+        "transcript": "Part five. You will hear three extracts. Choose the correct answer for each question. There are two questions for each extract. Mark your answers on the answer sheet. You have 30 seconds before you listen to the recording.\n\nNow, we are ready to start.\n\nExtract One.\nYou know, I find it quite astounding the way people flock through this area to go birdwatching, and yet on route they are completely oblivious to the marvel of the birds here on the lowlands.\nI know. Every Friday night when I'm driving home from the shop, the motorway plays host to a rush of weekend visitors buzzing past the flat lowlands on their way to the hillier areas of Dartmoor and Exmoor.\nIt seems it's a local's well-kept secret that the starlings' dance in the sky here is probably one of the best natural sights there is to be seen in the area. It makes me want to stop them all and tell them.\nMaybe it's not such a bad thing. They'd start to build tea shops and car parks and the whole area would be ruined.\n\nExtract Two.\nDid you hear that terrible racket last night?\nYes, it woke me up.\nIt sounded like a battleground! I thought it was a gang of youngsters messing around at first.\nI went to investigate because I thought we might have prowlers.\nThere has been a spate of burglaries in this area recently. I did consider calling the police, but I couldn't see anyone out of the window.\nWell, from the mess around our rubbish bins this morning, it was obvious what it was, as there was litter everywhere where it had been looking for food.\nOur bins weren't touched, but I'm glad my cat was in or it could have been eaten!\n\nExtract Three.\nI can see why people are campaigning to block the new landfill site, as the one just outside town is pretty smelly and unsightly. But on the other hand, it provides food for many species of birds.\nWell, yes, it's a fact that some species have seen their numbers increase substantially due to the abundance of insects and worms found on or around the dumps.\nIf the new site isn't opened, and in fact the original one may be closed, it could send the bird population into decline again in this area.\nBut it has been argued that birds feeding on these sites regularly die of poisoning.\nI don't know if the council will opt for incineration instead of creating more tips, but I think that the smoke from the incinerators causes more pollution than the tips do.\nI've heard that the whole thing has been put on hold until more research can be carried out.",
+        "points_per_question": 3.0
+    }
+},
+{
+    "model": "exams.part",
+    "pk": 174,
+    "fields": {
+        "test": 11,
+        "part_number": 6,
+        "instructions": "You will hear a part of a lecture. For each question, fill in the missing information in the numbered space. Write no more than ONE WORD for each answer.",
+        "audio_file": "exams/audio/test_1_part6_D7MJrUm.mp3",
+        "question_image": "exams/questions/test_1_part6_questions_SeaRxdD.jpg",
+        "map_image": "",
+        "passage_title": "BRITISH MARINE LIFE IN CRISIS",
+        "passage_text": "Pollution, coastal developments and {30} are the conventional threats to marine life. Pink coral is most in danger along with turtles, sharks and salmon. {31} passed by the UK and EU protects some areas of UK waters. 0.002 percent of UK waters are currently fully protected. WWF-UK is calling for a {32} of protected marine reserves to be established. The way that marine life has been protected up until now is {33} . If fisheries were {34} into the planning process, it would be more successful. A general {35} is needed for better marine management",
+        "shared_choices_json": [],
+        "transcript": "Now we are ready to start. Nowhere is the need for the ecosystem-based management more pressing than in British waters. According to WWF-UK, our marine environment is facing more problems than ever, not only from conventional threats such as overfishing, pollution, and coastal development, but also from sand and gravel extraction and construction associated with offshore wind farms and the sequestration of carbon dioxide. Those species most endangered include the turtle, shark, Atlantic salmon, and pink coral, while such habitats as salt marshes and seagrass and marl beds also face considerable pressure. At present, specific areas within UK waters are protected according to UK and EU legislation as marine nature reserves or special areas of conservation. But these areas are failing to halt the decline. Scientists recommend that 20 to 30 percent of the marine environment should be fully protected from damaging and extractive activities. However, at present, the only region in which all species and their habitats are managed in this way is a 3.3 square kilometer area off the east coast of Lundy Island in the Bristol Channel, a mere 0.002 percent of our waters. Organizations such as the MCS, the British Sub-Aqua Club, and WWF-UK are currently campaigning for the creation of a network of highly protected marine reserves. What the fishing industry would call no-take zones, where all extractive activities are prohibited. Case studies from around the world show that fully protected reserves are the only way to maintain marine biodiversity. It's quite clear that the current system is inadequate. We have to protect a representative number of habitats as a whole if we are to stop the decline of wildlife in UK waters. Not only do we need a network of protected areas, we should also manage fisheries from the perspective of biodiversity and the health of the ecosystem. Historically, we've always looked at these things independently. So at the policy level, fisheries aren't integrated into the planning process. They are considered separately from environmental issues. So when fisheries councils consider stocks and quotas and so on, they don't consider the environmental impact unless they have some impact on the stock. We need an overall strategy for marine spatial management that considers the impacts on biodiversity and ecosystems, not just the stocks. That is the end of the listening test.",
+        "points_per_question": 4.0
+    }
+},
+{
+    "model": "exams.question",
+    "pk": 946,
+    "fields": {
+        "part": 163,
+        "question_number": 1,
+        "global_question_number": 1,
+        "group_label": "",
+        "question_text": "",
+        "question_type": "multiple_choice",
+        "correct_answer": "A",
+        "explanation": "The answer is A because the speaker gives directions \"Go down the stairs and then turn left,\" and option A repeats those directions to confirm understanding."
+    }
+},
+{
+    "model": "exams.question",
+    "pk": 947,
+    "fields": {
+        "part": 163,
+        "question_number": 2,
+        "global_question_number": 2,
+        "group_label": "",
+        "question_text": "",
+        "question_type": "multiple_choice",
+        "correct_answer": "C",
+        "explanation": "The answer is C because the speaker asks for the location of the restaurant, and \"It's on the right\" is a direct response to a location inquiry."
+    }
+},
+{
+    "model": "exams.question",
+    "pk": 948,
+    "fields": {
+        "part": 163,
+        "question_number": 3,
+        "global_question_number": 3,
+        "group_label": "",
+        "question_text": "",
+        "question_type": "multiple_choice",
+        "correct_answer": "A",
+        "explanation": "The answer is A because the speaker is asking for directions to the book department, and \"Go through that door\" provides a directional instruction."
+    }
+},
+{
+    "model": "exams.question",
+    "pk": 949,
+    "fields": {
+        "part": 163,
+        "question_number": 4,
+        "global_question_number": 4,
+        "group_label": "",
+        "question_text": "",
+        "question_type": "multiple_choice",
+        "correct_answer": "A",
+        "explanation": "The answer is A because the speaker is asking for the location of the ticket office. Providing the specific floor \"It's on the second floor\" is the most logical answer."
+    }
+},
+{
+    "model": "exams.question",
+    "pk": 950,
+    "fields": {
+        "part": 163,
+        "question_number": 5,
+        "global_question_number": 5,
+        "group_label": "",
+        "question_text": "",
+        "question_type": "multiple_choice",
+        "correct_answer": "A",
+        "explanation": "The answer is A because the speaker is clarifying a floor number (\"the fourth floor?\"). \"No, the third\" corrects the speaker's assumption."
+    }
+},
+{
+    "model": "exams.question",
+    "pk": 951,
+    "fields": {
+        "part": 163,
+        "question_number": 6,
+        "global_question_number": 6,
+        "group_label": "",
+        "question_text": "",
+        "question_type": "multiple_choice",
+        "correct_answer": "C",
+        "explanation": "The answer is C because the speaker provides a multi-step set of directions, and \"Right, I think I've got that!\" is a natural way to acknowledge having understood the instructions."
+    }
+},
+{
+    "model": "exams.question",
+    "pk": 952,
+    "fields": {
+        "part": 163,
+        "question_number": 7,
+        "global_question_number": 7,
+        "group_label": "",
+        "question_text": "",
+        "question_type": "multiple_choice",
+        "correct_answer": "B",
+        "explanation": "The answer is B because the speaker asks for the location of the shopping center, and \"It’s over there, by the cinema\" provides its location relative to another landmark."
+    }
+},
+{
+    "model": "exams.question",
+    "pk": 953,
+    "fields": {
+        "part": 163,
+        "question_number": 8,
+        "global_question_number": 8,
+        "group_label": "",
+        "question_text": "",
+        "question_type": "multiple_choice",
+        "correct_answer": "B",
+        "explanation": "The answer is B because the speaker is checking if their understanding of the directions is correct (\"So, can I just check?\"). \"That's right\" confirms their summary is accurate."
+    }
+},
+{
+    "model": "exams.question",
+    "pk": 954,
+    "fields": {
+        "part": 164,
+        "question_number": 1,
+        "global_question_number": 9,
+        "group_label": "",
+        "question_text": "Steve had accommodation in a shared _____",
+        "question_type": "fill_blank",
+        "correct_answer": "tent",
+        "explanation": "Steve expected a wooden hut but clarifies his actual accommodation was a shared tent: 'I thought I'd be staying in a wooden hut, but in fact, I was in a tent, which I shared with four other boys.'"
+    }
+},
+{
+    "model": "exams.question",
+    "pk": 955,
+    "fields": {
+        "part": 164,
+        "question_number": 2,
+        "global_question_number": 10,
+        "group_label": "",
+        "question_text": "Steve says it was important to have good _____ at the end of each day.",
+        "question_type": "fill_blank",
+        "correct_answer": "meals",
+        "explanation": "Steve mentions that having good food at the end of the day is vital: '...every evening he made us great meals. That's important when you're working outside all day.'"
+    }
+},
+{
+    "model": "exams.question",
+    "pk": 956,
+    "fields": {
+        "part": 164,
+        "question_number": 3,
+        "global_question_number": 11,
+        "group_label": "",
+        "question_text": "Steve worked with a team that made a _____ through the forest.",
+        "question_type": "fill_blank",
+        "correct_answer": "path",
+        "explanation": "Steve describes the construction project his team completed: 'Our main job was creating a path in the forest to make access easier.'"
+    }
+},
+{
+    "model": "exams.question",
+    "pk": 957,
+    "fields": {
+        "part": 164,
+        "question_number": 4,
+        "global_question_number": 12,
+        "group_label": "",
+        "question_text": "Steve also collected information needed for a _____ of the forest area.",
+        "question_type": "fill_blank",
+        "correct_answer": "map",
+        "explanation": "Steve states that he gained experience by gathering data for a forest map: 'I also enjoyed getting the information to make a map of the forest area.'"
+    }
+},
+{
+    "model": "exams.question",
+    "pk": 958,
+    "fields": {
+        "part": 164,
+        "question_number": 5,
+        "global_question_number": 13,
+        "group_label": "",
+        "question_text": "In the morning Steve was surprised to hear the sound of _____ in the forest.",
+        "question_type": "fill_blank",
+        "correct_answer": "rabbits",
+        "explanation": "Steve expresses surprise at hearing specific animals: 'The birds were singing as you'd expect, but I couldn't believe I could actually hear the rabbits.'"
+    }
+},
+{
+    "model": "exams.question",
+    "pk": 959,
+    "fields": {
+        "part": 164,
+        "question_number": 6,
+        "global_question_number": 14,
+        "group_label": "",
+        "question_text": "When he did the trip, Steve only had to pay for his _____.",
+        "question_type": "fill_blank",
+        "correct_answer": "flight",
+        "explanation": "Steve explains that participants are responsible for travel costs to the country: 'You have to find the money for your own flight, but everything else... is provided.'"
+    }
+},
+{
+    "model": "exams.question",
+    "pk": 960,
+    "fields": {
+        "part": 165,
+        "question_number": 1,
+        "global_question_number": 15,
+        "group_label": "Speaker 1",
+        "question_text": "Speaker 1",
+        "question_type": "multiple_choice",
+        "correct_answer": "E",
+        "explanation": ""
+    }
+},
+{
+    "model": "exams.question",
+    "pk": 961,
+    "fields": {
+        "part": 165,
+        "question_number": 2,
+        "global_question_number": 16,
+        "group_label": "Speaker 2",
+        "question_text": "Speaker 2",
+        "question_type": "multiple_choice",
+        "correct_answer": "C",
+        "explanation": ""
+    }
+},
+{
+    "model": "exams.question",
+    "pk": 962,
+    "fields": {
+        "part": 165,
+        "question_number": 3,
+        "global_question_number": 17,
+        "group_label": "Speaker 3",
+        "question_text": "Speaker 3",
+        "question_type": "multiple_choice",
+        "correct_answer": "D",
+        "explanation": ""
+    }
+},
+{
+    "model": "exams.question",
+    "pk": 963,
+    "fields": {
+        "part": 165,
+        "question_number": 4,
+        "global_question_number": 18,
+        "group_label": "Speaker 4",
+        "question_text": "Speaker 4",
+        "question_type": "multiple_choice",
+        "correct_answer": "F",
+        "explanation": ""
+    }
+},
+{
+    "model": "exams.question",
+    "pk": 964,
+    "fields": {
+        "part": 166,
+        "question_number": 1,
+        "global_question_number": 19,
+        "group_label": "",
+        "question_text": "Box Office",
+        "question_type": "map_label",
+        "correct_answer": "C",
+        "explanation": "The correct answer is C because the speaker states that after entering and going around the sharp corner, the box office is 'on your left'."
+    }
+},
+{
+    "model": "exams.question",
+    "pk": 965,
+    "fields": {
+        "part": 166,
+        "question_number": 2,
+        "global_question_number": 20,
+        "group_label": "",
+        "question_text": "Children's Room",
+        "question_type": "map_label",
+        "correct_answer": "B",
+        "explanation": "The correct answer is B because the speaker directs the listener to walk 'towards the door on the far left wall' to find the children's room."
+    }
+},
+{
+    "model": "exams.question",
+    "pk": 966,
+    "fields": {
+        "part": 166,
+        "question_number": 3,
+        "global_question_number": 21,
+        "group_label": "",
+        "question_text": "Café",
+        "question_type": "map_label",
+        "correct_answer": "E",
+        "explanation": "The correct answer is E because although originally intended for another spot, the speaker confirms the café is 'placed in the bottom right corner of the plan'."
+    }
+},
+{
+    "model": "exams.question",
+    "pk": 967,
+    "fields": {
+        "part": 166,
+        "question_number": 4,
+        "global_question_number": 22,
+        "group_label": "",
+        "question_text": "Multimedia Room",
+        "question_type": "map_label",
+        "correct_answer": "H",
+        "explanation": "The correct answer is H because the speaker explicitly states that the multimedia room 'will be in the top right corner'."
+    }
+},
+{
+    "model": "exams.question",
+    "pk": 968,
+    "fields": {
+        "part": 166,
+        "question_number": 5,
+        "global_question_number": 23,
+        "group_label": "",
+        "question_text": "Showroom",
+        "question_type": "map_label",
+        "correct_answer": "G",
+        "explanation": "The correct answer is G because the speaker states the showroom 'will be built in the top left corner, directly opposite the new multimedia room'."
+    }
+},
+{
+    "model": "exams.question",
+    "pk": 969,
+    "fields": {
+        "part": 167,
+        "question_number": 1,
+        "global_question_number": 24,
+        "group_label": "Extract One",
+        "question_text": "What is the man's reaction to the majority of visiting birdwatchers?",
+        "question_type": "multiple_choice",
+        "correct_answer": "B",
+        "explanation": "The answer is B because the man explicitly states birdwatchers are 'completely oblivious to the marvel of the birds here on the lowlands' and that the sight is a 'well-kept secret'."
+    }
+},
+{
+    "model": "exams.question",
+    "pk": 970,
+    "fields": {
+        "part": 167,
+        "question_number": 2,
+        "global_question_number": 25,
+        "group_label": "Extract One",
+        "question_text": "The speakers seem to",
+        "question_type": "multiple_choice",
+        "correct_answer": "A",
+        "explanation": "The answer is A because both speakers discuss specific local phenomena, such as the 'starlings' dance' and the migratory patterns of visitors to specific areas like Dartmoor and Exmoor, showing local expertise."
+    }
+},
+{
+    "model": "exams.question",
+    "pk": 971,
+    "fields": {
+        "part": 167,
+        "question_number": 3,
+        "global_question_number": 26,
+        "group_label": "Extract Two",
+        "question_text": "The man and woman are",
+        "question_type": "multiple_choice",
+        "correct_answer": "B",
+        "explanation": "The answer is B because they refer to the 'rubbish bins' and 'this area' in a way that implies they live in separate houses near each other, especially when one says 'Our bins weren't touched' in contrast to the other's."
+    }
+},
+{
+    "model": "exams.question",
+    "pk": 972,
+    "fields": {
+        "part": 167,
+        "question_number": 4,
+        "global_question_number": 27,
+        "group_label": "Extract Two",
+        "question_text": "What probably caused the disturbance?",
+        "question_type": "multiple_choice",
+        "correct_answer": "C",
+        "explanation": "The answer is C because the man notes the mess around the rubbish bins was from something 'looking for food' and the woman expresses relief her cat wasn't 'eaten', implying a predatory wild animal like a fox."
+    }
+},
+{
+    "model": "exams.question",
+    "pk": 973,
+    "fields": {
+        "part": 167,
+        "question_number": 5,
+        "global_question_number": 28,
+        "group_label": "Extract Three",
+        "question_text": "According to the woman",
+        "question_type": "multiple_choice",
+        "correct_answer": "C",
+        "explanation": "The answer is C because the woman compares the two negative options and concludes that 'smoke from the incinerators causes more pollution than the tips do,' suggesting landfill is the 'lesser evil'."
+    }
+},
+{
+    "model": "exams.question",
+    "pk": 974,
+    "fields": {
+        "part": 167,
+        "question_number": 6,
+        "global_question_number": 29,
+        "group_label": "Extract Three",
+        "question_text": "Plans to build a new landfill site",
+        "question_type": "multiple_choice",
+        "correct_answer": "A",
+        "explanation": "The answer is A because the man states that 'the whole thing has been put on hold until more research can be carried out,' which signifies a temporary stop."
+    }
+},
+{
+    "model": "exams.question",
+    "pk": 975,
+    "fields": {
+        "part": 168,
+        "question_number": 1,
+        "global_question_number": 30,
+        "group_label": "",
+        "question_text": "Pollution, coastal developments and _____ are the conventional threats to marine life.",
+        "question_type": "fill_blank",
+        "correct_answer": "overfishing",
+        "explanation": "The answer is 'overfishing' as it is listed alongside pollution and coastal development as a conventional threat. Quote: '...conventional threats such as overfishing, pollution, and coastal development...'"
+    }
+},
+{
+    "model": "exams.question",
+    "pk": 976,
+    "fields": {
+        "part": 168,
+        "question_number": 2,
+        "global_question_number": 31,
+        "group_label": "",
+        "question_text": "_____ passed by the UK and EU protects some areas of UK waters.",
+        "question_type": "fill_blank",
+        "correct_answer": "legislation",
+        "explanation": "The answer is 'legislation' because the speaker notes that certain areas are protected by laws from the UK and EU. Quote: '...protected according to UK and EU legislation as marine nature reserves...'"
+    }
+},
+{
+    "model": "exams.question",
+    "pk": 977,
+    "fields": {
+        "part": 168,
+        "question_number": 3,
+        "global_question_number": 32,
+        "group_label": "",
+        "question_text": "WWF-UK is calling for a _____ of protected marine reserves to be established.",
+        "question_type": "fill_blank",
+        "correct_answer": "network",
+        "explanation": "The answer is 'network' because the mentioned organizations are lobbying for a connected system of reserves. Quote: '...campaigning for the creation of a network of highly protected marine reserves.'"
+    }
+},
+{
+    "model": "exams.question",
+    "pk": 978,
+    "fields": {
+        "part": 168,
+        "question_number": 4,
+        "global_question_number": 33,
+        "group_label": "",
+        "question_text": "The way that marine life has been protected up until now is _____ .",
+        "question_type": "fill_blank",
+        "correct_answer": "inadequate",
+        "explanation": "The answer is 'inadequate' as the speaker explicitly criticizes the current protection methods as insufficient. Quote: 'It's quite clear that the current system is inadequate.'"
+    }
+},
+{
+    "model": "exams.question",
+    "pk": 979,
+    "fields": {
+        "part": 168,
+        "question_number": 5,
+        "global_question_number": 34,
+        "group_label": "",
+        "question_text": "If fisheries were _____ into the planning process, it would be more successful.",
+        "question_type": "fill_blank",
+        "correct_answer": "integrated",
+        "explanation": "The answer is 'integrated' because the lecturer suggests that the current lack of success stems from fisheries being handled separately rather than as part of the main planning process. Quote: '...at the policy level, fisheries aren't integrated into the planning process.'"
+    }
+},
+{
+    "model": "exams.question",
+    "pk": 980,
+    "fields": {
+        "part": 168,
+        "question_number": 6,
+        "global_question_number": 35,
+        "group_label": "",
+        "question_text": "A general _____ is needed for better marine management",
+        "question_type": "fill_blank",
+        "correct_answer": "strategy",
+        "explanation": "The answer is 'strategy' as the speaker concludes by stating that a comprehensive plan is required for better management. Quote: 'We need an overall strategy for marine spatial management...'"
+    }
+},
+{
+    "model": "exams.question",
+    "pk": 981,
+    "fields": {
+        "part": 169,
+        "question_number": 1,
+        "global_question_number": 1,
+        "group_label": "",
+        "question_text": "",
+        "question_type": "multiple_choice",
+        "correct_answer": "A",
+        "explanation": "The answer is A because the speaker gives directions \"Go down the stairs and then turn left,\" and option A repeats those directions to confirm understanding."
+    }
+},
+{
+    "model": "exams.question",
+    "pk": 982,
+    "fields": {
+        "part": 169,
+        "question_number": 2,
+        "global_question_number": 2,
+        "group_label": "",
+        "question_text": "",
+        "question_type": "multiple_choice",
+        "correct_answer": "C",
+        "explanation": "The answer is C because the speaker asks for the location of the restaurant, and \"It's on the right\" is a direct response to a location inquiry."
+    }
+},
+{
+    "model": "exams.question",
+    "pk": 983,
+    "fields": {
+        "part": 169,
+        "question_number": 3,
+        "global_question_number": 3,
+        "group_label": "",
+        "question_text": "",
+        "question_type": "multiple_choice",
+        "correct_answer": "A",
+        "explanation": "The answer is A because the speaker is asking for directions to the book department, and \"Go through that door\" provides a directional instruction."
+    }
+},
+{
+    "model": "exams.question",
+    "pk": 984,
+    "fields": {
+        "part": 169,
+        "question_number": 4,
+        "global_question_number": 4,
+        "group_label": "",
+        "question_text": "",
+        "question_type": "multiple_choice",
+        "correct_answer": "A",
+        "explanation": "The answer is A because the speaker is asking for the location of the ticket office. Providing the specific floor \"It's on the second floor\" is the most logical answer."
+    }
+},
+{
+    "model": "exams.question",
+    "pk": 985,
+    "fields": {
+        "part": 169,
+        "question_number": 5,
+        "global_question_number": 5,
+        "group_label": "",
+        "question_text": "",
+        "question_type": "multiple_choice",
+        "correct_answer": "A",
+        "explanation": "The answer is A because the speaker is clarifying a floor number (\"the fourth floor?\"). \"No, the third\" corrects the speaker's assumption."
+    }
+},
+{
+    "model": "exams.question",
+    "pk": 986,
+    "fields": {
+        "part": 169,
+        "question_number": 6,
+        "global_question_number": 6,
+        "group_label": "",
+        "question_text": "",
+        "question_type": "multiple_choice",
+        "correct_answer": "C",
+        "explanation": "The answer is C because the speaker provides a multi-step set of directions, and \"Right, I think I've got that!\" is a natural way to acknowledge having understood the instructions."
+    }
+},
+{
+    "model": "exams.question",
+    "pk": 987,
+    "fields": {
+        "part": 169,
+        "question_number": 7,
+        "global_question_number": 7,
+        "group_label": "",
+        "question_text": "",
+        "question_type": "multiple_choice",
+        "correct_answer": "B",
+        "explanation": "The answer is B because the speaker asks for the location of the shopping center, and \"It’s over there, by the cinema\" provides its location relative to another landmark."
+    }
+},
+{
+    "model": "exams.question",
+    "pk": 988,
+    "fields": {
+        "part": 169,
+        "question_number": 8,
+        "global_question_number": 8,
+        "group_label": "",
+        "question_text": "",
+        "question_type": "multiple_choice",
+        "correct_answer": "B",
+        "explanation": "The answer is B because the speaker is checking if their understanding of the directions is correct (\"So, can I just check?\"). \"That's right\" confirms their summary is accurate."
+    }
+},
+{
+    "model": "exams.question",
+    "pk": 989,
+    "fields": {
+        "part": 170,
+        "question_number": 1,
+        "global_question_number": 9,
+        "group_label": "",
+        "question_text": "Steve had accommodation in a shared _____",
+        "question_type": "fill_blank",
+        "correct_answer": "tent",
+        "explanation": "Steve expected a wooden hut but clarifies his actual accommodation was a shared tent: 'I thought I'd be staying in a wooden hut, but in fact, I was in a tent, which I shared with four other boys.'"
+    }
+},
+{
+    "model": "exams.question",
+    "pk": 990,
+    "fields": {
+        "part": 170,
+        "question_number": 2,
+        "global_question_number": 10,
+        "group_label": "",
+        "question_text": "Steve says it was important to have good _____ at the end of each day.",
+        "question_type": "fill_blank",
+        "correct_answer": "meals",
+        "explanation": "Steve mentions that having good food at the end of the day is vital: '...every evening he made us great meals. That's important when you're working outside all day.'"
+    }
+},
+{
+    "model": "exams.question",
+    "pk": 991,
+    "fields": {
+        "part": 170,
+        "question_number": 3,
+        "global_question_number": 11,
+        "group_label": "",
+        "question_text": "Steve worked with a team that made a _____ through the forest.",
+        "question_type": "fill_blank",
+        "correct_answer": "path",
+        "explanation": "Steve describes the construction project his team completed: 'Our main job was creating a path in the forest to make access easier.'"
+    }
+},
+{
+    "model": "exams.question",
+    "pk": 992,
+    "fields": {
+        "part": 170,
+        "question_number": 4,
+        "global_question_number": 12,
+        "group_label": "",
+        "question_text": "Steve also collected information needed for a _____ of the forest area.",
+        "question_type": "fill_blank",
+        "correct_answer": "map",
+        "explanation": "Steve states that he gained experience by gathering data for a forest map: 'I also enjoyed getting the information to make a map of the forest area.'"
+    }
+},
+{
+    "model": "exams.question",
+    "pk": 993,
+    "fields": {
+        "part": 170,
+        "question_number": 5,
+        "global_question_number": 13,
+        "group_label": "",
+        "question_text": "In the morning Steve was surprised to hear the sound of _____ in the forest.",
+        "question_type": "fill_blank",
+        "correct_answer": "rabbits",
+        "explanation": "Steve expresses surprise at hearing specific animals: 'The birds were singing as you'd expect, but I couldn't believe I could actually hear the rabbits.'"
+    }
+},
+{
+    "model": "exams.question",
+    "pk": 994,
+    "fields": {
+        "part": 170,
+        "question_number": 6,
+        "global_question_number": 14,
+        "group_label": "",
+        "question_text": "When he did the trip, Steve only had to pay for his _____.",
+        "question_type": "fill_blank",
+        "correct_answer": "flight",
+        "explanation": "Steve explains that participants are responsible for travel costs to the country: 'You have to find the money for your own flight, but everything else... is provided.'"
+    }
+},
+{
+    "model": "exams.question",
+    "pk": 995,
+    "fields": {
+        "part": 171,
+        "question_number": 1,
+        "global_question_number": 15,
+        "group_label": "Speaker 1",
+        "question_text": "Speaker 1",
+        "question_type": "multiple_choice",
+        "correct_answer": "E",
+        "explanation": ""
+    }
+},
+{
+    "model": "exams.question",
+    "pk": 996,
+    "fields": {
+        "part": 171,
+        "question_number": 2,
+        "global_question_number": 16,
+        "group_label": "Speaker 2",
+        "question_text": "Speaker 2",
+        "question_type": "multiple_choice",
+        "correct_answer": "C",
+        "explanation": ""
+    }
+},
+{
+    "model": "exams.question",
+    "pk": 997,
+    "fields": {
+        "part": 171,
+        "question_number": 3,
+        "global_question_number": 17,
+        "group_label": "Speaker 3",
+        "question_text": "Speaker 3",
+        "question_type": "multiple_choice",
+        "correct_answer": "D",
+        "explanation": ""
+    }
+},
+{
+    "model": "exams.question",
+    "pk": 998,
+    "fields": {
+        "part": 171,
+        "question_number": 4,
+        "global_question_number": 18,
+        "group_label": "Speaker 4",
+        "question_text": "Speaker 4",
+        "question_type": "multiple_choice",
+        "correct_answer": "F",
+        "explanation": ""
+    }
+},
+{
+    "model": "exams.question",
+    "pk": 999,
+    "fields": {
+        "part": 172,
+        "question_number": 1,
+        "global_question_number": 19,
+        "group_label": "",
+        "question_text": "Box Office",
+        "question_type": "map_label",
+        "correct_answer": "C",
+        "explanation": "The correct answer is C because the speaker states that after entering and going around the sharp corner, the box office is 'on your left'."
+    }
+},
+{
+    "model": "exams.question",
+    "pk": 1000,
+    "fields": {
+        "part": 172,
+        "question_number": 2,
+        "global_question_number": 20,
+        "group_label": "",
+        "question_text": "Children's Room",
+        "question_type": "map_label",
+        "correct_answer": "B",
+        "explanation": "The correct answer is B because the speaker directs the listener to walk 'towards the door on the far left wall' to find the children's room."
+    }
+},
+{
+    "model": "exams.question",
+    "pk": 1001,
+    "fields": {
+        "part": 172,
+        "question_number": 3,
+        "global_question_number": 21,
+        "group_label": "",
+        "question_text": "Café",
+        "question_type": "map_label",
+        "correct_answer": "E",
+        "explanation": "The correct answer is E because although originally intended for another spot, the speaker confirms the café is 'placed in the bottom right corner of the plan'."
+    }
+},
+{
+    "model": "exams.question",
+    "pk": 1002,
+    "fields": {
+        "part": 172,
+        "question_number": 4,
+        "global_question_number": 22,
+        "group_label": "",
+        "question_text": "Multimedia Room",
+        "question_type": "map_label",
+        "correct_answer": "H",
+        "explanation": "The correct answer is H because the speaker explicitly states that the multimedia room 'will be in the top right corner'."
+    }
+},
+{
+    "model": "exams.question",
+    "pk": 1003,
+    "fields": {
+        "part": 172,
+        "question_number": 5,
+        "global_question_number": 23,
+        "group_label": "",
+        "question_text": "Showroom",
+        "question_type": "map_label",
+        "correct_answer": "G",
+        "explanation": "The correct answer is G because the speaker states the showroom 'will be built in the top left corner, directly opposite the new multimedia room'."
+    }
+},
+{
+    "model": "exams.question",
+    "pk": 1004,
+    "fields": {
+        "part": 173,
+        "question_number": 1,
+        "global_question_number": 24,
+        "group_label": "Extract One",
+        "question_text": "What is the man's reaction to the majority of visiting birdwatchers?",
+        "question_type": "multiple_choice",
+        "correct_answer": "B",
+        "explanation": "The answer is B because the man explicitly states birdwatchers are 'completely oblivious to the marvel of the birds here on the lowlands' and that the sight is a 'well-kept secret'."
+    }
+},
+{
+    "model": "exams.question",
+    "pk": 1005,
+    "fields": {
+        "part": 173,
+        "question_number": 2,
+        "global_question_number": 25,
+        "group_label": "Extract One",
+        "question_text": "The speakers seem to",
+        "question_type": "multiple_choice",
+        "correct_answer": "A",
+        "explanation": "The answer is A because both speakers discuss specific local phenomena, such as the 'starlings' dance' and the migratory patterns of visitors to specific areas like Dartmoor and Exmoor, showing local expertise."
+    }
+},
+{
+    "model": "exams.question",
+    "pk": 1006,
+    "fields": {
+        "part": 173,
+        "question_number": 3,
+        "global_question_number": 26,
+        "group_label": "Extract Two",
+        "question_text": "The man and woman are",
+        "question_type": "multiple_choice",
+        "correct_answer": "B",
+        "explanation": "The answer is B because they refer to the 'rubbish bins' and 'this area' in a way that implies they live in separate houses near each other, especially when one says 'Our bins weren't touched' in contrast to the other's."
+    }
+},
+{
+    "model": "exams.question",
+    "pk": 1007,
+    "fields": {
+        "part": 173,
+        "question_number": 4,
+        "global_question_number": 27,
+        "group_label": "Extract Two",
+        "question_text": "What probably caused the disturbance?",
+        "question_type": "multiple_choice",
+        "correct_answer": "C",
+        "explanation": "The answer is C because the man notes the mess around the rubbish bins was from something 'looking for food' and the woman expresses relief her cat wasn't 'eaten', implying a predatory wild animal like a fox."
+    }
+},
+{
+    "model": "exams.question",
+    "pk": 1008,
+    "fields": {
+        "part": 173,
+        "question_number": 5,
+        "global_question_number": 28,
+        "group_label": "Extract Three",
+        "question_text": "According to the woman",
+        "question_type": "multiple_choice",
+        "correct_answer": "C",
+        "explanation": "The answer is C because the woman compares the two negative options and concludes that 'smoke from the incinerators causes more pollution than the tips do,' suggesting landfill is the 'lesser evil'."
+    }
+},
+{
+    "model": "exams.question",
+    "pk": 1009,
+    "fields": {
+        "part": 173,
+        "question_number": 6,
+        "global_question_number": 29,
+        "group_label": "Extract Three",
+        "question_text": "Plans to build a new landfill site",
+        "question_type": "multiple_choice",
+        "correct_answer": "A",
+        "explanation": "The answer is A because the man states that 'the whole thing has been put on hold until more research can be carried out,' which signifies a temporary stop."
+    }
+},
+{
+    "model": "exams.question",
+    "pk": 1010,
+    "fields": {
+        "part": 174,
+        "question_number": 1,
+        "global_question_number": 30,
+        "group_label": "",
+        "question_text": "Pollution, coastal developments and _____ are the conventional threats to marine life.",
+        "question_type": "fill_blank",
+        "correct_answer": "overfishing",
+        "explanation": "The answer is 'overfishing' as it is listed alongside pollution and coastal development as a conventional threat. Quote: '...conventional threats such as overfishing, pollution, and coastal development...'"
+    }
+},
+{
+    "model": "exams.question",
+    "pk": 1011,
+    "fields": {
+        "part": 174,
+        "question_number": 2,
+        "global_question_number": 31,
+        "group_label": "",
+        "question_text": "_____ passed by the UK and EU protects some areas of UK waters.",
+        "question_type": "fill_blank",
+        "correct_answer": "legislation",
+        "explanation": "The answer is 'legislation' because the speaker notes that certain areas are protected by laws from the UK and EU. Quote: '...protected according to UK and EU legislation as marine nature reserves...'"
+    }
+},
+{
+    "model": "exams.question",
+    "pk": 1012,
+    "fields": {
+        "part": 174,
+        "question_number": 3,
+        "global_question_number": 32,
+        "group_label": "",
+        "question_text": "WWF-UK is calling for a _____ of protected marine reserves to be established.",
+        "question_type": "fill_blank",
+        "correct_answer": "network",
+        "explanation": "The answer is 'network' because the mentioned organizations are lobbying for a connected system of reserves. Quote: '...campaigning for the creation of a network of highly protected marine reserves.'"
+    }
+},
+{
+    "model": "exams.question",
+    "pk": 1013,
+    "fields": {
+        "part": 174,
+        "question_number": 4,
+        "global_question_number": 33,
+        "group_label": "",
+        "question_text": "The way that marine life has been protected up until now is _____ .",
+        "question_type": "fill_blank",
+        "correct_answer": "inadequate",
+        "explanation": "The answer is 'inadequate' as the speaker explicitly criticizes the current protection methods as insufficient. Quote: 'It's quite clear that the current system is inadequate.'"
+    }
+},
+{
+    "model": "exams.question",
+    "pk": 1014,
+    "fields": {
+        "part": 174,
+        "question_number": 5,
+        "global_question_number": 34,
+        "group_label": "",
+        "question_text": "If fisheries were _____ into the planning process, it would be more successful.",
+        "question_type": "fill_blank",
+        "correct_answer": "integrated",
+        "explanation": "The answer is 'integrated' because the lecturer suggests that the current lack of success stems from fisheries being handled separately rather than as part of the main planning process. Quote: '...at the policy level, fisheries aren't integrated into the planning process.'"
+    }
+},
+{
+    "model": "exams.question",
+    "pk": 1015,
+    "fields": {
+        "part": 174,
+        "question_number": 6,
+        "global_question_number": 35,
+        "group_label": "",
+        "question_text": "A general _____ is needed for better marine management",
+        "question_type": "fill_blank",
+        "correct_answer": "strategy",
+        "explanation": "The answer is 'strategy' as the speaker concludes by stating that a comprehensive plan is required for better management. Quote: 'We need an overall strategy for marine spatial management...'"
+    }
+},
+{
+    "model": "exams.choice",
+    "pk": 723,
+    "fields": {
+        "question": 946,
+        "label": "A",
+        "text": "OK, so down the stairs and turn left."
+    }
+},
+{
+    "model": "exams.choice",
+    "pk": 724,
+    "fields": {
+        "question": 946,
+        "label": "B",
+        "text": "That sounds lovely."
+    }
+},
+{
+    "model": "exams.choice",
+    "pk": 725,
+    "fields": {
+        "question": 946,
+        "label": "C",
+        "text": "We really must go."
+    }
+},
+{
+    "model": "exams.choice",
+    "pk": 726,
+    "fields": {
+        "question": 947,
+        "label": "A",
+        "text": "You’re right."
+    }
+},
+{
+    "model": "exams.choice",
+    "pk": 727,
+    "fields": {
+        "question": 947,
+        "label": "B",
+        "text": "I’ll ask someone to look at that right away."
+    }
+},
+{
+    "model": "exams.choice",
+    "pk": 728,
+    "fields": {
+        "question": 947,
+        "label": "C",
+        "text": "It’s on the right."
+    }
+},
+{
+    "model": "exams.choice",
+    "pk": 729,
+    "fields": {
+        "question": 948,
+        "label": "A",
+        "text": "Go through that door."
+    }
+},
+{
+    "model": "exams.choice",
+    "pk": 730,
+    "fields": {
+        "question": 948,
+        "label": "B",
+        "text": "I’ll just put you through."
+    }
+},
+{
+    "model": "exams.choice",
+    "pk": 731,
+    "fields": {
+        "question": 948,
+        "label": "C",
+        "text": "We really must go."
+    }
+},
+{
+    "model": "exams.choice",
+    "pk": 732,
+    "fields": {
+        "question": 949,
+        "label": "A",
+        "text": "It’s on the second floor."
+    }
+},
+{
+    "model": "exams.choice",
+    "pk": 733,
+    "fields": {
+        "question": 949,
+        "label": "B",
+        "text": "Ok, so it’s on the second floor?"
+    }
+},
+{
+    "model": "exams.choice",
+    "pk": 734,
+    "fields": {
+        "question": 949,
+        "label": "C",
+        "text": "Right, I think I’ve got that."
+    }
+},
+{
+    "model": "exams.choice",
+    "pk": 735,
+    "fields": {
+        "question": 950,
+        "label": "A",
+        "text": "No, the third."
+    }
+},
+{
+    "model": "exams.choice",
+    "pk": 736,
+    "fields": {
+        "question": 950,
+        "label": "B",
+        "text": "Yes, the second floor."
+    }
+},
+{
+    "model": "exams.choice",
+    "pk": 737,
+    "fields": {
+        "question": 950,
+        "label": "C",
+        "text": "Right, I think I’ve got that."
+    }
+},
+{
+    "model": "exams.choice",
+    "pk": 738,
+    "fields": {
+        "question": 951,
+        "label": "A",
+        "text": "Is that OK for you?"
+    }
+},
+{
+    "model": "exams.choice",
+    "pk": 739,
+    "fields": {
+        "question": 951,
+        "label": "B",
+        "text": "Long time no see!"
+    }
+},
+{
+    "model": "exams.choice",
+    "pk": 740,
+    "fields": {
+        "question": 951,
+        "label": "C",
+        "text": "Right, I think I’ve got that!"
+    }
+},
+{
+    "model": "exams.choice",
+    "pk": 741,
+    "fields": {
+        "question": 952,
+        "label": "A",
+        "text": "So can I just check?"
+    }
+},
+{
+    "model": "exams.choice",
+    "pk": 742,
+    "fields": {
+        "question": 952,
+        "label": "B",
+        "text": "It’s over there, by the cinema."
+    }
+},
+{
+    "model": "exams.choice",
+    "pk": 743,
+    "fields": {
+        "question": 952,
+        "label": "C",
+        "text": "Yes, the cash machine."
+    }
+},
+{
+    "model": "exams.choice",
+    "pk": 744,
+    "fields": {
+        "question": 953,
+        "label": "A",
+        "text": "No, the third floor."
+    }
+},
+{
+    "model": "exams.choice",
+    "pk": 745,
+    "fields": {
+        "question": 953,
+        "label": "B",
+        "text": "That’s right."
+    }
+},
+{
+    "model": "exams.choice",
+    "pk": 746,
+    "fields": {
+        "question": 953,
+        "label": "C",
+        "text": "Really, I’m fine"
+    }
+},
+{
+    "model": "exams.choice",
+    "pk": 747,
+    "fields": {
+        "question": 969,
+        "label": "A",
+        "text": "He thinks they drive too fast."
+    }
+},
+{
+    "model": "exams.choice",
+    "pk": 748,
+    "fields": {
+        "question": 969,
+        "label": "B",
+        "text": "He believes they are ignorant of one of nature's delights."
+    }
+},
+{
+    "model": "exams.choice",
+    "pk": 749,
+    "fields": {
+        "question": 969,
+        "label": "C",
+        "text": "He doesn't understand why so many of them come to the area he lives in."
+    }
+},
+{
+    "model": "exams.choice",
+    "pk": 750,
+    "fields": {
+        "question": 970,
+        "label": "A",
+        "text": "be knowledgeable about their local wildlife."
+    }
+},
+{
+    "model": "exams.choice",
+    "pk": 751,
+    "fields": {
+        "question": 970,
+        "label": "B",
+        "text": "work for a local wildlife conservation group."
+    }
+},
+{
+    "model": "exams.choice",
+    "pk": 752,
+    "fields": {
+        "question": 970,
+        "label": "C",
+        "text": "resent people admiring the local wildlife."
+    }
+},
+{
+    "model": "exams.choice",
+    "pk": 753,
+    "fields": {
+        "question": 971,
+        "label": "A",
+        "text": "flatmates."
+    }
+},
+{
+    "model": "exams.choice",
+    "pk": 754,
+    "fields": {
+        "question": 971,
+        "label": "B",
+        "text": "neighbours."
+    }
+},
+{
+    "model": "exams.choice",
+    "pk": 755,
+    "fields": {
+        "question": 971,
+        "label": "C",
+        "text": "married."
+    }
+},
+{
+    "model": "exams.choice",
+    "pk": 756,
+    "fields": {
+        "question": 972,
+        "label": "A",
+        "text": "a cat"
+    }
+},
+{
+    "model": "exams.choice",
+    "pk": 757,
+    "fields": {
+        "question": 972,
+        "label": "B",
+        "text": "a criminal"
+    }
+},
+{
+    "model": "exams.choice",
+    "pk": 758,
+    "fields": {
+        "question": 972,
+        "label": "C",
+        "text": "a wild animal"
+    }
+},
+{
+    "model": "exams.choice",
+    "pk": 759,
+    "fields": {
+        "question": 973,
+        "label": "A",
+        "text": "there are no obvious benefits to landfill sites."
+    }
+},
+{
+    "model": "exams.choice",
+    "pk": 760,
+    "fields": {
+        "question": 973,
+        "label": "B",
+        "text": "landfill sites cause disease among local people."
+    }
+},
+{
+    "model": "exams.choice",
+    "pk": 761,
+    "fields": {
+        "question": 973,
+        "label": "C",
+        "text": "landfill sites are the lesser of the two evils compared to incineration."
+    }
+},
+{
+    "model": "exams.choice",
+    "pk": 762,
+    "fields": {
+        "question": 974,
+        "label": "A",
+        "text": "have been temporarily stopped."
+    }
+},
+{
+    "model": "exams.choice",
+    "pk": 763,
+    "fields": {
+        "question": 974,
+        "label": "B",
+        "text": "will probably never come to fruition."
+    }
+},
+{
+    "model": "exams.choice",
+    "pk": 764,
+    "fields": {
+        "question": 974,
+        "label": "C",
+        "text": "have been stopped by protesters who are blocking research"
+    }
+},
+{
+    "model": "exams.choice",
+    "pk": 765,
+    "fields": {
+        "question": 981,
+        "label": "A",
+        "text": "OK, so down the stairs and turn left."
+    }
+},
+{
+    "model": "exams.choice",
+    "pk": 766,
+    "fields": {
+        "question": 981,
+        "label": "B",
+        "text": "That sounds lovely."
+    }
+},
+{
+    "model": "exams.choice",
+    "pk": 767,
+    "fields": {
+        "question": 981,
+        "label": "C",
+        "text": "We really must go."
+    }
+},
+{
+    "model": "exams.choice",
+    "pk": 768,
+    "fields": {
+        "question": 982,
+        "label": "A",
+        "text": "You’re right."
+    }
+},
+{
+    "model": "exams.choice",
+    "pk": 769,
+    "fields": {
+        "question": 982,
+        "label": "B",
+        "text": "I’ll ask someone to look at that right away."
+    }
+},
+{
+    "model": "exams.choice",
+    "pk": 770,
+    "fields": {
+        "question": 982,
+        "label": "C",
+        "text": "It’s on the right."
+    }
+},
+{
+    "model": "exams.choice",
+    "pk": 771,
+    "fields": {
+        "question": 983,
+        "label": "A",
+        "text": "Go through that door."
+    }
+},
+{
+    "model": "exams.choice",
+    "pk": 772,
+    "fields": {
+        "question": 983,
+        "label": "B",
+        "text": "I’ll just put you through."
+    }
+},
+{
+    "model": "exams.choice",
+    "pk": 773,
+    "fields": {
+        "question": 983,
+        "label": "C",
+        "text": "We really must go."
+    }
+},
+{
+    "model": "exams.choice",
+    "pk": 774,
+    "fields": {
+        "question": 984,
+        "label": "A",
+        "text": "It’s on the second floor."
+    }
+},
+{
+    "model": "exams.choice",
+    "pk": 775,
+    "fields": {
+        "question": 984,
+        "label": "B",
+        "text": "Ok, so it’s on the second floor?"
+    }
+},
+{
+    "model": "exams.choice",
+    "pk": 776,
+    "fields": {
+        "question": 984,
+        "label": "C",
+        "text": "Right, I think I’ve got that."
+    }
+},
+{
+    "model": "exams.choice",
+    "pk": 777,
+    "fields": {
+        "question": 985,
+        "label": "A",
+        "text": "No, the third."
+    }
+},
+{
+    "model": "exams.choice",
+    "pk": 778,
+    "fields": {
+        "question": 985,
+        "label": "B",
+        "text": "Yes, the second floor."
+    }
+},
+{
+    "model": "exams.choice",
+    "pk": 779,
+    "fields": {
+        "question": 985,
+        "label": "C",
+        "text": "Right, I think I’ve got that."
+    }
+},
+{
+    "model": "exams.choice",
+    "pk": 780,
+    "fields": {
+        "question": 986,
+        "label": "A",
+        "text": "Is that OK for you?"
+    }
+},
+{
+    "model": "exams.choice",
+    "pk": 781,
+    "fields": {
+        "question": 986,
+        "label": "B",
+        "text": "Long time no see!"
+    }
+},
+{
+    "model": "exams.choice",
+    "pk": 782,
+    "fields": {
+        "question": 986,
+        "label": "C",
+        "text": "Right, I think I’ve got that!"
+    }
+},
+{
+    "model": "exams.choice",
+    "pk": 783,
+    "fields": {
+        "question": 987,
+        "label": "A",
+        "text": "So can I just check?"
+    }
+},
+{
+    "model": "exams.choice",
+    "pk": 784,
+    "fields": {
+        "question": 987,
+        "label": "B",
+        "text": "It’s over there, by the cinema."
+    }
+},
+{
+    "model": "exams.choice",
+    "pk": 785,
+    "fields": {
+        "question": 987,
+        "label": "C",
+        "text": "Yes, the cash machine."
+    }
+},
+{
+    "model": "exams.choice",
+    "pk": 786,
+    "fields": {
+        "question": 988,
+        "label": "A",
+        "text": "No, the third floor."
+    }
+},
+{
+    "model": "exams.choice",
+    "pk": 787,
+    "fields": {
+        "question": 988,
+        "label": "B",
+        "text": "That’s right."
+    }
+},
+{
+    "model": "exams.choice",
+    "pk": 788,
+    "fields": {
+        "question": 988,
+        "label": "C",
+        "text": "Really, I’m fine"
+    }
+},
+{
+    "model": "exams.choice",
+    "pk": 789,
+    "fields": {
+        "question": 1004,
+        "label": "A",
+        "text": "He thinks they drive too fast."
+    }
+},
+{
+    "model": "exams.choice",
+    "pk": 790,
+    "fields": {
+        "question": 1004,
+        "label": "B",
+        "text": "He believes they are ignorant of one of nature's delights."
+    }
+},
+{
+    "model": "exams.choice",
+    "pk": 791,
+    "fields": {
+        "question": 1004,
+        "label": "C",
+        "text": "He doesn't understand why so many of them come to the area he lives in."
+    }
+},
+{
+    "model": "exams.choice",
+    "pk": 792,
+    "fields": {
+        "question": 1005,
+        "label": "A",
+        "text": "be knowledgeable about their local wildlife."
+    }
+},
+{
+    "model": "exams.choice",
+    "pk": 793,
+    "fields": {
+        "question": 1005,
+        "label": "B",
+        "text": "work for a local wildlife conservation group."
+    }
+},
+{
+    "model": "exams.choice",
+    "pk": 794,
+    "fields": {
+        "question": 1005,
+        "label": "C",
+        "text": "resent people admiring the local wildlife."
+    }
+},
+{
+    "model": "exams.choice",
+    "pk": 795,
+    "fields": {
+        "question": 1006,
+        "label": "A",
+        "text": "flatmates."
+    }
+},
+{
+    "model": "exams.choice",
+    "pk": 796,
+    "fields": {
+        "question": 1006,
+        "label": "B",
+        "text": "neighbours."
+    }
+},
+{
+    "model": "exams.choice",
+    "pk": 797,
+    "fields": {
+        "question": 1006,
+        "label": "C",
+        "text": "married."
+    }
+},
+{
+    "model": "exams.choice",
+    "pk": 798,
+    "fields": {
+        "question": 1007,
+        "label": "A",
+        "text": "a cat"
+    }
+},
+{
+    "model": "exams.choice",
+    "pk": 799,
+    "fields": {
+        "question": 1007,
+        "label": "B",
+        "text": "a criminal"
+    }
+},
+{
+    "model": "exams.choice",
+    "pk": 800,
+    "fields": {
+        "question": 1007,
+        "label": "C",
+        "text": "a wild animal"
+    }
+},
+{
+    "model": "exams.choice",
+    "pk": 801,
+    "fields": {
+        "question": 1008,
+        "label": "A",
+        "text": "there are no obvious benefits to landfill sites."
+    }
+},
+{
+    "model": "exams.choice",
+    "pk": 802,
+    "fields": {
+        "question": 1008,
+        "label": "B",
+        "text": "landfill sites cause disease among local people."
+    }
+},
+{
+    "model": "exams.choice",
+    "pk": 803,
+    "fields": {
+        "question": 1008,
+        "label": "C",
+        "text": "landfill sites are the lesser of the two evils compared to incineration."
+    }
+},
+{
+    "model": "exams.choice",
+    "pk": 804,
+    "fields": {
+        "question": 1009,
+        "label": "A",
+        "text": "have been temporarily stopped."
+    }
+},
+{
+    "model": "exams.choice",
+    "pk": 805,
+    "fields": {
+        "question": 1009,
+        "label": "B",
+        "text": "will probably never come to fruition."
+    }
+},
+{
+    "model": "exams.choice",
+    "pk": 806,
+    "fields": {
+        "question": 1009,
+        "label": "C",
+        "text": "have been stopped by protesters who are blocking research"
+    }
+},
+{
+    "model": "exams.userattempt",
+    "pk": 29,
+    "fields": {
+        "user": [
+            "admin"
+        ],
+        "test": 11,
+        "started_at": "2026-04-17T03:55:17.194Z",
+        "completed_at": "2026-04-17T03:55:17.213Z",
+        "total_correct": 0,
+        "total_questions": 6,
+        "total_score": 0.0,
+        "max_possible_score": 24.0
+    }
+},
+{
+    "model": "exams.userattempt",
+    "pk": 30,
+    "fields": {
+        "user": [
+            "admin"
+        ],
+        "test": 5,
+        "started_at": "2026-04-17T03:56:04.631Z",
+        "completed_at": null,
+        "total_correct": 0,
+        "total_questions": 0,
+        "total_score": 0.0,
+        "max_possible_score": 0.0
+    }
+},
+{
+    "model": "exams.userattempt",
+    "pk": 31,
+    "fields": {
+        "user": [
+            "admin"
+        ],
+        "test": 7,
+        "started_at": "2026-04-17T03:56:51.507Z",
+        "completed_at": "2026-04-17T03:56:51.530Z",
+        "total_correct": 0,
+        "total_questions": 6,
+        "total_score": 0.0,
+        "max_possible_score": 15.0
+    }
+},
+{
+    "model": "exams.userattempt",
+    "pk": 32,
+    "fields": {
+        "user": [
+            "admin"
+        ],
+        "test": 11,
+        "started_at": "2026-04-17T03:58:55.356Z",
+        "completed_at": "2026-04-17T03:59:16.474Z",
+        "total_correct": 0,
+        "total_questions": 6,
+        "total_score": 0.0,
+        "max_possible_score": 24.0
+    }
+},
+{
+    "model": "exams.userattempt",
+    "pk": 33,
+    "fields": {
+        "user": [
+            "new_tester"
+        ],
+        "test": 5,
+        "started_at": "2026-04-17T09:36:41.802Z",
+        "completed_at": null,
+        "total_correct": 0,
+        "total_questions": 0,
+        "total_score": 0.0,
+        "max_possible_score": 0.0
+    }
+},
+{
+    "model": "exams.userattempt",
+    "pk": 34,
+    "fields": {
+        "user": [
+            "new_tester"
+        ],
+        "test": 5,
+        "started_at": "2026-04-17T09:39:42.339Z",
+        "completed_at": null,
+        "total_correct": 0,
+        "total_questions": 0,
+        "total_score": 0.0,
+        "max_possible_score": 0.0
+    }
+},
+{
+    "model": "exams.userattempt",
+    "pk": 35,
+    "fields": {
+        "user": [
+            "new_tester"
+        ],
+        "test": 5,
+        "started_at": "2026-04-17T09:43:57.722Z",
+        "completed_at": null,
+        "total_correct": 0,
+        "total_questions": 0,
+        "total_score": 0.0,
+        "max_possible_score": 0.0
+    }
+},
+{
+    "model": "exams.useranswer",
+    "pk": 436,
+    "fields": {
+        "attempt": 29,
+        "question": 1010,
+        "given_answer": "",
+        "is_correct": false
+    }
+},
+{
+    "model": "exams.useranswer",
+    "pk": 437,
+    "fields": {
+        "attempt": 29,
+        "question": 1011,
+        "given_answer": "",
+        "is_correct": false
+    }
+},
+{
+    "model": "exams.useranswer",
+    "pk": 438,
+    "fields": {
+        "attempt": 29,
+        "question": 1012,
+        "given_answer": "",
+        "is_correct": false
+    }
+},
+{
+    "model": "exams.useranswer",
+    "pk": 439,
+    "fields": {
+        "attempt": 29,
+        "question": 1013,
+        "given_answer": "",
+        "is_correct": false
+    }
+},
+{
+    "model": "exams.useranswer",
+    "pk": 440,
+    "fields": {
+        "attempt": 29,
+        "question": 1014,
+        "given_answer": "",
+        "is_correct": false
+    }
+},
+{
+    "model": "exams.useranswer",
+    "pk": 441,
+    "fields": {
+        "attempt": 29,
+        "question": 1015,
+        "given_answer": "",
+        "is_correct": false
+    }
+},
+{
+    "model": "exams.useranswer",
+    "pk": 442,
+    "fields": {
+        "attempt": 31,
+        "question": 989,
+        "given_answer": "",
+        "is_correct": false
+    }
+},
+{
+    "model": "exams.useranswer",
+    "pk": 443,
+    "fields": {
+        "attempt": 31,
+        "question": 990,
+        "given_answer": "",
+        "is_correct": false
+    }
+},
+{
+    "model": "exams.useranswer",
+    "pk": 444,
+    "fields": {
+        "attempt": 31,
+        "question": 991,
+        "given_answer": "",
+        "is_correct": false
+    }
+},
+{
+    "model": "exams.useranswer",
+    "pk": 445,
+    "fields": {
+        "attempt": 31,
+        "question": 992,
+        "given_answer": "",
+        "is_correct": false
+    }
+},
+{
+    "model": "exams.useranswer",
+    "pk": 446,
+    "fields": {
+        "attempt": 31,
+        "question": 993,
+        "given_answer": "",
+        "is_correct": false
+    }
+},
+{
+    "model": "exams.useranswer",
+    "pk": 447,
+    "fields": {
+        "attempt": 31,
+        "question": 994,
+        "given_answer": "",
+        "is_correct": false
+    }
+},
+{
+    "model": "exams.useranswer",
+    "pk": 448,
+    "fields": {
+        "attempt": 32,
+        "question": 1010,
+        "given_answer": "",
+        "is_correct": false
+    }
+},
+{
+    "model": "exams.useranswer",
+    "pk": 449,
+    "fields": {
+        "attempt": 32,
+        "question": 1011,
+        "given_answer": "",
+        "is_correct": false
+    }
+},
+{
+    "model": "exams.useranswer",
+    "pk": 450,
+    "fields": {
+        "attempt": 32,
+        "question": 1012,
+        "given_answer": "",
+        "is_correct": false
+    }
+},
+{
+    "model": "exams.useranswer",
+    "pk": 451,
+    "fields": {
+        "attempt": 32,
+        "question": 1013,
+        "given_answer": "",
+        "is_correct": false
+    }
+},
+{
+    "model": "exams.useranswer",
+    "pk": 452,
+    "fields": {
+        "attempt": 32,
+        "question": 1014,
+        "given_answer": "",
+        "is_correct": false
+    }
+},
+{
+    "model": "exams.useranswer",
+    "pk": 453,
+    "fields": {
+        "attempt": 32,
+        "question": 1015,
+        "given_answer": "",
+        "is_correct": false
+    }
+},
+{
+    "model": "admin.logentry",
+    "pk": 1,
+    "fields": {
+        "action_time": "2026-04-11T17:17:32.762Z",
+        "user": [
+            "admin"
+        ],
+        "content_type": [
+            "exams",
+            "part"
+        ],
+        "object_id": "4",
+        "object_repr": "Test 1 — Part 4",
+        "action_flag": 2,
+        "change_message": "[{\"changed\": {\"fields\": [\"Question image\", \"Instructions\"]}}]"
+    }
+},
+{
+    "model": "admin.logentry",
+    "pk": 2,
+    "fields": {
+        "action_time": "2026-04-11T17:18:41.813Z",
+        "user": [
+            "admin"
+        ],
+        "content_type": [
+            "exams",
+            "part"
+        ],
+        "object_id": "4",
+        "object_repr": "Test 1 — Part 4",
+        "action_flag": 2,
+        "change_message": "[{\"changed\": {\"fields\": [\"Instructions\"]}}]"
+    }
+}
+]

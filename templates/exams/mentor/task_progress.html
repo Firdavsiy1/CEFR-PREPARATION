@@ -1,0 +1,351 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Обработка теста — {{ task.test_name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
+
+    <!-- Back link -->
+    <a href="{% url 'exams:mentor_dashboard' %}" class="btn-duo-outline text-xs !py-2 !px-4 mb-8 inline-flex" id="back-link">
+        <i class="ph-bold ph-arrow-left"></i>
+        <span data-i18n="mnt_back_panel">Панель ментора</span>
+    </a>
+
+    <!-- Progress Card -->
+    <div class="card-duo overflow-hidden !p-0 animate-fade-in relative" id="progress-card">
+
+        <!-- Header -->
+        <div class="px-8 py-6 border-b-2 border-duo-border bg-duo-purple/5">
+            <div class="flex items-center gap-4">
+                <div class="w-14 h-14 rounded-2xl flex items-center justify-center bg-duo-purple shadow-[0_4px_0_#A855F7]" id="header-icon-wrapper">
+                    <i class="ph-fill ph-brain text-white text-2xl" id="header-icon"></i>
+                </div>
+                <div>
+                    <h1 class="text-2xl font-black text-white tracking-tight" id="page-title" data-i18n="mnt_progress_title">Обработка теста</h1>
+                    <p class="text-sm text-duo-text-dim font-semibold mt-0.5">
+                        <span class="text-white font-bold">{{ task.test_name }}</span>
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Progress Content -->
+        <div class="p-8">
+
+            <!-- Main progress circle + bar -->
+            <div class="flex flex-col items-center mb-8">
+                <!-- Animated brain icon -->
+                <div class="relative w-28 h-28 mb-6" id="spinner-wrapper">
+                    <svg class="w-full h-full animate-spin-slow" viewBox="0 0 100 100" id="progress-ring">
+                        <circle cx="50" cy="50" r="45" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="6" />
+                        <circle cx="50" cy="50" r="45" fill="none"
+                                stroke="url(#progressGradient)" stroke-width="6"
+                                stroke-dasharray="283"
+                                stroke-dashoffset="283"
+                                stroke-linecap="round"
+                                id="progress-circle"
+                                style="transition: stroke-dashoffset 0.8s ease;" />
+                        <defs>
+                            <linearGradient id="progressGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stop-color="#58CC02" />
+                                <stop offset="100%" stop-color="#1CB0F6" />
+                            </linearGradient>
+                        </defs>
+                    </svg>
+                    <div class="absolute inset-0 flex items-center justify-center">
+                        <span class="text-2xl font-black text-white" id="progress-percent">0%</span>
+                    </div>
+                </div>
+
+                <!-- Progress bar -->
+                <div class="w-full max-w-md h-4 bg-duo-surface-2 rounded-full overflow-hidden border-2 border-duo-border">
+                    <div id="progress-bar"
+                         class="h-full rounded-full transition-all duration-700 ease-out"
+                         style="width: 0%; background: linear-gradient(90deg, #58CC02 0%, #1CB0F6 100%); box-shadow: 0 0 12px rgba(88,204,2,0.4);">
+                    </div>
+                </div>
+
+                <!-- Stage text -->
+                <div class="mt-4 flex items-center gap-2" id="stage-display">
+                    <i class="ph ph-spinner animate-spin text-duo-blue text-lg" id="stage-spinner"></i>
+                    <span class="text-xs font-extrabold text-duo-blue uppercase tracking-widest" id="stage-text">
+                        {{ task.stage }}
+                    </span>
+                </div>
+            </div>
+
+            <!-- Status timeline -->
+            <div class="space-y-3" id="timeline">
+                <div class="timeline-item flex items-center gap-3 p-3 rounded-xl bg-duo-surface/50 border border-duo-border/50 transition-all duration-300" data-threshold="5">
+                    <div class="w-8 h-8 rounded-lg flex items-center justify-center bg-duo-surface-2 border border-duo-border flex-shrink-0 timeline-dot">
+                        <i class="ph-fill ph-file-zip text-duo-text-muted text-sm timeline-icon"></i>
+                    </div>
+                    <span class="text-sm font-bold text-duo-text-muted timeline-label" data-i18n="mnt_progress_step_unzip">Распаковка архива</span>
+                    <span class="ml-auto text-xs font-bold text-duo-text-muted timeline-check hidden"><i class="ph-fill ph-check-circle text-duo-green text-lg"></i></span>
+                </div>
+                <div class="timeline-item flex items-center gap-3 p-3 rounded-xl bg-duo-surface/50 border border-duo-border/50 transition-all duration-300" data-threshold="20">
+                    <div class="w-8 h-8 rounded-lg flex items-center justify-center bg-duo-surface-2 border border-duo-border flex-shrink-0 timeline-dot">
+                        <i class="ph-fill ph-brain text-duo-text-muted text-sm timeline-icon"></i>
+                    </div>
+                    <span class="text-sm font-bold text-duo-text-muted timeline-label" data-i18n="mnt_progress_step_ocr">AI-распознавание вопросов (OCR)</span>
+                    <span class="ml-auto text-xs font-bold text-duo-text-muted timeline-check hidden"><i class="ph-fill ph-check-circle text-duo-green text-lg"></i></span>
+                </div>
+                <div class="timeline-item flex items-center gap-3 p-3 rounded-xl bg-duo-surface/50 border border-duo-border/50 transition-all duration-300" data-threshold="70">
+                    <div class="w-8 h-8 rounded-lg flex items-center justify-center bg-duo-surface-2 border border-duo-border flex-shrink-0 timeline-dot">
+                        <i class="ph-fill ph-waveform text-duo-text-muted text-sm timeline-icon"></i>
+                    </div>
+                    <span class="text-sm font-bold text-duo-text-muted timeline-label" data-i18n="mnt_progress_step_audio">Анализ аудиодорожек</span>
+                    <span class="ml-auto text-xs font-bold text-duo-text-muted timeline-check hidden"><i class="ph-fill ph-check-circle text-duo-green text-lg"></i></span>
+                </div>
+                <div class="timeline-item flex items-center gap-3 p-3 rounded-xl bg-duo-surface/50 border border-duo-border/50 transition-all duration-300" data-threshold="90">
+                    <div class="w-8 h-8 rounded-lg flex items-center justify-center bg-duo-surface-2 border border-duo-border flex-shrink-0 timeline-dot">
+                        <i class="ph-fill ph-database text-duo-text-muted text-sm timeline-icon"></i>
+                    </div>
+                    <span class="text-sm font-bold text-duo-text-muted timeline-label" data-i18n="mnt_progress_step_db">Сохранение в базу данных</span>
+                    <span class="ml-auto text-xs font-bold text-duo-text-muted timeline-check hidden"><i class="ph-fill ph-check-circle text-duo-green text-lg"></i></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Success / Error Panel (hidden by default) -->
+        <div id="result-panel" class="hidden border-t-2 border-duo-border p-8">
+        </div>
+
+    </div>
+
+    <!-- Info Card -->
+    <div class="mt-6 card-duo !border-duo-blue/30 p-4 animate-slide-up" style="animation-delay: 0.3s" id="info-card">
+        <div class="flex items-start gap-3">
+            <div class="w-10 h-10 rounded-xl bg-duo-blue/15 flex items-center justify-center flex-shrink-0">
+                <i class="ph-fill ph-info text-duo-blue text-lg"></i>
+            </div>
+            <div>
+                <p class="text-sm font-extrabold text-duo-blue mb-1" data-i18n="mnt_progress_bg_title">Обработка в фоне</p>
+                <p class="text-xs text-duo-text-dim font-semibold leading-relaxed">
+                    <strong class="text-white" data-i18n="mnt_progress_bg_safe">Вы можете безопасно закрыть эту страницу</strong>
+                    <span data-i18n="mnt_progress_bg_desc">— обработка продолжится в фоновом режиме. Вернитесь на</span>
+                    <a href="{% url 'exams:mentor_dashboard' %}" class="text-duo-blue hover:underline font-bold" data-i18n="mnt_progress_bg_link">панель ментора</a><span data-i18n="mnt_progress_bg_end">, чтобы увидеть результат.</span>
+                </p>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<style>
+    @keyframes spin-slow {
+        from { transform: rotate(0deg); }
+        to   { transform: rotate(360deg); }
+    }
+    .animate-spin-slow {
+        animation: spin-slow 3s linear infinite;
+    }
+    @keyframes pulse-glow {
+        0%, 100% { box-shadow: 0 0 0 0 rgba(88, 204, 2, 0); }
+        50%      { box-shadow: 0 0 20px 4px rgba(88, 204, 2, 0.2); }
+    }
+    .pulse-glow {
+        animation: pulse-glow 2s ease-in-out infinite;
+    }
+    @keyframes confetti-pop {
+        0%   { transform: scale(0.5); opacity: 0; }
+        60%  { transform: scale(1.15); }
+        100% { transform: scale(1); opacity: 1; }
+    }
+    .animate-confetti-pop {
+        animation: confetti-pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    }
+</style>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    const TASK_ID = {{ task.id }};
+    const POLL_URL = '{% url "exams:api_task_status" task.id %}';
+    const DASHBOARD_URL = '{% url "exams:mentor_dashboard" %}';
+    const UPLOAD_URL = '{% url "exams:mentor_upload" %}';
+
+    // Get current language dict
+    function getDict() {
+        const lang = '{{ current_language|default:"ru" }}';
+        return (typeof _i18n !== 'undefined' && _i18n[lang]) ? _i18n[lang] : {};
+    }
+
+    let pollInterval = null;
+    let lastProgress = 0;
+
+    function updateUI(data) {
+        const progress = data.progress;
+        const status = data.status;
+        const stage = data.stage;
+
+        // Update progress bar
+        document.getElementById('progress-bar').style.width = progress + '%';
+
+        // Update circle
+        const circumference = 283;
+        const offset = circumference - (progress / 100) * circumference;
+        document.getElementById('progress-circle').setAttribute('stroke-dashoffset', offset);
+
+        // Update percentage
+        document.getElementById('progress-percent').textContent = progress + '%';
+
+        // Update stage text
+        document.getElementById('stage-text').textContent = stage;
+
+        // Update timeline
+        document.querySelectorAll('.timeline-item').forEach(item => {
+            const threshold = parseInt(item.dataset.threshold);
+            const dot = item.querySelector('.timeline-dot');
+            const icon = item.querySelector('.timeline-icon');
+            const label = item.querySelector('.timeline-label');
+            const check = item.querySelector('.timeline-check');
+
+            if (progress >= threshold + 15) {
+                // Completed
+                dot.classList.remove('bg-duo-surface-2', 'border-duo-border', 'bg-duo-blue/20', 'border-duo-blue/40');
+                dot.classList.add('bg-duo-green/20', 'border-duo-green/40');
+                icon.classList.remove('text-duo-text-muted', 'text-duo-blue');
+                icon.classList.add('text-duo-green');
+                label.classList.remove('text-duo-text-muted', 'text-white');
+                label.classList.add('text-duo-green');
+                check.classList.remove('hidden');
+                item.classList.remove('border-duo-blue/40', 'bg-duo-blue/5');
+                item.classList.add('border-duo-green/30', 'bg-duo-green/5');
+            } else if (progress >= threshold) {
+                // Active
+                dot.classList.remove('bg-duo-surface-2', 'border-duo-border');
+                dot.classList.add('bg-duo-blue/20', 'border-duo-blue/40');
+                icon.classList.remove('text-duo-text-muted');
+                icon.classList.add('text-duo-blue');
+                label.classList.remove('text-duo-text-muted');
+                label.classList.add('text-white');
+                item.classList.add('border-duo-blue/40', 'bg-duo-blue/5');
+                check.classList.add('hidden');
+            }
+        });
+
+        // Handle completion
+        if (status === 'completed') {
+            clearInterval(pollInterval);
+            showSuccess(data);
+        } else if (status === 'failed') {
+            clearInterval(pollInterval);
+            showError(data);
+        }
+
+        lastProgress = progress;
+    }
+
+    function showSuccess(data) {
+        const t = getDict();
+
+        // Stop spinner
+        document.getElementById('spinner-wrapper').innerHTML = `
+            <div class="w-28 h-28 rounded-full bg-duo-green/15 border-4 border-duo-green/40 flex items-center justify-center animate-confetti-pop pulse-glow">
+                <i class="ph-fill ph-check-fat text-duo-green text-5xl drop-shadow-[0_0_10px_rgba(88,204,2,0.5)]"></i>
+            </div>
+        `;
+        document.getElementById('stage-spinner').classList.add('hidden');
+        document.getElementById('stage-text').textContent = t.mnt_progress_published || 'Тест успешно опубликован!';
+        document.getElementById('stage-text').classList.remove('text-duo-blue');
+        document.getElementById('stage-text').classList.add('text-duo-green');
+
+        // Update header
+        document.getElementById('page-title').textContent = t.mnt_progress_ready || 'Тест готов!';
+        document.getElementById('header-icon-wrapper').classList.remove('bg-duo-purple', 'shadow-[0_4px_0_#A855F7]');
+        document.getElementById('header-icon-wrapper').classList.add('bg-duo-green', 'shadow-[0_4px_0_#45a302]');
+        document.getElementById('header-icon').className = 'ph-fill ph-check-circle text-white text-2xl';
+
+        // Show result panel
+        const panel = document.getElementById('result-panel');
+        panel.classList.remove('hidden');
+        panel.innerHTML = `
+            <div class="text-center animate-confetti-pop">
+                <div class="inline-flex items-center gap-3 mb-4">
+                    <div class="flex items-center gap-2 px-4 py-2 rounded-xl bg-duo-blue/15 border border-duo-blue/25">
+                        <i class="ph-fill ph-puzzle-piece text-duo-blue"></i>
+                        <span class="text-sm font-black text-white">${data.parts_count} ${t.mnt_progress_parts || 'частей'}</span>
+                    </div>
+                    <div class="flex items-center gap-2 px-4 py-2 rounded-xl bg-duo-purple/15 border border-duo-purple/25">
+                        <i class="ph-fill ph-chat-centered-dots text-duo-purple"></i>
+                        <span class="text-sm font-black text-white">${data.questions_count} ${t.mnt_progress_questions || 'вопросов'}</span>
+                    </div>
+                </div>
+                <div class="flex items-center justify-center gap-3 mt-6">
+                    ${data.result_test_id ? `
+                    <a href="/mentor/test/${data.result_test_id}/builder/"
+                       class="btn-duo-blue text-sm">
+                        <i class="ph-fill ph-pencil-simple text-lg"></i>
+                        ${t.mnt_progress_open_builder || 'Открыть в конструкторе'}
+                    </a>` : ''}
+                    <a href="${DASHBOARD_URL}" class="btn-duo-green text-sm">
+                        <i class="ph-fill ph-arrow-right text-lg"></i>
+                        ${t.mnt_progress_to_panel || 'К панели ментора'}
+                    </a>
+                </div>
+            </div>
+        `;
+
+        // Hide info card
+        document.getElementById('info-card').classList.add('hidden');
+    }
+
+    function showError(data) {
+        const t = getDict();
+
+        // Stop spinner
+        document.getElementById('spinner-wrapper').innerHTML = `
+            <div class="w-28 h-28 rounded-full bg-duo-red/15 border-4 border-duo-red/40 flex items-center justify-center animate-confetti-pop">
+                <i class="ph-fill ph-x-circle text-duo-red text-5xl"></i>
+            </div>
+        `;
+        document.getElementById('stage-spinner').classList.add('hidden');
+        document.getElementById('stage-text').textContent = t.mnt_progress_error || 'Произошла ошибка';
+        document.getElementById('stage-text').classList.remove('text-duo-blue');
+        document.getElementById('stage-text').classList.add('text-duo-red');
+
+        // Update header
+        document.getElementById('page-title').textContent = t.mnt_progress_error || 'Ошибка обработки';
+        document.getElementById('header-icon-wrapper').classList.remove('bg-duo-purple', 'shadow-[0_4px_0_#A855F7]');
+        document.getElementById('header-icon-wrapper').classList.add('bg-duo-red', 'shadow-[0_4px_0_#b91c1c]');
+        document.getElementById('header-icon').className = 'ph-fill ph-warning text-white text-2xl';
+
+        // Show error panel
+        const panel = document.getElementById('result-panel');
+        panel.classList.remove('hidden');
+        panel.innerHTML = `
+            <div class="animate-confetti-pop">
+                <div class="p-4 rounded-xl bg-duo-red/10 border border-duo-red/25 mb-4">
+                    <p class="text-xs font-bold text-duo-red mb-2">${t.mnt_progress_error_label || 'СООБЩЕНИЕ ОБ ОШИБКЕ:'}</p>
+                    <pre class="text-xs text-duo-text-dim font-mono whitespace-pre-wrap break-all max-h-48 overflow-y-auto">${data.error_message || 'Unknown error'}</pre>
+                </div>
+                <div class="flex items-center justify-center gap-3">
+                    <a href="${UPLOAD_URL}" class="btn-duo-outline text-sm">
+                        <i class="ph-fill ph-arrow-counter-clockwise text-lg"></i>
+                        ${t.mnt_progress_try_again || 'Попробовать снова'}
+                    </a>
+                    <a href="${DASHBOARD_URL}" class="btn-duo-green text-sm">
+                        <i class="ph-fill ph-arrow-right text-lg"></i>
+                        ${t.mnt_progress_to_panel || 'К панели'}
+                    </a>
+                </div>
+            </div>
+        `;
+    }
+
+    function pollStatus() {
+        fetch(POLL_URL)
+            .then(r => r.json())
+            .then(data => updateUI(data))
+            .catch(err => console.error('Poll error:', err));
+    }
+
+    // Start polling
+    document.addEventListener('DOMContentLoaded', () => {
+        pollStatus(); // immediate first check
+        pollInterval = setInterval(pollStatus, 1500); // then every 1.5s
+    });
+</script>
+{% endblock %}

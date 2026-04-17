@@ -1,6 +1,7 @@
 import os
 import re
 import json
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 from django.conf import settings
@@ -32,6 +33,9 @@ PART_ROTATIONS = {
 GEMINI_MODEL    = "gemini-3-flash-preview"
 GEMINI_LOCATION = "global"
 
+# Number of parallel Gemini API calls
+MAX_WORKERS = 4
+
 
 class Command(BaseCommand):
     help = 'Ingest CEFR exam materials from the materials/ directory.'
@@ -50,6 +54,11 @@ class Command(BaseCommand):
                 '"high" = deepest reasoning.'
             ),
         )
+        parser.add_argument(
+            '--workers',
+            type=int, default=MAX_WORKERS,
+            help='Max number of parallel Gemini API calls (default: 4).',
+        )
 
     # ------------------------------------------------------------------
     # Entry point
@@ -59,6 +68,7 @@ class Command(BaseCommand):
         self.skip_ocr      = options['skip_ocr']
         self.thinking_level = options['thinking_level'].upper()   # SDK хочет UPPER
         self.genai_client  = None
+        self.max_workers   = options['workers']
 
         if not self.skip_ocr:
             try:
@@ -89,7 +99,8 @@ class Command(BaseCommand):
                     f'    ✓  Gen AI client ready  '
                     f'(project={project_id or "ADC default"}, '
                     f'model={GEMINI_MODEL}, '
-                    f'thinking={self.thinking_level})'
+                    f'thinking={self.thinking_level}, '
+                    f'workers={self.max_workers})'
                 ))
 
             except ImportError:
@@ -118,7 +129,7 @@ class Command(BaseCommand):
             self._ingest_test(test_dir, dry_run=options['dry_run'])
 
     # ------------------------------------------------------------------
-    # Test-level processing  (без изменений кроме сообщений)
+    # Test-level processing — PARALLELISED
     # ------------------------------------------------------------------
 
     def _ingest_test(self, test_dir: Path, *, dry_run: bool):
@@ -148,6 +159,45 @@ class Command(BaseCommand):
             self._dry_run_preview(part_dirs)
             return
 
+        # ============================================================
+        # PHASE 1: Parallel OCR — fire all Gemini OCR calls at once
+        # ============================================================
+        part_data = {}   # part_num → {answers, q_type, extraction, processed_img_path, part_dir}
+
+        # Prepare metadata for each part (fast, no API calls)
+        for part_dir in part_dirs:
+            part_num = int(part_dir.name.split()[-1])
+            answers = self._parse_answers(part_dir / 'answers.txt')
+            q_type = PART_QUESTION_TYPES.get(part_num, 'multiple_choice')
+            part_data[part_num] = {
+                'part_dir': part_dir,
+                'answers': answers,
+                'q_type': q_type,
+                'extraction': {
+                    'instructions': '',
+                    'passage_title': '',
+                    'passage_text': '',
+                    'shared_choices': [],
+                    'questions': {},
+                },
+                'processed_img_path': None,
+            }
+
+        # Run OCR in parallel
+        if not self.skip_ocr and self.genai_client:
+            self.stdout.write(self.style.MIGRATE_HEADING(
+                f'\n  ⚡  Running OCR for {len(part_dirs)} parts in parallel '
+                f'(max {self.max_workers} workers)...'
+            ))
+            self._parallel_ocr(part_data)
+        else:
+            self.stdout.write('  ⏭  Skipping OCR (--skip-ocr or no client)')
+
+        # ============================================================
+        # PHASE 2: Save to DB (sequential, fast)
+        # ============================================================
+        self.stdout.write(self.style.MIGRATE_HEADING('\n  💾  Saving to database...'))
+
         with transaction.atomic():
             test_obj, created = Test.objects.update_or_create(
                 name=test_name,
@@ -161,11 +211,24 @@ class Command(BaseCommand):
 
             global_offset   = 0
             total_questions = 0
+
             for part_dir in part_dirs:
                 part_num = int(part_dir.name.split()[-1])
-                n = self._ingest_part(test_obj, part_dir, part_num, global_offset)
+                pd = part_data[part_num]
+                n = self._save_part_to_db(
+                    test_obj, pd, part_num, global_offset,
+                )
                 global_offset   += n
                 total_questions += n
+
+        # ============================================================
+        # PHASE 3: Parallel Audio Analysis
+        # ============================================================
+        if not self.skip_ocr and self.genai_client:
+            self.stdout.write(self.style.MIGRATE_HEADING(
+                f'\n  🧠  Running audio analysis for {len(part_dirs)} parts in parallel...'
+            ))
+            self._parallel_audio_analysis(test_obj, part_data)
 
         self.stdout.write(self.style.SUCCESS(
             f'\n  ✅  Successfully ingested {test_name}: '
@@ -173,51 +236,109 @@ class Command(BaseCommand):
         ))
 
     # ------------------------------------------------------------------
-    # Dry-run preview
+    # Parallel OCR dispatcher
     # ------------------------------------------------------------------
 
-    def _dry_run_preview(self, part_dirs):
-        self.stdout.write(self.style.WARNING('  [DRY RUN] No database changes.\n'))
-        for pd in part_dirs:
-            part_num = int(pd.name.split()[-1])
-            answers  = self._parse_answers(pd / 'answers.txt')
-            q_type   = PART_QUESTION_TYPES.get(part_num, '?')
-            files    = [f.name for f in pd.iterdir() if f.is_file()]
-            self.stdout.write(
-                f'    Part {part_num}: {len(answers)} Qs ({q_type})  files={files}'
-            )
+    def _parallel_ocr(self, part_data):
+        """Fire all OCR API calls in parallel using ThreadPoolExecutor."""
+        ocr_tasks = {}
+
+        with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
+            for part_num, pd in part_data.items():
+                questions_img = pd['part_dir'] / 'questions.jpg'
+                if questions_img.exists() and pd['answers']:
+                    future = executor.submit(
+                        self._ocr_and_parse,
+                        questions_img,
+                        part_num,
+                        pd['q_type'],
+                        pd['answers'],
+                        0,  # global_offset not needed for OCR
+                    )
+                    ocr_tasks[future] = part_num
+
+            for future in as_completed(ocr_tasks):
+                part_num = ocr_tasks[future]
+                try:
+                    extraction, processed_img_path = future.result()
+                    part_data[part_num]['extraction'] = extraction
+                    part_data[part_num]['processed_img_path'] = processed_img_path
+                    q_count = len(extraction.get('questions', {}))
+                    self.stdout.write(self.style.SUCCESS(
+                        f'    ✓  Part {part_num} OCR done  ({q_count} questions extracted)'
+                    ))
+                except Exception as e:
+                    self.stderr.write(self.style.WARNING(
+                        f'    ⚠  Part {part_num} OCR failed: {e}'
+                    ))
 
     # ------------------------------------------------------------------
-    # Part-level processing  (без изменений)
+    # Parallel Audio Analysis dispatcher
     # ------------------------------------------------------------------
 
-    def _ingest_part(self, test_obj, part_dir: Path, part_num: int,
-                     global_offset: int) -> int:
-        self.stdout.write(f'\n  📁  Part {part_num}')
+    def _parallel_audio_analysis(self, test_obj, part_data):
+        """Fire all audio analysis API calls in parallel."""
+        audio_tasks = {}
 
-        answers = self._parse_answers(part_dir / 'answers.txt')
+        with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
+            for part_num, pd in part_data.items():
+                audio = pd['part_dir'] / 'audio.mp3'
+                if audio.exists() and pd['answers']:
+                    # Get the saved Part object
+                    try:
+                        part_obj = Part.objects.get(
+                            test=test_obj, part_number=part_num
+                        )
+                    except Part.DoesNotExist:
+                        continue
+
+                    future = executor.submit(
+                        self._analyze_audio_worker,
+                        audio, part_obj.id, pd['answers'],
+                        pd['extraction'].get('questions', {}),
+                    )
+                    audio_tasks[future] = part_num
+
+            for future in as_completed(audio_tasks):
+                part_num = audio_tasks[future]
+                try:
+                    future.result()
+                    self.stdout.write(self.style.SUCCESS(
+                        f'    ✓  Part {part_num} audio analysis done'
+                    ))
+                except Exception as e:
+                    self.stderr.write(self.style.WARNING(
+                        f'    ⚠  Part {part_num} audio analysis failed: {e}'
+                    ))
+
+    def _analyze_audio_worker(self, audio_path, part_obj_id, answers, parsed_questions):
+        """
+        Worker function for parallel audio analysis.
+        Re-fetches the Part object by ID to avoid thread-safety issues.
+        """
+        part_obj = Part.objects.get(id=part_obj_id)
+        self._analyze_audio_and_explain(audio_path, part_obj, answers, parsed_questions)
+
+    # ------------------------------------------------------------------
+    # Save a single part to DB (fast, no API calls)
+    # ------------------------------------------------------------------
+
+    def _save_part_to_db(self, test_obj, pd, part_num, global_offset):
+        """Save a pre-processed part and its questions to the database."""
+        answers = pd['answers']
         if not answers:
-            self.stderr.write(self.style.WARNING('    ⚠  No answers found, skipping.'))
+            self.stderr.write(self.style.WARNING(
+                f'    ⚠  Part {part_num}: No answers found, skipping.'
+            ))
             return 0
 
-        q_type = PART_QUESTION_TYPES.get(part_num, 'multiple_choice')
-        self.stdout.write(f'    📝  {len(answers)} answers loaded  (type={q_type})')
+        extraction = pd['extraction']
+        processed_img_path = pd['processed_img_path']
+        part_dir = pd['part_dir']
+        q_type = pd['q_type']
 
-        # Default empty extraction result
-        extraction = {
-            'instructions': '',
-            'passage_title': '',
-            'passage_text': '',
-            'shared_choices': [],
-            'questions': {},
-        }
-        processed_img_path = None
-
-        questions_img = part_dir / 'questions.jpg'
-        if questions_img.exists() and not self.skip_ocr and self.genai_client:
-            extraction, processed_img_path = self._ocr_and_parse(
-                questions_img, part_num, q_type, answers, global_offset,
-            )
+        self.stdout.write(f'\n  📁  Part {part_num}')
+        self.stdout.write(f'    📝  {len(answers)} answers  (type={q_type})')
 
         slug     = test_obj.name.lower().replace(' ', '_')
         part_obj = Part(
@@ -237,6 +358,7 @@ class Command(BaseCommand):
                 )
             self.stdout.write('    🔊  Audio attached')
 
+        questions_img = part_dir / 'questions.jpg'
         img_to_save = Path(processed_img_path) if processed_img_path else questions_img
         if img_to_save.exists():
             with open(img_to_save, 'rb') as f:
@@ -308,12 +430,22 @@ class Command(BaseCommand):
             except OSError:
                 pass
 
-        # Perform Audio Analysis if requested and possible
-        if audio.exists() and not self.skip_ocr and self.genai_client:
-            self.stdout.write('    🧠  Analyzing audio for transcript and explanations...')
-            self._analyze_audio_and_explain(audio, part_obj, answers, parsed_questions)
-
         return len(answers)
+
+    # ------------------------------------------------------------------
+    # Dry-run preview
+    # ------------------------------------------------------------------
+
+    def _dry_run_preview(self, part_dirs):
+        self.stdout.write(self.style.WARNING('  [DRY RUN] No database changes.\n'))
+        for pd in part_dirs:
+            part_num = int(pd.name.split()[-1])
+            answers  = self._parse_answers(pd / 'answers.txt')
+            q_type   = PART_QUESTION_TYPES.get(part_num, '?')
+            files    = [f.name for f in pd.iterdir() if f.is_file()]
+            self.stdout.write(
+                f'    Part {part_num}: {len(answers)} Qs ({q_type})  files={files}'
+            )
 
     # ------------------------------------------------------------------
     # answers.txt parser
@@ -347,6 +479,9 @@ class Command(BaseCommand):
         extraction_dict keys:
             instructions, passage_title, passage_text,
             shared_choices, questions
+
+        NOTE: This method is thread-safe — it only reads files and calls
+        the Gemini API; no Django ORM writes happen here.
         """
         extraction = {
             'instructions': '',
@@ -367,10 +502,9 @@ class Command(BaseCommand):
             rotation = PART_ROTATIONS.get(part_num, 0)
             if rotation:
                 img = img.rotate(rotation, expand=True)
-                tmp = image_path.parent / 'questions_rotated.jpg'
+                tmp = image_path.parent / f'questions_rotated_p{part_num}.jpg'
                 img.save(str(tmp), 'JPEG', quality=95)
                 processed_path = str(tmp)
-                self.stdout.write(f'    🔄  Rotated image {rotation}°')
 
             with open(processed_path, 'rb') as fh:
                 image_bytes = fh.read()
@@ -390,11 +524,6 @@ class Command(BaseCommand):
             )
 
             # --- 5. Call API ---
-            self.stdout.write(
-                f'    🔍  Calling {GEMINI_MODEL} '
-                f'(thinking={self.thinking_level})…'
-            )
-
             response = self.genai_client.models.generate_content(
                 model=GEMINI_MODEL,
                 contents=[image_part, prompt],
@@ -422,9 +551,6 @@ class Command(BaseCommand):
             extraction['shared_choices'] = data.get('shared_choices', [])
 
             extracted_qs = data.get('questions', [])
-            self.stdout.write(
-                f'    📄  Gemini 3 Flash extracted {len(extracted_qs)} questions.'
-            )
 
             # Re-index from exam-page numbers to local 1-based indices
             valid_qs = []
@@ -450,7 +576,9 @@ class Command(BaseCommand):
                 }
 
         except Exception as e:
-            self.stderr.write(self.style.WARNING(f'    ⚠  Gemini 3 Flash error: {e}'))
+            self.stderr.write(self.style.WARNING(
+                f'    ⚠  Part {part_num} Gemini 3 Flash error: {e}'
+            ))
 
         return extraction, processed_path
 
@@ -698,11 +826,6 @@ If a question has no choices, use an empty list for "choices"."""
                 response_mime_type="application/json",
             )
 
-            self.stdout.write(
-                f'    🔍  Calling {GEMINI_MODEL} for Audio '
-                f'(thinking={self.thinking_level})…'
-            )
-
             response = self.genai_client.models.generate_content(
                 model=GEMINI_MODEL,
                 contents=[audio_part, prompt],
@@ -732,8 +855,6 @@ If a question has no choices, use an empty list for "choices"."""
                 if expl:
                     q_obj.explanation = expl
                     q_obj.save()
-
-            self.stdout.write(self.style.SUCCESS(f'    ✅  Audio analysis & explanations saved.'))
 
         except Exception as e:
             self.stderr.write(self.style.WARNING(f'    ⚠  Audio analysis failed: {e}'))

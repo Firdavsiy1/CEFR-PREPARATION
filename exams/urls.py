@@ -23,6 +23,7 @@ urlpatterns = [
     # -----------------------------------------------------------------------
     path('mentor/', mentor_views.mentor_dashboard, name='mentor_dashboard'),
     path('mentor/upload/', mentor_views.mentor_upload, name='mentor_upload'),
+    path('mentor/task/<int:task_id>/progress/', mentor_views.mentor_task_progress, name='mentor_task_progress'),
     path('mentor/test/<int:test_id>/builder/', mentor_views.mentor_test_builder, name='mentor_test_builder'),
     path('mentor/test/<int:test_id>/delete/', mentor_views.mentor_delete_test, name='mentor_delete_test'),
 
@@ -32,6 +33,7 @@ urlpatterns = [
     path('api/mentor/test/<int:test_id>/data/', mentor_views.api_test_data, name='api_test_data'),
     path('api/mentor/test/<int:test_id>/toggle-active/', mentor_views.api_toggle_test_active, name='api_toggle_test_active'),
     path('api/mentor/test/<int:test_id>/update/', mentor_views.api_update_test, name='api_update_test'),
+    path('api/mentor/task/<int:task_id>/status/', mentor_views.api_task_status, name='api_task_status'),
     path('api/mentor/part/<int:part_id>/update/', mentor_views.api_update_part, name='api_update_part'),
     path('api/mentor/part/<int:part_id>/upload-audio/', mentor_views.api_upload_part_audio, name='api_upload_part_audio'),
     path('api/mentor/part/<int:part_id>/question/create/', mentor_views.api_create_question, name='api_create_question'),

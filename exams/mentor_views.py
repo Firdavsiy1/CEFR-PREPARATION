@@ -8,6 +8,7 @@ Access control:
 Main views:
   - mentor_dashboard: Lists tests the mentor can manage.
   - mentor_upload: Handles ZIP file upload and triggers the ingestion pipeline.
+  - mentor_task_progress: Real-time progress page for a background ingestion task.
   - mentor_test_builder: Full AJAX-powered test editor for Parts/Questions/Choices.
   - mentor_delete_test: Confirmation page for deleting a test.
 
@@ -17,6 +18,7 @@ JSON API endpoints (used by the Test Builder frontend):
   - api_create_question / api_update_question / api_delete_question
   - api_create_choice / api_update_choice / api_delete_choice
   - api_toggle_test_active: Toggles the is_active flag.
+  - api_task_status: Returns ingestion task progress for polling.
 """
 
 import json
@@ -26,18 +28,20 @@ import tempfile
 import threading
 import traceback
 import zipfile
+from io import StringIO
 from pathlib import Path
 
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.files import File
-from django.db import transaction
+from django.db import transaction, connection
 from django.http import JsonResponse, HttpResponseForbidden, Http404
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
 from django.views.decorators.http import require_POST, require_http_methods
 
-from .models import Test, Part, Question, Choice
+from .models import Test, Part, Question, Choice, IngestionTask
 
 
 # ---------------------------------------------------------------------------
@@ -88,22 +92,30 @@ def mentor_dashboard(request):
 
     tests = tests.prefetch_related('parts__questions').order_by('-created_at')
 
+    # Get active ingestion tasks for this user
+    active_tasks = IngestionTask.objects.filter(
+        user=request.user,
+        status__in=['pending', 'running'],
+    )
+
     context = {
         'tests': tests,
         'is_superuser': request.user.is_superuser,
+        'active_tasks': active_tasks,
     }
     return render(request, 'exams/mentor/dashboard.html', context)
 
 
 # ---------------------------------------------------------------------------
-# ZIP Upload + Ingestion
+# ZIP Upload + Background Ingestion
 # ---------------------------------------------------------------------------
 
 @mentor_required
 def mentor_upload(request):
     """
     GET:  Show the upload form.
-    POST: Accept a ZIP file, unpack it, and run the ingestion pipeline.
+    POST: Accept a ZIP file, create an IngestionTask, kick off background
+          processing, and redirect to the progress page immediately.
     """
     if request.method == 'POST':
         zip_file = request.FILES.get('zip_file')
@@ -121,163 +133,301 @@ def mentor_upload(request):
             messages.error(request, "Please provide a test name.")
             return redirect('exams:mentor_upload')
 
-        # Save ZIP to a temp directory and extract
-        try:
-            result = _process_zip_upload(zip_file, test_name, request.user, split_parts=split_parts)
-            if result['success']:
-                extra_msg = " и отдельные части!" if split_parts else "!"
-                messages.success(
-                    request,
-                    f"Test «{test_name}» ingested successfully{extra_msg} "
-                    f"{result.get('questions', 0)} questions across "
-                    f"{result.get('parts', 0)} parts."
-                )
-                return redirect('exams:mentor_dashboard')
-            else:
-                messages.error(request, f"Ingestion failed: {result['error']}")
-        except Exception as e:
-            messages.error(request, f"Upload failed: {str(e)}")
+        # Save ZIP to a persistent temp location (not TemporaryDirectory,
+        # since the thread will outlive this request)
+        upload_dir = settings.BASE_DIR / 'media' / 'uploads'
+        upload_dir.mkdir(parents=True, exist_ok=True)
+        zip_path = upload_dir / f"task_{timezone.now().strftime('%Y%m%d_%H%M%S')}_{zip_file.name}"
 
-        return redirect('exams:mentor_upload')
+        with open(zip_path, 'wb') as f:
+            for chunk in zip_file.chunks():
+                f.write(chunk)
+
+        # Create the task record
+        task = IngestionTask.objects.create(
+            user=request.user,
+            test_name=test_name,
+            split_parts=split_parts,
+            status='pending',
+            stage='Загрузка файла завершена. Запуск обработки...',
+        )
+
+        # Start background processing thread
+        thread = threading.Thread(
+            target=_run_ingestion_background,
+            args=(task.id, str(zip_path), test_name, request.user.id, split_parts),
+            daemon=True,
+        )
+        thread.start()
+
+        return redirect('exams:mentor_task_progress', task_id=task.id)
 
     return render(request, 'exams/mentor/upload.html')
 
 
-def _process_zip_upload(zip_file, test_name, user, split_parts=False):
+def _run_ingestion_background(task_id, zip_path, test_name, user_id, split_parts):
     """
-    Unpack the ZIP into the materials/ directory structure and
-    run the ingestion logic inline (synchronously).
+    Background thread entry point for test ingestion.
+    Updates the IngestionTask record with progress as it works.
 
-    Expected ZIP structure:
-        TestName/
-          Listening/
-            Part 1/
-              audio.mp3
-              questions.jpg
-              answers.txt
-            Part 2/
-              ...
+    IMPORTANT: Django DB connections are per-thread, so we close the
+    inherited one and let Django create fresh ones for this thread.
     """
-    materials_dir = settings.BASE_DIR / 'materials'
-    materials_dir.mkdir(exist_ok=True)
+    connection.close()
 
-    test_dir = materials_dir / test_name
-
-    # Create a temp dir to unpack
-    with tempfile.TemporaryDirectory(dir=str(settings.BASE_DIR)) as tmpdir:
-        # Extract ZIP
-        with zipfile.ZipFile(zip_file, 'r') as zf:
-            zf.extractall(tmpdir)
-
-        # Find the root folder in the extracted content
-        extracted = Path(tmpdir)
-        subdirs = [d for d in extracted.iterdir() if d.is_dir()]
-
-        # Use the first directory as the source, or the whole tmpdir
-        if len(subdirs) == 1:
-            source = subdirs[0]
-        else:
-            source = extracted
-
-        # Check for a Listening/ folder
-        listening_src = None
-        for candidate in [source / 'Listening', source]:
-            if (candidate / 'Part 1').exists() or any(
-                d.name.startswith('Part') for d in candidate.iterdir() if d.is_dir()
-            ):
-                listening_src = candidate
-                break
-
-        if not listening_src:
-            return {
-                'success': False,
-                'error': (
-                    'Could not find a valid structure in the ZIP. '
-                    'Expected: TestName/Listening/Part 1/, Part 2/, ...'
-                ),
-            }
-
-        # Move to materials/TestName/Listening/
-        if test_dir.exists():
-            shutil.rmtree(test_dir)
-        test_dir.mkdir(parents=True)
-
-        # If the source IS a Listening folder, place it under test_dir
-        target_listening = test_dir / 'Listening'
-        shutil.copytree(str(listening_src), str(target_listening))
-
-    # Now run the ingestion command logic programmatically
-    from django.core.management import call_command
-    from io import StringIO
-
-    stdout_capture = StringIO()
-    stderr_capture = StringIO()
+    from django.contrib.auth import get_user_model
+    User = get_user_model()
 
     try:
-        call_command(
-            'ingest_materials',
-            test=test_name,
-            stdout=stdout_capture,
-            stderr=stderr_capture,
-        )
-    except Exception as e:
-        return {
-            'success': False,
-            'error': f"{str(e)}\n\nOutput:\n{stdout_capture.getvalue()}\n{stderr_capture.getvalue()}",
-        }
+        task = IngestionTask.objects.get(id=task_id)
+        task.status = 'running'
+        task.progress = 5
+        task.stage = 'Распаковка ZIP-архива...'
+        task.save(update_fields=['status', 'progress', 'stage'])
 
-    # Assign the author to the newly created test
-    try:
-        from exams.models import Test, Part, Question, Choice
-        test_obj = Test.objects.get(name=test_name)
-        test_obj.author = user
-        test_obj.save(update_fields=['author'])
+        user = User.objects.get(id=user_id)
+        materials_dir = settings.BASE_DIR / 'materials'
+        materials_dir.mkdir(exist_ok=True)
+        test_dir = materials_dir / test_name
 
-        parts_count = test_obj.parts.count()
-        questions_count = Question.objects.filter(part__test=test_obj).count()
+        # --- Step 1: Extract ZIP ---
+        task.update_progress(10, 'Распаковка ZIP-архива...')
 
-        if split_parts:
-            # Clone each part to its own individual test
-            for part in test_obj.parts.all():
-                new_test_name = f"{test_name} - Part {part.part_number}"
-                Test.objects.filter(name=new_test_name).delete()
-                
-                new_test = Test.objects.create(
-                    name=new_test_name,
-                    test_type=test_obj.test_type,
-                    is_active=True,
-                    author=user
+        with tempfile.TemporaryDirectory(dir=str(settings.BASE_DIR)) as tmpdir:
+            with zipfile.ZipFile(zip_path, 'r') as zf:
+                zf.extractall(tmpdir)
+
+            extracted = Path(tmpdir)
+            subdirs = [d for d in extracted.iterdir() if d.is_dir()]
+            source = subdirs[0] if len(subdirs) == 1 else extracted
+
+            # Find Listening folder
+            listening_src = None
+            for candidate in [source / 'Listening', source]:
+                if (candidate / 'Part 1').exists() or any(
+                    d.name.startswith('Part') for d in candidate.iterdir() if d.is_dir()
+                ):
+                    listening_src = candidate
+                    break
+
+            if not listening_src:
+                task.status = 'failed'
+                task.error_message = (
+                    'Не найдена правильная структура в ZIP. '
+                    'Ожидается: TestName/Listening/Part 1/, Part 2/, ...'
                 )
+                task.stage = 'Ошибка структуры архива'
+                task.completed_at = timezone.now()
+                task.save()
+                _cleanup_zip(zip_path)
+                return
 
-                part_clone = Part.objects.get(id=part.id)
-                part_clone.id = None
-                part_clone.test = new_test
-                # Re-assign part number to 1 since it's a standalone test now
-                # Or keep it as original so we know the type? We keep it as original to preserve UI type logic
-                part_clone.save()
+            task.update_progress(15, 'Копирование файлов...')
 
-                for q in part.questions.all():
-                    q_clone = Question.objects.get(id=q.id)
-                    q_clone.id = None
-                    q_clone.part = part_clone
-                    q_clone.save()
-                    
-                    for c in q.choices.all():
-                        c_clone = Choice.objects.get(id=c.id)
-                        c_clone.id = None
-                        c_clone.question = q_clone
-                        c_clone.save()
+            if test_dir.exists():
+                shutil.rmtree(test_dir)
+            test_dir.mkdir(parents=True)
+            target_listening = test_dir / 'Listening'
+            shutil.copytree(str(listening_src), str(target_listening))
 
-        return {
-            'success': True,
-            'parts': parts_count,
-            'questions': questions_count,
-        }
-    except Test.DoesNotExist:
-        return {
-            'success': False,
-            'error': 'Ingestion ran but the test was not found in the database.',
-        }
+        # --- Step 2: Run the ingestion command ---
+        task.update_progress(20, 'Запуск AI-обработки материалов...')
+
+        from django.core.management import call_command
+
+        stdout_capture = StringIO()
+        stderr_capture = StringIO()
+
+        # Create a progress callback that the ingest command can call
+        # We'll monkey-patch stdout to intercept progress messages
+        class ProgressCapture(StringIO):
+            """Captures stdout and updates task progress based on output patterns."""
+            def __init__(self, task_obj):
+                super().__init__()
+                self.task_obj = task_obj
+                self._ocr_done = 0
+                self._audio_done = 0
+                self._total_parts = 6  # typical
+
+            def write(self, text):
+                super().write(text)
+                # Parse progress from new parallel ingest output
+                if '⚡  Running OCR' in text:
+                    self.task_obj.update_progress(
+                        20, 'Параллельная AI-обработка изображений...'
+                    )
+                elif 'OCR done' in text:
+                    self._ocr_done += 1
+                    pct = 20 + int((self._ocr_done / self._total_parts) * 30)
+                    self.task_obj.update_progress(
+                        min(pct, 50),
+                        f'OCR завершён для {self._ocr_done} из ~{self._total_parts} частей...'
+                    )
+                elif '💾  Saving to database' in text:
+                    self.task_obj.update_progress(55, 'Сохранение в базу данных...')
+                elif '📁  Part' in text:
+                    self.task_obj.update_progress(60, 'Запись частей и вопросов...')
+                elif '🧠  Running audio analysis' in text:
+                    self.task_obj.update_progress(
+                        65, 'Параллельный анализ аудиодорожек...'
+                    )
+                elif 'audio analysis done' in text:
+                    self._audio_done += 1
+                    pct = 65 + int((self._audio_done / self._total_parts) * 20)
+                    self.task_obj.update_progress(
+                        min(pct, 85),
+                        f'Аудио анализ завершён для {self._audio_done} из ~{self._total_parts} частей...'
+                    )
+                elif '✅  Successfully ingested' in text:
+                    self.task_obj.update_progress(88, 'Основная обработка завершена...')
+
+        progress_stdout = ProgressCapture(task)
+
+        try:
+            call_command(
+                'ingest_materials',
+                test=test_name,
+                stdout=progress_stdout,
+                stderr=stderr_capture,
+            )
+        except Exception as e:
+            task.status = 'failed'
+            task.error_message = (
+                f"{str(e)}\n\nOutput:\n"
+                f"{progress_stdout.getvalue()}\n{stderr_capture.getvalue()}"
+            )
+            task.stage = 'Ошибка обработки'
+            task.completed_at = timezone.now()
+            task.save()
+            _cleanup_zip(zip_path)
+            return
+
+        # --- Step 3: Assign author + split parts ---
+        task.update_progress(90, 'Назначение автора и постобработка...')
+
+        try:
+            test_obj = Test.objects.get(name=test_name)
+            test_obj.author = user
+            test_obj.save(update_fields=['author'])
+
+            parts_count = test_obj.parts.count()
+            questions_count = Question.objects.filter(part__test=test_obj).count()
+
+            if split_parts:
+                task.update_progress(93, 'Создание отдельных микро-тестов...')
+                _clone_parts_to_individual_tests(test_obj, user)
+
+            # --- Step 4: Success! ---
+            task.status = 'completed'
+            task.progress = 100
+            task.stage = 'Готово!'
+            task.result_test_id = test_obj.id
+            task.parts_count = parts_count
+            task.questions_count = questions_count
+            task.completed_at = timezone.now()
+            task.save()
+
+        except Test.DoesNotExist:
+            task.status = 'failed'
+            task.error_message = 'Обработка завершилась, но тест не найден в базе данных.'
+            task.stage = 'Ошибка'
+            task.completed_at = timezone.now()
+            task.save()
+
+    except Exception as e:
+        # Catch-all for unexpected errors
+        try:
+            task = IngestionTask.objects.get(id=task_id)
+            task.status = 'failed'
+            task.error_message = f"Неожиданная ошибка: {str(e)}\n\n{traceback.format_exc()}"
+            task.stage = 'Критическая ошибка'
+            task.completed_at = timezone.now()
+            task.save()
+        except Exception:
+            pass  # Can't even update the task, nothing to do
+
+    finally:
+        _cleanup_zip(zip_path)
+        connection.close()
+
+
+def _clone_parts_to_individual_tests(test_obj, user):
+    """Clone each part of a test into its own standalone micro-test."""
+    for part in test_obj.parts.all():
+        new_test_name = f"{test_obj.name} - Part {part.part_number}"
+        Test.objects.filter(name=new_test_name).delete()
+
+        new_test = Test.objects.create(
+            name=new_test_name,
+            test_type=test_obj.test_type,
+            is_active=True,
+            author=user,
+        )
+
+        part_clone = Part.objects.get(id=part.id)
+        part_clone.id = None
+        part_clone.test = new_test
+        part_clone.save()
+
+        for q in part.questions.all():
+            q_clone = Question.objects.get(id=q.id)
+            q_clone.id = None
+            q_clone.part = part_clone
+            q_clone.save()
+
+            for c in q.choices.all():
+                c_clone = Choice.objects.get(id=c.id)
+                c_clone.id = None
+                c_clone.question = q_clone
+                c_clone.save()
+
+
+def _cleanup_zip(zip_path):
+    """Remove the temporary uploaded ZIP file."""
+    try:
+        if os.path.exists(zip_path):
+            os.remove(zip_path)
+    except OSError:
+        pass
+
+
+# ---------------------------------------------------------------------------
+# Task Progress Page
+# ---------------------------------------------------------------------------
+
+@mentor_required
+def mentor_task_progress(request, task_id):
+    """Render the real-time progress page for an ingestion task."""
+    task = get_object_or_404(IngestionTask, pk=task_id)
+    if task.user != request.user and not request.user.is_superuser:
+        return HttpResponseForbidden("You can only view your own tasks.")
+
+    return render(request, 'exams/mentor/task_progress.html', {'task': task})
+
+
+# ---------------------------------------------------------------------------
+# Task Status API (polling)
+# ---------------------------------------------------------------------------
+
+@mentor_required
+def api_task_status(request, task_id):
+    """Return the current status of an ingestion task as JSON (for polling)."""
+    task = get_object_or_404(IngestionTask, pk=task_id)
+    if task.user != request.user and not request.user.is_superuser:
+        return JsonResponse({'error': 'Forbidden'}, status=403)
+
+    data = {
+        'id': task.id,
+        'status': task.status,
+        'progress': task.progress,
+        'stage': task.stage,
+        'test_name': task.test_name,
+        'result_test_id': task.result_test_id,
+        'parts_count': task.parts_count,
+        'questions_count': task.questions_count,
+        'error_message': task.error_message,
+    }
+    return JsonResponse(data)
 
 
 # ---------------------------------------------------------------------------

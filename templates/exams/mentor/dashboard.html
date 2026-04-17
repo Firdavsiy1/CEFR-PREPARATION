@@ -13,8 +13,8 @@
                 <i class="ph-fill ph-crown text-white text-2xl"></i>
             </div>
             <div>
-                <h1 class="text-2xl font-black text-white tracking-tight">Панель Ментора</h1>
-                <p class="text-duo-text-dim text-sm font-semibold">
+                <h1 class="text-2xl font-black text-white tracking-tight" data-i18n="mnt_panel_title">Панель Ментора</h1>
+                <p class="text-duo-text-dim text-sm font-semibold" data-i18n="mnt_panel_subtitle">
                     Управляй тестами, загружай новые и контролируй доступ
                 </p>
             </div>
@@ -23,7 +23,7 @@
         <a href="{% url 'exams:mentor_upload' %}" id="btn-upload-test"
            class="btn-duo-green text-sm">
             <i class="ph-fill ph-upload-simple text-lg"></i>
-            Загрузить тест
+            <span data-i18n="mnt_upload_test">Загрузить тест</span>
         </a>
     </div>
 
@@ -37,7 +37,7 @@
                 </div>
                 <div>
                     <p class="text-2xl font-black text-white">{{ tests|length }}</p>
-                    <p class="text-xs text-duo-text-muted uppercase tracking-widest font-bold">Всего тестов</p>
+                    <p class="text-xs text-duo-text-muted uppercase tracking-widest font-bold" data-i18n="mnt_total_tests">Всего тестов</p>
                 </div>
             </div>
         </div>
@@ -49,7 +49,7 @@
                 </div>
                 <div>
                     <p class="text-2xl font-black text-white" id="active-count">—</p>
-                    <p class="text-xs text-duo-text-muted uppercase tracking-widest font-bold">Активных</p>
+                    <p class="text-xs text-duo-text-muted uppercase tracking-widest font-bold" data-i18n="mnt_active">Активных</p>
                 </div>
             </div>
         </div>
@@ -61,7 +61,7 @@
                 </div>
                 <div>
                     <p class="text-2xl font-black text-white" id="total-questions">—</p>
-                    <p class="text-xs text-duo-text-muted uppercase tracking-widest font-bold">Вопросов</p>
+                    <p class="text-xs text-duo-text-muted uppercase tracking-widest font-bold" data-i18n="mnt_questions">Вопросов</p>
                 </div>
             </div>
         </div>
@@ -74,12 +74,14 @@
             <div class="px-6 py-4 border-b-2 border-duo-border flex items-center justify-between">
                 <h2 class="text-base font-black text-white flex items-center gap-2">
                     <i class="ph-fill ph-list-dashes text-duo-text-dim"></i>
-                    {% if is_superuser %}Все тесты{% else %}Мои тесты{% endif %}
+                    {% if is_superuser %}<span data-i18n="mnt_all_tests">Все тесты</span>{% else %}<span data-i18n="mnt_my_tests">Мои тесты</span>{% endif %}
                 </h2>
                 <div class="flex items-center gap-2">
                     <div class="relative">
                         <i class="ph-fill ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-duo-text-muted text-sm"></i>
-                        <input type="text" id="search-tests" placeholder="Поиск..."
+                        <input type="text" id="search-tests"
+                               data-i18n-placeholder="mnt_search"
+                               placeholder="Поиск..."
                                class="text-sm bg-duo-surface border-2 border-duo-border rounded-xl pl-9 pr-3 py-2
                                       text-white placeholder-duo-text-muted focus:outline-none focus:border-duo-green
                                       transition-all w-44 font-semibold">
@@ -92,14 +94,14 @@
                 <table class="w-full" id="tests-table">
                     <thead>
                         <tr class="border-b-2 border-duo-border/50 text-xs text-duo-text-muted uppercase tracking-widest">
-                            <th class="px-6 py-3 text-left font-extrabold">Название</th>
-                            <th class="px-6 py-3 text-left font-extrabold">Тип</th>
-                            {% if is_superuser %}<th class="px-6 py-3 text-left font-extrabold">Автор</th>{% endif %}
-                            <th class="px-6 py-3 text-center font-extrabold">Части</th>
-                            <th class="px-6 py-3 text-center font-extrabold">Вопросы</th>
-                            <th class="px-6 py-3 text-center font-extrabold">Статус</th>
-                            <th class="px-6 py-3 text-center font-extrabold">Дата</th>
-                            <th class="px-6 py-3 text-right font-extrabold">Действия</th>
+                            <th class="px-6 py-3 text-left font-extrabold" data-i18n="mnt_col_name">Название</th>
+                            <th class="px-6 py-3 text-left font-extrabold" data-i18n="mnt_col_type">Тип</th>
+                            {% if is_superuser %}<th class="px-6 py-3 text-left font-extrabold" data-i18n="mnt_col_author">Автор</th>{% endif %}
+                            <th class="px-6 py-3 text-center font-extrabold" data-i18n="mnt_col_parts">Части</th>
+                            <th class="px-6 py-3 text-center font-extrabold" data-i18n="mnt_col_questions">Вопросы</th>
+                            <th class="px-6 py-3 text-center font-extrabold" data-i18n="mnt_col_status">Статус</th>
+                            <th class="px-6 py-3 text-center font-extrabold" data-i18n="mnt_col_date">Дата</th>
+                            <th class="px-6 py-3 text-right font-extrabold" data-i18n="mnt_col_actions">Действия</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y-2 divide-duo-border/30">
@@ -149,7 +151,7 @@
                                         class="status-badge badge-duo cursor-pointer transition-all duration-200 hover:scale-105
                                     {% if test.is_active %}bg-duo-green/15 text-duo-green border border-duo-green/30
                                     {% else %}bg-duo-surface-2 text-duo-text-muted border border-duo-border{% endif %}">
-                                    {% if test.is_active %}Активен{% else %}Черновик{% endif %}
+                                    {% if test.is_active %}<span data-i18n="mnt_status_active">Активен</span>{% else %}<span data-i18n="mnt_status_draft">Черновик</span>{% endif %}
                                 </button>
                             </td>
                             <td class="px-6 py-4 text-center text-xs text-duo-text-muted font-bold">
@@ -163,7 +165,7 @@
                                               hover:bg-duo-blue/25 transition-all"
                                        title="Редактировать">
                                         <i class="ph-fill ph-pencil-simple"></i>
-                                        Изменить
+                                        <span data-i18n="mnt_btn_edit">Изменить</span>
                                     </a>
                                     <a href="{% url 'exams:mentor_delete_test' test.id %}"
                                        class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold
@@ -171,7 +173,7 @@
                                               hover:bg-duo-red/25 transition-all"
                                        title="Удалить">
                                         <i class="ph-fill ph-trash"></i>
-                                        Удалить
+                                        <span data-i18n="mnt_btn_delete">Удалить</span>
                                     </a>
                                 </div>
                             </td>
@@ -186,11 +188,11 @@
                 <div class="w-20 h-20 mx-auto mb-5 rounded-2xl flex items-center justify-center bg-duo-surface-2 border-2 border-duo-border">
                     <i class="ph-fill ph-folder-open text-4xl text-duo-text-muted"></i>
                 </div>
-                <h3 class="text-lg font-black text-white mb-2">Тестов пока нет</h3>
-                <p class="text-sm text-duo-text-dim font-semibold mb-6">Загрузите ваш первый CEFR тест</p>
+                <h3 class="text-lg font-black text-white mb-2" data-i18n="mnt_no_tests_title">Тестов пока нет</h3>
+                <p class="text-sm text-duo-text-dim font-semibold mb-6" data-i18n="mnt_no_tests_desc">Загрузите ваш первый CEFR тест</p>
                 <a href="{% url 'exams:mentor_upload' %}" class="btn-duo-green">
                     <i class="ph-fill ph-upload-simple"></i>
-                    Загрузить первый тест
+                    <span data-i18n="mnt_upload_first">Загрузить первый тест</span>
                 </a>
             </div>
             {% endif %}
@@ -243,15 +245,18 @@
         })
         .then(r => r.json())
         .then(data => {
+            const lang = document.documentElement.lang || 'ru';
+            const dict = (typeof _i18n !== 'undefined' && _i18n[lang]) ? _i18n[lang] : {};
             btn.dataset.active = data.is_active ? 'true' : 'false';
+            const spanEl = btn.querySelector('span') || btn;
             if (data.is_active) {
-                btn.textContent = 'Активен';
+                spanEl.textContent = dict.mnt_status_active || 'Активен';
                 btn.className = btn.className
                     .replace('bg-duo-surface-2', 'bg-duo-green/15')
                     .replace('text-duo-text-muted', 'text-duo-green')
                     .replace('border-duo-border', 'border-duo-green/30');
             } else {
-                btn.textContent = 'Черновик';
+                spanEl.textContent = dict.mnt_status_draft || 'Черновик';
                 btn.className = btn.className
                     .replace('bg-duo-green/15', 'bg-duo-surface-2')
                     .replace('text-duo-green', 'text-duo-text-muted')

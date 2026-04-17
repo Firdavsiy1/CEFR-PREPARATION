@@ -140,14 +140,14 @@
                         <i class="ph-fill ph-pencil-simple text-sm"></i>
                     </button>
                 </div>
-                <p class="text-sm text-duo-text-dim font-semibold">Конструктор тестов — редактируйте части, вопросы и варианты</p>
+                <p class="text-sm text-duo-text-dim font-semibold" data-i18n="mnt_bld_subtitle">Конструктор тестов — редактируйте части, вопросы и варианты</p>
             </div>
         </div>
         <div class="flex items-center gap-3">
-            <span class="text-xs text-duo-text-muted font-bold" id="autosave-status">Все изменения сохранены</span>
+            <span class="text-xs text-duo-text-muted font-bold" id="autosave-status" data-i18n="mnt_bld_saved">Все изменения сохранены</span>
             <button onclick="toggleActive()" id="toggle-active-btn"
                     class="badge-duo cursor-pointer transition-all text-xs {{ test.is_active|yesno:'bg-duo-green/15 text-duo-green border border-duo-green/30 hover:bg-duo-green/25,bg-duo-surface-2 text-duo-text-muted border border-duo-border hover:bg-duo-surface-2' }}">
-                {{ test.is_active|yesno:'Активен,Черновик' }}
+                {% if test.is_active %}<span data-i18n="mnt_status_active">Активен</span>{% else %}<span data-i18n="mnt_status_draft">Черновик</span>{% endif %}
             </button>
         </div>
     </div>
@@ -157,12 +157,12 @@
 
         <!-- Sidebar: Parts Navigation -->
         <aside class="card-duo p-4 h-fit sticky top-20" id="parts-sidebar">
-            <h3 class="text-xs text-duo-text-muted uppercase tracking-widest font-extrabold mb-4 px-2">Части</h3>
+            <h3 class="text-xs text-duo-text-muted uppercase tracking-widest font-extrabold mb-4 px-2" data-i18n="mnt_bld_parts">Части</h3>
             <nav class="space-y-1.5" id="parts-nav">
                 <!-- Populated by JS -->
                 <div class="text-center py-8 text-duo-text-muted text-sm" id="parts-loading">
                     <i class="ph ph-spinner text-2xl spin"></i>
-                    <p class="mt-2 font-bold">Загрузка...</p>
+                    <p class="mt-2 font-bold" data-i18n="mnt_bld_loading">Загрузка...</p>
                 </div>
             </nav>
         </aside>
@@ -175,7 +175,7 @@
                     <div class="w-16 h-16 mx-auto mb-4 rounded-2xl bg-duo-surface-2 flex items-center justify-center">
                         <i class="ph-fill ph-cursor-click text-3xl text-duo-text-muted"></i>
                     </div>
-                    <p class="text-duo-text-dim font-bold">Выберите часть на панели слева для редактирования</p>
+                    <p class="text-duo-text-dim font-bold" data-i18n="mnt_bld_select_part">Выберите часть на панели слева для редактирования</p>
                 </div>
             </div>
         </main>
@@ -186,7 +186,7 @@
 <!-- Save Indicator -->
 <div class="save-indicator" id="save-indicator">
     <i class="ph ph-spinner spin" id="save-icon"></i>
-    <span id="save-text">Сохранение...</span>
+    <span id="save-text" data-i18n="mnt_bld_saving">Сохранение...</span>
 </div>
 {% endblock %}
 
@@ -200,6 +200,11 @@ const CSRF = getCookie('csrftoken');
 let testData = null;
 let activePart = null;
 let saveTimer = null;
+
+function getDict() {
+    const lang = '{{ current_language|default:"ru" }}';
+    return (typeof _i18n !== 'undefined' && _i18n[lang]) ? _i18n[lang] : {};
+}
 
 // ---- Init ----
 document.addEventListener('DOMContentLoaded', () => {
@@ -233,13 +238,14 @@ function apiUpload(url, formData) {
     }).then(r => r.json());
 }
 
-function showSave(state, text) {
+function showSave(state, textKey) {
+    const t = getDict();
     const el = document.getElementById('save-indicator');
     const icon = document.getElementById('save-icon');
     const txt = document.getElementById('save-text');
 
     el.className = 'save-indicator show ' + state;
-    txt.textContent = text;
+    txt.textContent = t[textKey] || textKey;
     if (state === 'saving') {
         icon.className = 'ph ph-spinner spin';
     } else if (state === 'saved') {
@@ -270,7 +276,10 @@ async function loadTestData() {
 // ---- Sidebar ----
 function renderSidebar() {
     const nav = document.getElementById('parts-nav');
-    document.getElementById('parts-loading').remove();
+    const loading = document.getElementById('parts-loading');
+    if (loading) loading.remove();
+    
+    const t = getDict();
 
     nav.innerHTML = testData.parts.map(part => {
         const qCount = part.questions.length;
@@ -282,8 +291,8 @@ function renderSidebar() {
                     ${part.part_number}
                 </div>
                 <div class="min-w-0">
-                    <p class="text-sm font-bold text-white truncate">Часть ${part.part_number}</p>
-                    <p class="text-xs text-duo-text-muted font-semibold">${qCount} вопр. · ${part.points_per_question} бл.</p>
+                    <p class="text-sm font-bold text-white truncate">${t.mnt_bld_part || 'Часть'} ${part.part_number}</p>
+                    <p class="text-xs text-duo-text-muted font-semibold">${qCount} ${t.mnt_bld_ques || 'вопр.'} · ${part.points_per_question} ${t.mnt_bld_pts || 'бл.'}</p>
                 </div>
                 ${part.audio_file ? '<i class="ph-fill ph-speaker-high text-duo-green/40 text-xs ml-auto flex-shrink-0"></i>' : ''}
             </button>
@@ -308,6 +317,7 @@ function selectPart(partId) {
 function renderPartEditor() {
     const p = activePart;
     const editor = document.getElementById('part-editor');
+    const t = getDict();
 
     const hasPassage = p.part_number === 2 || p.part_number === 6;
     const hasSharedChoices = p.part_number === 3;
@@ -324,13 +334,13 @@ function renderPartEditor() {
                 <div class="flex items-center gap-3">
                     <div class="w-10 h-10 rounded-xl flex items-center justify-center bg-duo-green/15 border-2 border-duo-green/25 text-lg font-black text-duo-green">${p.part_number}</div>
                     <div>
-                        <h2 class="text-lg font-black text-white">Часть ${p.part_number}</h2>
-                        <p class="text-xs text-duo-text-muted font-semibold">${questionTypeLabel[p.questions[0]?.question_type] || '—'} · ${p.points_per_question} бл./вопрос</p>
+                        <h2 class="text-lg font-black text-white">${t.mnt_bld_part || 'Часть'} ${p.part_number}</h2>
+                        <p class="text-xs text-duo-text-muted font-semibold">${questionTypeLabel[p.questions[0]?.question_type] || '—'} · ${p.points_per_question} ${t.mnt_bld_pts_ques || 'бл./вопрос'}</p>
                     </div>
                 </div>
                 <div class="flex items-center gap-2">
-                    ${p.question_image ? `<a href="${p.question_image}" target="_blank" class="badge-duo bg-duo-surface-2 text-duo-text-dim border border-duo-border hover:text-white hover:border-duo-green/40 transition-all"><i class="ph-fill ph-image mr-1"></i>Скриншот</a>` : ''}
-                    ${p.map_image ? `<a href="${p.map_image}" target="_blank" class="badge-duo bg-duo-surface-2 text-duo-text-dim border border-duo-border hover:text-white hover:border-duo-green/40 transition-all"><i class="ph-fill ph-map-trifold mr-1"></i>Карта</a>` : ''}
+                    ${p.question_image ? `<a href="${p.question_image}" target="_blank" class="badge-duo bg-duo-surface-2 text-duo-text-dim border border-duo-border hover:text-white hover:border-duo-green/40 transition-all"><i class="ph-fill ph-image mr-1"></i>${t.mnt_bld_screenshot || 'Скриншот'}</a>` : ''}
+                    ${p.map_image ? `<a href="${p.map_image}" target="_blank" class="badge-duo bg-duo-surface-2 text-duo-text-dim border border-duo-border hover:text-white hover:border-duo-green/40 transition-all"><i class="ph-fill ph-map-trifold mr-1"></i>${t.mnt_bld_map || 'Карта'}</a>` : ''}
                 </div>
             </div>
 
@@ -338,24 +348,24 @@ function renderPartEditor() {
                 <!-- Instructions -->
                 <div>
                     <label class="block text-xs font-extrabold text-duo-text-dim uppercase tracking-widest mb-2">
-                        <i class="ph-fill ph-note-pencil text-duo-blue mr-1"></i> Инструкции
+                        <i class="ph-fill ph-note-pencil text-duo-blue mr-1"></i> ${t.mnt_bld_instructions || 'Инструкции'}
                     </label>
                     <textarea class="editable-field editable-textarea"
                               onchange="updatePart(${p.id}, 'instructions', this.value)"
-                              placeholder="Инструкции к части...">${escHtml(p.instructions)}</textarea>
+                              placeholder="${t.mnt_bld_instructions || 'Инструкции'}...">${escHtml(p.instructions)}</textarea>
                 </div>
 
                 <!-- Audio -->
                 <div>
                     <label class="block text-xs font-extrabold text-duo-text-dim uppercase tracking-widest mb-2">
-                        <i class="ph-fill ph-speaker-high text-duo-green mr-1"></i> Аудио
+                        <i class="ph-fill ph-speaker-high text-duo-green mr-1"></i> ${t.mnt_bld_audio || 'Аудио'}
                     </label>
                     <div class="flex items-center gap-4">
                         ${p.audio_file
                             ? `<audio controls class="flex-1" style="height:40px"><source src="${p.audio_file}" type="audio/mpeg"></audio>`
-                            : '<span class="text-xs text-duo-text-muted italic font-semibold">Аудио не загружено</span>'}
+                            : `<span class="text-xs text-duo-text-muted italic font-semibold">${t.mnt_bld_no_audio || 'Аудио не загружено'}</span>`}
                         <label class="cursor-pointer btn-duo-outline !py-1.5 !px-3 text-xs !rounded-xl">
-                            <i class="ph-fill ph-upload-simple"></i> Заменить
+                            <i class="ph-fill ph-upload-simple"></i> ${t.mnt_bld_replace || 'Заменить'}
                             <input type="file" accept=".mp3,audio/*" class="hidden" onchange="uploadAudio(${p.id}, this)">
                         </label>
                     </div>
@@ -365,7 +375,7 @@ function renderPartEditor() {
                 <!-- Passage -->
                 <div class="pt-3 border-t-2 border-duo-border">
                     <label class="block text-xs font-extrabold text-duo-text-dim uppercase tracking-widest mb-2">
-                        <i class="ph-fill ph-book-open-text text-duo-gold mr-1"></i> Заголовок пассажа
+                        <i class="ph-fill ph-book-open-text text-duo-gold mr-1"></i> ${t.mnt_bld_passage_title || 'Заголовок пассажа'}
                     </label>
                     <input class="editable-field" type="text"
                            value="${escAttr(p.passage_title)}"
@@ -374,12 +384,12 @@ function renderPartEditor() {
                 </div>
                 <div>
                     <label class="block text-xs font-extrabold text-duo-text-dim uppercase tracking-widest mb-2">
-                        <i class="ph-fill ph-text-align-left text-duo-gold mr-1"></i> Текст пассажа
-                        <span class="text-duo-text-muted normal-case font-semibold ml-1">(Используйте {N} для пропусков)</span>
+                        <i class="ph-fill ph-text-align-left text-duo-gold mr-1"></i> ${t.mnt_bld_passage_text || 'Текст пассажа'}
+                        <span class="text-duo-text-muted normal-case font-semibold ml-1">${t.mnt_bld_passage_hint || '(Используйте {N} для пропусков)'}</span>
                     </label>
                     <textarea class="editable-field editable-textarea" style="min-height:150px"
                               onchange="updatePart(${p.id}, 'passage_text', this.value)"
-                              placeholder="Полный текст с {30}, {31} пропусками...">${escHtml(p.passage_text)}</textarea>
+                              placeholder="Полный текст...">${escHtml(p.passage_text)}</textarea>
                 </div>
                 ` : ''}
 
@@ -387,7 +397,7 @@ function renderPartEditor() {
                 <!-- Shared Choices (Part 3) -->
                 <div class="pt-3 border-t-2 border-duo-border">
                     <label class="block text-xs font-extrabold text-duo-text-dim uppercase tracking-widest mb-2">
-                        <i class="ph-fill ph-list-checks text-duo-purple mr-1"></i> Общие варианты (A-F)
+                        <i class="ph-fill ph-list-checks text-duo-purple mr-1"></i> ${t.mnt_bld_shared || 'Общие варианты (A-F)'}
                     </label>
                     <div class="space-y-2" id="shared-choices-list">
                         ${(p.shared_choices_json || []).map((sc, idx) => `
@@ -404,11 +414,11 @@ function renderPartEditor() {
                 <div class="pt-3 border-t-2 border-duo-border">
                     <details>
                         <summary class="text-xs font-extrabold text-duo-text-dim uppercase tracking-widest cursor-pointer hover:text-duo-green transition-colors">
-                            <i class="ph-fill ph-subtitles text-duo-blue mr-1"></i> Транскрипт
+                            <i class="ph-fill ph-subtitles text-duo-blue mr-1"></i> ${t.mnt_bld_transcript || 'Транскрипт'}
                         </summary>
                         <textarea class="editable-field editable-textarea mt-2" style="min-height:120px"
                                   onchange="updatePart(${p.id}, 'transcript', this.value)"
-                                  placeholder="Транскрипт аудио...">${escHtml(p.transcript)}</textarea>
+                                  placeholder="${t.mnt_bld_transcript || 'Транскрипт'}...">${escHtml(p.transcript)}</textarea>
                     </details>
                 </div>
             </div>
@@ -419,23 +429,23 @@ function renderPartEditor() {
             <div class="px-6 py-4 border-b-2 border-duo-border flex items-center justify-between">
                 <h3 class="text-base font-black text-white flex items-center gap-2">
                     <i class="ph-fill ph-list-numbers text-duo-green"></i>
-                    Вопросы
+                    ${t.mnt_bld_questions || 'Вопросы'}
                     <span class="text-xs font-bold text-duo-text-muted">(${p.questions.length})</span>
                 </h3>
                 <button onclick="addQuestion(${p.id})"
                         class="btn-duo-outline !py-1.5 !px-3 text-xs !rounded-xl">
-                    <i class="ph-fill ph-plus-circle"></i> Добавить
+                    <i class="ph-fill ph-plus-circle"></i> ${t.mnt_bld_add || 'Добавить'}
                 </button>
             </div>
             <div class="p-4 space-y-3" id="questions-list">
-                ${p.questions.map(q => renderQuestionCard(q, p)).join('')}
+                ${p.questions.map(q => renderQuestionCard(q, p, t)).join('')}
             </div>
         </div>
     `;
 }
 
 // ---- Render Question Card ----
-function renderQuestionCard(q, part) {
+function renderQuestionCard(q, part, t) {
     const isCorrectHighlight = q.correct_answer ? 'correct-highlight' : '';
     const typeBadge = {
         'multiple_choice': '<span class="text-duo-blue bg-duo-blue/10 border-duo-blue/20">MC</span>',
@@ -456,7 +466,7 @@ function renderQuestionCard(q, part) {
                     ${q.group_label ? `<span class="text-[10px] text-duo-text-muted italic font-semibold">${escHtml(q.group_label)}</span>` : ''}
                 </div>
                 <div class="flex items-center gap-1.5">
-                    <button onclick="deleteQuestion(${q.id})" class="w-7 h-7 rounded-xl flex items-center justify-center text-duo-text-muted hover:text-duo-red hover:bg-duo-red/10 transition-all" title="Удалить">
+                    <button onclick="deleteQuestion(${q.id})" class="w-7 h-7 rounded-xl flex items-center justify-center text-duo-text-muted hover:text-duo-red hover:bg-duo-red/10 transition-all" title="${t.mnt_btn_delete || 'Удалить'}">
                         <i class="ph-fill ph-trash text-sm"></i>
                     </button>
                 </div>
@@ -466,47 +476,47 @@ function renderQuestionCard(q, part) {
             <div class="space-y-2.5">
                 ${q.group_label !== undefined ? `
                 <div class="flex items-center gap-2">
-                    <label class="text-[10px] text-duo-text-muted w-20 flex-shrink-0 uppercase tracking-widest font-extrabold">Группа</label>
+                    <label class="text-[10px] text-duo-text-muted w-20 flex-shrink-0 uppercase tracking-widest font-extrabold">${t.mnt_bld_group || 'Группа'}</label>
                     <input class="editable-field text-xs py-1.5" value="${escAttr(q.group_label)}"
-                           onchange="updateQuestion(${q.id}, 'group_label', this.value)" placeholder="Напр. Extract One">
+                           onchange="updateQuestion(${q.id}, 'group_label', this.value)" placeholder="${t.mnt_bld_group || 'Группа'}">
                 </div>` : ''}
 
                 <div class="flex items-start gap-2">
-                    <label class="text-[10px] text-duo-text-muted w-20 flex-shrink-0 uppercase tracking-widest font-extrabold pt-2">Текст</label>
+                    <label class="text-[10px] text-duo-text-muted w-20 flex-shrink-0 uppercase tracking-widest font-extrabold pt-2">${t.mnt_bld_text || 'Текст'}</label>
                     <textarea class="editable-field text-xs py-1.5" style="min-height:50px"
                               onchange="updateQuestion(${q.id}, 'question_text', this.value)"
-                              placeholder="Текст вопроса...">${escHtml(q.question_text)}</textarea>
+                              placeholder="${t.mnt_bld_text || 'Текст'}...">${escHtml(q.question_text)}</textarea>
                 </div>
 
                 <div class="flex items-center gap-2">
-                    <label class="text-[10px] text-duo-text-muted w-20 flex-shrink-0 uppercase tracking-widest font-extrabold">Ответ</label>
+                    <label class="text-[10px] text-duo-text-muted w-20 flex-shrink-0 uppercase tracking-widest font-extrabold">${t.mnt_bld_answer || 'Ответ'}</label>
                     <input class="editable-field text-xs py-1.5 font-black text-duo-green" style="max-width:200px"
                            value="${escAttr(q.correct_answer)}"
                            onchange="updateQuestion(${q.id}, 'correct_answer', this.value)"
-                           placeholder="Правильный ответ">
+                           placeholder="${t.mnt_bld_answer || 'Ответ'}">
                 </div>
 
                 <!-- Explanation -->
                 <details class="mt-1">
                     <summary class="text-[10px] text-duo-text-muted cursor-pointer hover:text-duo-green transition-colors font-extrabold uppercase tracking-widest">
-                        Объяснение
+                        ${t.mnt_bld_explanation || 'Объяснение'}
                     </summary>
                     <textarea class="editable-field text-xs py-1.5 mt-1" style="min-height:40px"
                               onchange="updateQuestion(${q.id}, 'explanation', this.value)"
-                              placeholder="Почему этот ответ правильный...">${escHtml(q.explanation)}</textarea>
+                              placeholder="${t.mnt_bld_explanation || 'Объяснение'}...">${escHtml(q.explanation)}</textarea>
                 </details>
 
                 <!-- Choices (if applicable) -->
                 ${q.question_type === 'multiple_choice' || q.question_type === 'map_label' ? `
                 <div class="mt-3 pt-3 border-t-2 border-duo-border/30">
                     <div class="flex items-center justify-between mb-2">
-                        <label class="text-[10px] text-duo-text-muted uppercase tracking-widest font-extrabold">Варианты</label>
+                        <label class="text-[10px] text-duo-text-muted uppercase tracking-widest font-extrabold">${t.mnt_bld_choices || 'Варианты'}</label>
                         <button onclick="addChoice(${q.id})" class="text-[10px] text-duo-green hover:text-duo-gold transition-colors flex items-center gap-1 font-extrabold">
-                            <i class="ph-fill ph-plus-circle text-xs"></i> Добавить
+                            <i class="ph-fill ph-plus-circle text-xs"></i> ${t.mnt_bld_add || 'Добавить'}
                         </button>
                     </div>
                     <div class="space-y-1.5" id="choices-${q.id}">
-                        ${q.choices.map(c => renderChoiceRow(c, q)).join('')}
+                        ${q.choices.map(c => renderChoiceRow(c, q, t)).join('')}
                     </div>
                 </div>
                 ` : ''}
@@ -516,7 +526,7 @@ function renderQuestionCard(q, part) {
 }
 
 // ---- Render Choice Row ----
-function renderChoiceRow(c, q) {
+function renderChoiceRow(c, q, t) {
     const isCorrect = q.correct_answer.trim().toUpperCase() === c.label.trim().toUpperCase();
     return `
         <div class="choice-row flex items-center gap-2 px-2.5 py-1.5 rounded-xl border-2 border-duo-border/30 ${isCorrect ? 'is-correct' : ''}" id="choice-${c.id}">
@@ -524,7 +534,7 @@ function renderChoiceRow(c, q) {
             <input class="editable-field text-xs py-1 font-black text-center" style="width:36px; padding:0.25rem" value="${escAttr(c.label)}"
                    onchange="updateChoice(${c.id}, 'label', this.value)">
             <input class="editable-field text-xs py-1 flex-1" value="${escAttr(c.text)}"
-                   onchange="updateChoice(${c.id}, 'text', this.value)" placeholder="Текст варианта">
+                   onchange="updateChoice(${c.id}, 'text', this.value)" placeholder="${t.mnt_bld_text || 'Текст варианта'}">
             <button onclick="deleteChoice(${c.id}, ${q.id})" class="w-6 h-6 rounded-lg flex items-center justify-center text-duo-text-muted hover:text-duo-red transition-colors flex-shrink-0">
                 <i class="ph-bold ph-x text-xs"></i>
             </button>
@@ -534,7 +544,7 @@ function renderChoiceRow(c, q) {
 
 // ---- API Actions ----
 async function updatePart(partId, field, value) {
-    showSave('saving', 'Сохранение...');
+    showSave('saving', 'mnt_bld_saving');
     try {
         const data = {};
         data[field] = value;
@@ -542,9 +552,9 @@ async function updatePart(partId, field, value) {
         // Update local data
         const part = testData.parts.find(p => p.id === partId);
         if (part) part[field] = value;
-        showSave('saved', 'Сохранено');
+        showSave('saved', 'mnt_bld_saved');
     } catch (e) {
-        showSave('error', 'Ошибка');
+        showSave('error', 'mnt_bld_save_err');
     }
 }
 
@@ -557,7 +567,7 @@ async function updateSharedChoice(partId, idx, newText) {
 
 async function uploadAudio(partId, input) {
     if (!input.files.length) return;
-    showSave('saving', 'Загрузка аудио...');
+    showSave('saving', 'mnt_bld_saving');
     try {
         const fd = new FormData();
         fd.append('audio_file', input.files[0]);
@@ -566,45 +576,43 @@ async function uploadAudio(partId, input) {
             const part = testData.parts.find(p => p.id === partId);
             if (part) part.audio_file = result.audio_url;
             renderPartEditor();
-            showSave('saved', 'Аудио загружено');
+            showSave('saved', 'mnt_bld_saved');
         } else {
-            showSave('error', result.error || 'Ошибка загрузки');
+            showSave('error', 'mnt_bld_save_err');
         }
     } catch (e) {
-        showSave('error', 'Ошибка загрузки');
+        showSave('error', 'mnt_bld_save_err');
     }
 }
 
 async function updateQuestion(questionId, field, value) {
-    showSave('saving', 'Сохранение...');
+    showSave('saving', 'mnt_bld_saving');
     try {
         const data = {};
         data[field] = value;
         await apiCall(`/api/mentor/question/${questionId}/update/`, data);
-        // Update local data
         for (const part of testData.parts) {
             const q = part.questions.find(q => q.id === questionId);
             if (q) {
                 q[field] = value;
-                // If correct_answer changed, re-render to update choice highlights
                 if (field === 'correct_answer') {
                     renderPartEditor();
                 }
                 break;
             }
         }
-        showSave('saved', 'Сохранено');
+        showSave('saved', 'mnt_bld_saved');
     } catch (e) {
-        showSave('error', 'Ошибка');
+        showSave('error', 'mnt_bld_save_err');
     }
 }
 
 async function deleteQuestion(questionId) {
-    if (!(await DuoModal.confirm('Удалить этот вопрос? Это действие нельзя отменить.'))) return;
-    showSave('saving', 'Удаление...');
+    const t = getDict();
+    if (!(await DuoModal.confirm(t.mnt_bld_confirm_del_q || 'Удалить этот вопрос? Это действие нельзя отменить.'))) return;
+    showSave('saving', 'mnt_bld_saving');
     try {
         await apiCall(`/api/mentor/question/${questionId}/delete/`);
-        // Remove from local data
         for (const part of testData.parts) {
             const idx = part.questions.findIndex(q => q.id === questionId);
             if (idx !== -1) {
@@ -614,19 +622,18 @@ async function deleteQuestion(questionId) {
         }
         renderPartEditor();
         renderSidebar();
-        // Re-activate sidebar button
         if (activePart) {
             const btn = document.getElementById(`part-btn-${activePart.id}`);
             if (btn) btn.classList.add('active');
         }
-        showSave('saved', 'Удалено');
+        showSave('saved', 'mnt_bld_deleted');
     } catch (e) {
-        showSave('error', 'Ошибка удаления');
+        showSave('error', 'mnt_bld_save_err');
     }
 }
 
 async function addQuestion(partId) {
-    showSave('saving', 'Создание...');
+    showSave('saving', 'mnt_bld_saving');
     try {
         const part = testData.parts.find(p => p.id === partId);
         const qType = part.questions.length > 0 ? part.questions[0].question_type : 'multiple_choice';
@@ -636,7 +643,6 @@ async function addQuestion(partId) {
             correct_answer: '',
         });
         if (result.success) {
-            // Add to local data
             part.questions.push({
                 id: result.id,
                 question_number: result.question_number,
@@ -654,17 +660,16 @@ async function addQuestion(partId) {
                 const btn = document.getElementById(`part-btn-${activePart.id}`);
                 if (btn) btn.classList.add('active');
             }
-            showSave('saved', 'Вопрос добавлен');
+            showSave('saved', 'mnt_bld_saved');
         }
     } catch (e) {
-        showSave('error', 'Ошибка');
+        showSave('error', 'mnt_bld_save_err');
     }
 }
 
 async function addChoice(questionId) {
-    showSave('saving', 'Создание...');
+    showSave('saving', 'mnt_bld_saving');
     try {
-        // Determine next label
         let part = null;
         let question = null;
         for (const p of testData.parts) {
@@ -680,25 +685,24 @@ async function addChoice(questionId) {
         });
         if (result.success) {
             question.choices.push({ id: result.id, label: nextLabel, text: '' });
-            // Re-render just the choices area
             const container = document.getElementById(`choices-${questionId}`);
             if (container) {
-                container.innerHTML = question.choices.map(c => renderChoiceRow(c, question)).join('');
+                const t = getDict();
+                container.innerHTML = question.choices.map(c => renderChoiceRow(c, question, t)).join('');
             }
-            showSave('saved', 'Вариант добавлен');
+            showSave('saved', 'mnt_bld_saved');
         }
     } catch (e) {
-        showSave('error', 'Ошибка');
+        showSave('error', 'mnt_bld_save_err');
     }
 }
 
 async function updateChoice(choiceId, field, value) {
-    showSave('saving', 'Сохранение...');
+    showSave('saving', 'mnt_bld_saving');
     try {
         const data = {};
         data[field] = value;
         await apiCall(`/api/mentor/choice/${choiceId}/update/`, data);
-        // Update local data
         for (const part of testData.parts) {
             for (const q of part.questions) {
                 const c = q.choices.find(c => c.id === choiceId);
@@ -708,66 +712,76 @@ async function updateChoice(choiceId, field, value) {
                 }
             }
         }
-        showSave('saved', 'Сохранено');
+        showSave('saved', 'mnt_bld_saved');
     } catch (e) {
-        showSave('error', 'Ошибка');
+        showSave('error', 'mnt_bld_save_err');
     }
 }
 
 async function deleteChoice(choiceId, questionId) {
-    showSave('saving', 'Удаление...');
+    showSave('saving', 'mnt_bld_saving');
     try {
         await apiCall(`/api/mentor/choice/${choiceId}/delete/`);
-        // Remove from local data
         for (const part of testData.parts) {
             const q = part.questions.find(q => q.id === questionId);
             if (q) {
                 q.choices = q.choices.filter(c => c.id !== choiceId);
                 const container = document.getElementById(`choices-${questionId}`);
                 if (container) {
-                    container.innerHTML = q.choices.map(c => renderChoiceRow(c, q)).join('');
+                    const t = getDict();
+                    container.innerHTML = q.choices.map(c => renderChoiceRow(c, q, t)).join('');
                 }
                 break;
             }
         }
-        showSave('saved', 'Удалено');
+        showSave('saved', 'mnt_bld_deleted');
     } catch (e) {
-        showSave('error', 'Ошибка');
+        showSave('error', 'mnt_bld_save_err');
     }
 }
 
 // ---- Test-level actions ----
 async function editTestName() {
-    const newName = await DuoModal.prompt('Введите новое название теста:', testData.name);
+    const t = getDict();
+    const newName = await DuoModal.prompt(t.mnt_bld_prompt_name || 'Введите новое название теста:', testData.name);
     if (newName && newName !== testData.name) {
-        showSave('saving', 'Переименование...');
+        showSave('saving', 'mnt_bld_saving');
         try {
             await apiCall(`/api/mentor/test/${TEST_ID}/update/`, { name: newName });
             testData.name = newName;
             document.getElementById('test-title').textContent = newName;
-            showSave('saved', 'Переименовано');
+            showSave('saved', 'mnt_bld_saved');
         } catch (e) {
-            showSave('error', 'Ошибка');
+            showSave('error', 'mnt_bld_save_err');
         }
     }
 }
 
 async function toggleActive() {
-    showSave('saving', 'Обновление...');
+    showSave('saving', 'mnt_bld_saving');
     try {
         const result = await apiCall(`/api/mentor/test/${TEST_ID}/toggle-active/`);
         testData.is_active = result.is_active;
         const btn = document.getElementById('toggle-active-btn');
+        const t = getDict();
+        
+        // Remove span and clear html
+        btn.innerHTML = '';
+        const span = document.createElement('span');
+        btn.appendChild(span);
+
         if (result.is_active) {
-            btn.textContent = 'Активен';
+            span.setAttribute('data-i18n', 'mnt_status_active');
+            span.textContent = t.mnt_status_active || 'Активен';
             btn.className = 'badge-duo cursor-pointer transition-all text-xs bg-duo-green/15 text-duo-green border border-duo-green/30 hover:bg-duo-green/25';
         } else {
-            btn.textContent = 'Черновик';
+            span.setAttribute('data-i18n', 'mnt_status_draft');
+            span.textContent = t.mnt_status_draft || 'Черновик';
             btn.className = 'badge-duo cursor-pointer transition-all text-xs bg-duo-surface-2 text-duo-text-muted border border-duo-border hover:bg-duo-surface-2';
         }
-        showSave('saved', result.is_active ? 'Активирован' : 'В черновик');
+        showSave('saved', 'mnt_bld_saved');
     } catch (e) {
-        showSave('error', 'Ошибка');
+        showSave('error', 'mnt_bld_save_err');
     }
 }
 
