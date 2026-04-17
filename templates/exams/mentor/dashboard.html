@@ -20,11 +20,19 @@
             </div>
         </div>
 
-        <a href="{% url 'exams:mentor_upload' %}" id="btn-upload-test"
-           class="btn-duo-green text-sm">
-            <i class="ph-fill ph-upload-simple text-lg"></i>
-            <span data-i18n="mnt_upload_test">Загрузить тест</span>
-        </a>
+        <div class="flex flex-col sm:flex-row items-center gap-3">
+            <form method="POST" action="{% url 'exams:mentor_create_test' %}">
+                {% csrf_token %}
+                <button type="submit" class="btn-duo-outline text-sm !py-2.5">
+                    <i class="ph-bold ph-plus text-lg"></i>
+                    <span data-i18n="mnt_create_test_manual">Создать вручную</span>
+                </button>
+            </form>
+            <a href="{% url 'exams:mentor_upload' %}" id="btn-upload-test" class="btn-duo-green text-sm !py-2.5">
+                <i class="ph-fill ph-upload-simple text-lg"></i>
+                <span data-i18n="mnt_upload_test">Загрузить архив</span>
+            </a>
+        </div>
     </div>
 
     <!-- Stats Cards -->

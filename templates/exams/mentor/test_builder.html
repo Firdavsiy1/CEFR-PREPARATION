@@ -298,6 +298,14 @@ function renderSidebar() {
             </button>
         `;
     }).join('');
+
+    // Add Part button
+    nav.innerHTML += `
+        <button onclick="addPart()" class="w-full flex items-center justify-center gap-2 mt-3 p-3 rounded-xl border-2 border-dashed border-duo-border hover:border-duo-green/40 text-duo-text-dim hover:text-duo-green font-extrabold text-sm transition-all duration-200">
+            <i class="ph-bold ph-plus"></i>
+            ${t.mnt_bld_add || 'Добавить часть'}
+        </button>
+    `;
 }
 
 // ---- Select Part ----
@@ -341,6 +349,9 @@ function renderPartEditor() {
                 <div class="flex items-center gap-2">
                     ${p.question_image ? `<a href="${p.question_image}" target="_blank" class="badge-duo bg-duo-surface-2 text-duo-text-dim border border-duo-border hover:text-white hover:border-duo-green/40 transition-all"><i class="ph-fill ph-image mr-1"></i>${t.mnt_bld_screenshot || 'Скриншот'}</a>` : ''}
                     ${p.map_image ? `<a href="${p.map_image}" target="_blank" class="badge-duo bg-duo-surface-2 text-duo-text-dim border border-duo-border hover:text-white hover:border-duo-green/40 transition-all"><i class="ph-fill ph-map-trifold mr-1"></i>${t.mnt_bld_map || 'Карта'}</a>` : ''}
+                    <button onclick="deletePart(${p.id})" class="badge-duo bg-duo-red/10 text-duo-red border border-duo-red/20 hover:bg-duo-red/25 transition-all text-xs" title="${t.mnt_btn_delete || 'Удалить часть'}">
+                        <i class="ph-bold ph-trash"></i>
+                    </button>
                 </div>
             </div>
 
@@ -543,6 +554,49 @@ function renderChoiceRow(c, q, t) {
 }
 
 // ---- API Actions ----
+async function addPart() {
+    showSave('saving', 'mnt_bld_saving');
+    try {
+        const result = await apiCall(`/api/mentor/test/${TEST_ID}/part/create/`);
+        if (result.success) {
+            testData.parts.push({
+                id: result.id,
+                part_number: result.part_number,
+                points_per_question: result.points_per_question,
+                instructions: '',
+                passage_title: '',
+                passage_text: '',
+                transcript: '',
+                shared_choices_json: [],
+                questions: []
+            });
+            renderSidebar();
+            selectPart(result.id);
+            showSave('saved', 'mnt_bld_saved');
+        } else {
+            showSave('error', 'mnt_bld_save_err');
+            if (result.error) alert(result.error);
+        }
+    } catch (e) {
+        showSave('error', 'mnt_bld_save_err');
+    }
+}
+
+async function deletePart(partId) {
+    const t = getDict();
+    if (!(await DuoModal.confirm(t.mnt_bld_confirm_del_p || 'Удалить эту часть целиком? Это действие нельзя отменить.'))) return;
+    
+    showSave('saving', 'mnt_bld_saving');
+    try {
+        await apiCall(`/api/mentor/part/${partId}/delete/`);
+        // We generally need to reload the whole test data since part numbers might shift
+        await loadTestData();
+        showSave('saved', 'mnt_bld_deleted');
+    } catch (e) {
+        showSave('error', 'mnt_bld_save_err');
+    }
+}
+
 async function updatePart(partId, field, value) {
     showSave('saving', 'mnt_bld_saving');
     try {

@@ -107,8 +107,23 @@ def mentor_dashboard(request):
 
 
 # ---------------------------------------------------------------------------
-# ZIP Upload + Background Ingestion
+# ZIP Upload + Background Ingestion & Manual Creation
 # ---------------------------------------------------------------------------
+
+@mentor_required
+def mentor_create_empty_test(request):
+    """Create a new blank test and redirect to its builder."""
+    if request.method == 'POST':
+        # Create a blank test
+        test_type = request.POST.get('test_type', 'listening')
+        new_test = Test.objects.create(
+            name=f"Новый тест (Черновик) - {timezone.now().strftime('%Y-%m-%d %H:%M')}",
+            test_type=test_type,
+            author=request.user,
+            is_active=False
+        )
+        return redirect('exams:mentor_test_builder', test_id=new_test.id)
+    return redirect('exams:mentor_dashboard')
 
 @mentor_required
 def mentor_upload(request):
@@ -568,6 +583,58 @@ def api_update_test(request, test_id):
 # ---------------------------------------------------------------------------
 # JSON API — Part CRUD
 # ---------------------------------------------------------------------------
+
+@mentor_required
+@require_POST
+def api_create_part(request, test_id):
+    """Create a new Part in a specific Test."""
+    test = get_object_or_404(Test, pk=test_id)
+    if not can_manage_test(request.user, test):
+        return JsonResponse({'error': 'Forbidden'}, status=403)
+
+    # find next part number
+    last_part = test.parts.order_by('-part_number').first()
+    next_num = (last_part.part_number + 1) if last_part else 1
+    
+    # max 10 parts, arbitrary safe limit
+    if next_num > 10:
+        return JsonResponse({'error': 'Too many parts'}, status=400)
+
+    # Get default points (fallback to 2.0)
+    pts = Part.PART_WEIGHTS.get(next_num, 2.0)
+
+    part = Part.objects.create(
+        test=test,
+        part_number=next_num,
+        points_per_question=pts
+    )
+
+    return JsonResponse({
+        'success': True,
+        'id': part.id,
+        'part_number': part.part_number,
+        'points_per_question': part.points_per_question
+    })
+
+@mentor_required
+@require_POST
+def api_delete_part(request, part_id):
+    """Delete a Part and renumber subsequent parts."""
+    part = get_object_or_404(Part, pk=part_id)
+    if not can_manage_test(request.user, part.test):
+        return JsonResponse({'error': 'Forbidden'}, status=403)
+        
+    test = part.test
+    part.delete()
+    
+    # renumber subsequent parts to ensure sequential part numbers if needed
+    # for simplicity, we let the user reorganize manually if desired, or auto renumber
+    for i, p in enumerate(test.parts.order_by('part_number'), 1):
+        if p.part_number != i:
+            p.part_number = i
+            p.save(update_fields=['part_number'])
+            
+    return JsonResponse({'success': True})
 
 @mentor_required
 @require_POST
