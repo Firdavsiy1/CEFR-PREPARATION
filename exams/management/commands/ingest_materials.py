@@ -118,7 +118,7 @@ class Command(BaseCommand):
 
         test_dirs = sorted([
             d for d in materials_dir.iterdir()
-            if d.is_dir() and d.name.startswith('Test')
+            if d.is_dir() and not d.name.startswith('.') and not d.name.startswith('__MACOSX')
         ])
         if options['test']:
             test_dirs = [d for d in test_dirs if d.name == options['test']]
@@ -133,26 +133,53 @@ class Command(BaseCommand):
     # ------------------------------------------------------------------
 
     def _ingest_test(self, test_dir: Path, *, dry_run: bool):
-        test_name     = test_dir.name
-        listening_dir = test_dir / 'Listening'
-
-        if not listening_dir.exists():
+        test_name = test_dir.name
+        valid_modules = ['Listening', 'Reading', 'Writing', 'Speaking']
+        
+        found_modules = []
+        for mod in valid_modules:
+            if (test_dir / mod).exists():
+                found_modules.append(mod)
+                
+        if not found_modules:
             self.stderr.write(self.style.WARNING(
-                f'  ⚠  No Listening/ folder in {test_name}, skipping.'
+                f'  ⚠  No valid module folders found in {test_name}, skipping.'
             ))
             return
+            
+        for module_name in found_modules:
+            self._ingest_module(test_name, module_name, test_dir / module_name, dry_run, len(found_modules) > 1)
+
+    def _ingest_module(self, parent_test_name, module_name, module_dir, dry_run, append_suffix):
+        # Determine actual test name to use in DB
+        # If there are multiple modules in the same ZIP, append the module name
+        # If the parent test name already ends with the module name (e.g. from photo upload), avoid duplicating
+        if append_suffix and not parent_test_name.lower().endswith(module_name.lower()):
+            test_name = f"{parent_test_name} - {module_name}"
+        else:
+            test_name = parent_test_name
 
         self.stdout.write(self.style.MIGRATE_HEADING(f'\n{"=" * 60}'))
-        self.stdout.write(self.style.MIGRATE_HEADING(f'  Ingesting: {test_name}'))
+        self.stdout.write(self.style.MIGRATE_HEADING(f'  Ingesting: {test_name} [{module_name}]'))
         self.stdout.write(self.style.MIGRATE_HEADING(f'{"=" * 60}'))
 
         part_dirs = sorted(
-            [d for d in listening_dir.iterdir()
+            [d for d in module_dir.iterdir()
              if d.is_dir() and d.name.startswith('Part')],
             key=lambda d: int(d.name.split()[-1]),
         )
+        
+        if module_name == 'Writing':
+            # Writing tests have Part 1 and Part 2
+            if not part_dirs:
+                self.stderr.write(self.style.WARNING('  ⚠  No Part folders found for Writing.'))
+                return
+            if dry_run: return
+            self._ingest_writing_module(test_name, module_dir, part_dirs)
+            return
+
         if not part_dirs:
-            self.stderr.write(self.style.WARNING('  ⚠  No Part folders found.'))
+            self.stderr.write(self.style.WARNING(f'  ⚠  No Part folders found for {module_name}.'))
             return
 
         if dry_run:
@@ -201,7 +228,7 @@ class Command(BaseCommand):
         with transaction.atomic():
             test_obj, created = Test.objects.update_or_create(
                 name=test_name,
-                defaults={'test_type': 'listening', 'is_active': True},
+                defaults={'test_type': module_name.lower(), 'is_active': True},
             )
             if not created:
                 self.stdout.write(f'  ↻  Re-ingesting "{test_name}" (clearing old data)…')
@@ -245,8 +272,8 @@ class Command(BaseCommand):
 
         with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
             for part_num, pd in part_data.items():
-                questions_img = pd['part_dir'] / 'questions.jpg'
-                if questions_img.exists() and pd['answers']:
+                questions_img = next(pd['part_dir'].glob('questions.*'), None)
+                if questions_img and pd['answers']:
                     future = executor.submit(
                         self._ocr_and_parse,
                         questions_img,
@@ -858,3 +885,124 @@ If a question has no choices, use an empty list for "choices"."""
 
         except Exception as e:
             self.stderr.write(self.style.WARNING(f'    ⚠  Audio analysis failed: {e}'))
+
+    # ------------------------------------------------------------------
+    # Writing Module Ingestion Support
+    # ------------------------------------------------------------------
+
+    def _ingest_writing_module(self, test_name, module_dir, part_dirs):
+        self.stdout.write(self.style.MIGRATE_HEADING(f'\n  ⚡  Running OCR for {len(part_dirs)} parts in parallel (Writing Tasks)...'))
+        
+        part_data = {}
+        for part_dir in part_dirs:
+            part_num = int(part_dir.name.split()[-1])
+            questions_img = next(part_dir.glob('questions.*'), None)
+            if questions_img:
+                part_data[part_num] = questions_img
+                
+        if not self.skip_ocr and self.genai_client:
+            extracted_data = self._parallel_writing_ocr(part_data)
+        else:
+            self.stdout.write('  ⏭  Skipping OCR for Writing')
+            return
+
+        self.stdout.write(self.style.MIGRATE_HEADING('\n  💾  Saving Writing Tasks to database...'))
+        with transaction.atomic():
+            test_obj, created = Test.objects.update_or_create(
+                name=test_name,
+                defaults={'test_type': 'writing', 'is_active': True},
+            )
+            if not created:
+                test_obj.writing_tasks.all().delete()
+                
+            from exams.models import WritingTask
+            
+            if 1 in extracted_data:
+                d = extracted_data[1]
+                situation = d.get('situation_context', '')
+                shared = d.get('shared_input_text', '')
+                full_input = f"{situation}\n\n{shared}" if situation else shared
+                
+                WritingTask.objects.create(
+                    test=test_obj, task_type='informal', order=1,
+                    input_text=full_input,
+                    prompt=d.get('task_1_1_prompt', 'Write an email to your friend. Write about 50 words.'),
+                    min_words=40, max_words=60
+                )
+                WritingTask.objects.create(
+                    test=test_obj, task_type='formal', order=2,
+                    input_text=full_input,
+                    prompt=d.get('task_1_2_prompt', 'Write an email to the organiser. Write about 120-150 words.'),
+                    min_words=120, max_words=150
+                )
+                
+            if 2 in extracted_data:
+                d = extracted_data[2]
+                essay_theme = d.get('essay_theme', '')
+                essay_statement = d.get('essay_statement', '')
+                essay_input = f'{essay_theme}\n\nWrite your essay in response to this statement:\n\n"{essay_statement}"'
+                
+                WritingTask.objects.create(
+                    test=test_obj, task_type='essay', order=3,
+                    input_text=essay_input,
+                    prompt=d.get('essay_word_count', 'Write 180-200 words.'),
+                    min_words=180, max_words=200
+                )
+
+        total_tasks = test_obj.writing_tasks.count()
+        self.stdout.write(self.style.SUCCESS(
+            f'\n  ✅  Successfully ingested {test_name}: '
+            f'{total_tasks} questions across {len(part_dirs)} parts.\n'
+        ))
+
+    def _parallel_writing_ocr(self, part_data):
+        results = {}
+        with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
+            futures = {}
+            for part_num, img_path in part_data.items():
+                futures[executor.submit(self._ocr_writing_part, img_path, part_num)] = part_num
+                
+            for future in as_completed(futures):
+                p_num = futures[future]
+                try:
+                    res = future.result()
+                    results[p_num] = res
+                    self.stdout.write(f"  ✓  OCR done for part {p_num}")
+                except Exception as e:
+                    self.stderr.write(f"  ✗  OCR failed for part {p_num}: {e}")
+        return results
+
+    def _ocr_writing_part(self, img_path, part_num):
+        img_bytes = img_path.read_bytes()
+        mime_type = "image/png" if img_path.suffix.lower() == '.png' else "image/jpeg"
+        
+        if part_num == 1:
+            prompt = """Extract the Writing Part 1 tasks from this image.
+Return STRICTLY JSON ONLY and nothing else:
+{
+  "situation_context": "You are a member...",
+  "shared_input_text": "Dear member,\\n...",
+  "task_1_1_prompt": "Write an email to your friend...",
+  "task_1_2_prompt": "Write an email to the organiser..."
+}"""
+        else:
+            prompt = """Extract the Writing Part 2 essay task from this image.
+Return STRICTLY JSON ONLY and nothing else:
+{
+  "essay_theme": "We are running a writing competition...",
+  "essay_statement": "Entertainment plays an important role...",
+  "essay_word_count": "Write 180-200 words."
+}"""
+
+        response = self.genai_client.models.generate_content(
+            model=GEMINI_MODEL,
+            contents=[prompt, self.genai_types.Part.from_bytes(data=img_bytes, mime_type=mime_type)],
+            config=self.genai_types.GenerateContentConfig(response_mime_type="application/json")
+        )
+        
+        raw_text = response.text.strip()
+        if raw_text.startswith("```json"): raw_text = raw_text[7:]
+        if raw_text.startswith("```"): raw_text = raw_text[3:]
+        if raw_text.endswith("```"): raw_text = raw_text[:-3]
+        
+        return json.loads(raw_text.strip())

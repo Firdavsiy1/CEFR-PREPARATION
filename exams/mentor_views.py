@@ -41,7 +41,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST, require_http_methods
 
-from .models import Test, Part, Question, Choice, IngestionTask
+from .models import Test, Part, Question, Choice, IngestionTask, WritingTask
 
 
 # ---------------------------------------------------------------------------
@@ -138,25 +138,44 @@ def mentor_upload(request):
             messages.error(request, "No file was uploaded.")
             return redirect('exams:mentor_upload')
 
-        if not zip_file.name.endswith('.zip'):
-            messages.error(request, "Please upload a .zip file.")
+        is_zip = zip_file.name.lower().endswith('.zip')
+        is_image = zip_file.name.lower().endswith(('.jpg', '.jpeg', '.png'))
+
+        if not is_zip and not is_image:
+            messages.error(request, "Please upload a .zip file or an image (.jpg, .png).")
             return redirect('exams:mentor_upload')
 
         test_name = request.POST.get('test_name', '').strip()
         split_parts = request.POST.get('split_parts') == 'on'
+        photo_test_type = request.POST.get('photo_test_type', 'Writing')
+
         if not test_name:
             messages.error(request, "Please provide a test name.")
             return redirect('exams:mentor_upload')
 
-        # Save ZIP to a persistent temp location (not TemporaryDirectory,
-        # since the thread will outlive this request)
+        # Save ZIP to a persistent temp location
         upload_dir = settings.BASE_DIR / 'media' / 'uploads'
         upload_dir.mkdir(parents=True, exist_ok=True)
-        zip_path = upload_dir / f"task_{timezone.now().strftime('%Y%m%d_%H%M%S')}_{zip_file.name}"
-
-        with open(zip_path, 'wb') as f:
-            for chunk in zip_file.chunks():
-                f.write(chunk)
+        
+        if is_image:
+            # Wrap image in a ZIP file to match the ingestion pipeline structure
+            safe_name = test_name.replace(' ', '_').replace('/', '_')
+            zip_filename = f"task_{timezone.now().strftime('%Y%m%d_%H%M%S')}_{safe_name}_photo.zip"
+            zip_path = upload_dir / zip_filename
+            
+            with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zf:
+                # Seed the same image into Part 1 and Part 2 (especially for Writing!)
+                _, ext = os.path.splitext(zip_file.name)
+                archive_path_1 = f"{safe_name}/{photo_test_type}/Part 1/questions{ext}"
+                archive_path_2 = f"{safe_name}/{photo_test_type}/Part 2/questions{ext}"
+                file_bytes = zip_file.read()
+                zf.writestr(archive_path_1, file_bytes)
+                zf.writestr(archive_path_2, file_bytes)
+        else:
+            zip_path = upload_dir / f"task_{timezone.now().strftime('%Y%m%d_%H%M%S')}_{zip_file.name}"
+            with open(zip_path, 'wb') as f:
+                for chunk in zip_file.chunks():
+                    f.write(chunk)
 
         # Create the task record
         task = IngestionTask.objects.create(
@@ -178,6 +197,74 @@ def mentor_upload(request):
         return redirect('exams:mentor_task_progress', task_id=task.id)
 
     return render(request, 'exams/mentor/upload.html')
+
+
+@mentor_required
+def mentor_upload_writing(request):
+    """
+    GET:  Show the dedicated Writing upload form.
+    POST: Accept a ZIP file or image, kick off background processing.
+    """
+    if request.method == 'POST':
+        zip_file = request.FILES.get('zip_file')
+        if not zip_file:
+            messages.error(request, "No file was uploaded.")
+            return redirect('exams:mentor_upload_writing')
+
+        is_zip = zip_file.name.lower().endswith('.zip')
+        is_image = zip_file.name.lower().endswith(('.jpg', '.jpeg', '.png'))
+
+        if not is_zip and not is_image:
+            messages.error(request, "Please upload a .zip file or an image (.jpg, .png).")
+            return redirect('exams:mentor_upload_writing')
+
+        test_name = request.POST.get('test_name', '').strip()
+        split_parts = request.POST.get('split_parts') == 'on'
+        photo_test_type = 'Writing'  # Hardcoded for this view
+
+        if not test_name:
+            messages.error(request, "Please provide a test name.")
+            return redirect('exams:mentor_upload_writing')
+
+        upload_dir = settings.BASE_DIR / 'media' / 'uploads'
+        upload_dir.mkdir(parents=True, exist_ok=True)
+        
+        if is_image:
+            safe_name = test_name.replace(' ', '_').replace('/', '_')
+            zip_filename = f"task_{timezone.now().strftime('%Y%m%d_%H%M%S')}_{safe_name}_photo.zip"
+            zip_path = upload_dir / zip_filename
+            
+            with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zf:
+                _, ext = os.path.splitext(zip_file.name)
+                archive_path_1 = f"{safe_name}/{photo_test_type}/Part 1/questions{ext}"
+                archive_path_2 = f"{safe_name}/{photo_test_type}/Part 2/questions{ext}"
+                file_bytes = zip_file.read()
+                zf.writestr(archive_path_1, file_bytes)
+                zf.writestr(archive_path_2, file_bytes)
+        else:
+            zip_path = upload_dir / f"task_{timezone.now().strftime('%Y%m%d_%H%M%S')}_{zip_file.name}"
+            with open(zip_path, 'wb') as f:
+                for chunk in zip_file.chunks():
+                    f.write(chunk)
+
+        task = IngestionTask.objects.create(
+            user=request.user,
+            test_name=test_name,
+            split_parts=split_parts,
+            status='pending',
+            stage='Загрузка файла завершена. Запуск обработки...',
+        )
+
+        thread = threading.Thread(
+            target=_run_ingestion_background,
+            args=(task.id, str(zip_path), test_name, request.user.id, split_parts),
+            daemon=True,
+        )
+        thread.start()
+
+        return redirect('exams:mentor_task_progress', task_id=task.id)
+
+    return render(request, 'exams/mentor/upload_writing.html')
 
 
 def _run_ingestion_background(task_id, zip_path, test_name, user_id, split_parts):
@@ -216,20 +303,26 @@ def _run_ingestion_background(task_id, zip_path, test_name, user_id, split_parts
             subdirs = [d for d in extracted.iterdir() if d.is_dir()]
             source = subdirs[0] if len(subdirs) == 1 else extracted
 
-            # Find Listening folder
-            listening_src = None
-            for candidate in [source / 'Listening', source]:
-                if (candidate / 'Part 1').exists() or any(
-                    d.name.startswith('Part') for d in candidate.iterdir() if d.is_dir()
-                ):
-                    listening_src = candidate
-                    break
+            valid_modules = ['Listening', 'Reading', 'Writing', 'Speaking']
+            found_modules = []
 
-            if not listening_src:
+            for module in valid_modules:
+                candidate = source / module
+                if candidate.exists() and candidate.is_dir():
+                    found_modules.append((candidate, module))
+            
+            # Fallback if no explicit module folders (e.g. root just has "Part 1")
+            if not found_modules and any(d.name.startswith('Part') for d in source.iterdir() if d.is_dir()):
+                # Guess from the task or default to 'Listening' for legacy compat
+                # But since we wrapped photos in `<TestType>/Part 1`, this will just work.
+                found_modules.append((source, 'Listening'))
+
+            if not found_modules:
                 task.status = 'failed'
                 task.error_message = (
                     'Не найдена правильная структура в ZIP. '
-                    'Ожидается: TestName/Listening/Part 1/, Part 2/, ...'
+                    'Ожидается папка Listening/, Reading/, Writing/ или Speaking/ '
+                    'содержащая Part 1, Part 2 и т.д.'
                 )
                 task.stage = 'Ошибка структуры архива'
                 task.completed_at = timezone.now()
@@ -242,8 +335,10 @@ def _run_ingestion_background(task_id, zip_path, test_name, user_id, split_parts
             if test_dir.exists():
                 shutil.rmtree(test_dir)
             test_dir.mkdir(parents=True)
-            target_listening = test_dir / 'Listening'
-            shutil.copytree(str(listening_src), str(target_listening))
+            
+            for src_dir, module_name in found_modules:
+                target_dir = test_dir / module_name
+                shutil.copytree(str(src_dir), str(target_dir))
 
         # --- Step 2: Run the ingestion command ---
         task.update_progress(20, 'Запуск AI-обработки материалов...')
@@ -325,8 +420,12 @@ def _run_ingestion_background(task_id, zip_path, test_name, user_id, split_parts
             test_obj.author = user
             test_obj.save(update_fields=['author'])
 
-            parts_count = test_obj.parts.count()
-            questions_count = Question.objects.filter(part__test=test_obj).count()
+            if test_obj.test_type == 'writing':
+                parts_count = 1  # Or logically 2 parts, but let's count tasks
+                questions_count = test_obj.writing_tasks.count()
+            else:
+                parts_count = test_obj.parts.count()
+                questions_count = Question.objects.filter(part__test=test_obj).count()
 
             if split_parts:
                 task.update_progress(93, 'Создание отдельных микро-тестов...')
@@ -367,7 +466,26 @@ def _run_ingestion_background(task_id, zip_path, test_name, user_id, split_parts
 
 
 def _clone_parts_to_individual_tests(test_obj, user):
-    """Clone each part of a test into its own standalone micro-test."""
+    """Clone each part of a test into its own standalone micro-test. Supports Writing too."""
+    if test_obj.test_type == 'writing':
+        tasks = test_obj.writing_tasks.all()
+        # Group tasks by their logical 'part' based on order (1, 2 = Part 1; 3 = Part 2)
+        part1_tasks = [t for t in tasks if t.order in (1, 2)]
+        part2_tasks = [t for t in tasks if t.order == 3]
+        
+        for part_num, task_group in [(1, part1_tasks), (2, part2_tasks)]:
+            if not task_group: continue
+            new_test_name = f"{test_obj.name} - Part {part_num}"
+            Test.objects.filter(name=new_test_name).delete()
+            new_test = Test.objects.create(
+                name=new_test_name, test_type=test_obj.test_type, is_active=True, author=user
+            )
+            for t in task_group:
+                t.id = None
+                t.test = new_test
+                t.save()
+        return
+
     for part in test_obj.parts.all():
         new_test_name = f"{test_obj.name} - Part {part.part_number}"
         Test.objects.filter(name=new_test_name).delete()
@@ -538,6 +656,17 @@ def api_test_data(request, test_id):
         'is_active': test.is_active,
         'author': test.author.username if test.author else None,
         'parts': parts_data,
+        'writing_tasks': [
+            {
+                'id': wt.id,
+                'task_type': wt.task_type,
+                'input_text': wt.input_text,
+                'prompt': wt.prompt,
+                'min_words': wt.min_words,
+                'max_words': wt.max_words,
+                'order': wt.order,
+            } for wt in test.writing_tasks.all().order_by('order')
+        ],
     })
 
 
@@ -552,6 +681,28 @@ def api_toggle_test_active(request, test_id):
     test = get_object_or_404(Test, pk=test_id)
     if not can_manage_test(request.user, test):
         return JsonResponse({'error': 'Forbidden'}, status=403)
+
+@mentor_required
+@require_POST
+def api_publish_test(request, test_id):
+    """Set test to active, and optionally clone its parts."""
+    test = get_object_or_404(Test, pk=test_id)
+    if not can_manage_test(request.user, test):
+        return JsonResponse({'error': 'Forbidden'}, status=403)
+        
+    try:
+        data = json.loads(request.body)
+        split_parts = data.get('split_parts', False)
+        
+        test.is_active = True
+        test.save(update_fields=['is_active'])
+        
+        if split_parts:
+            _clone_parts_to_individual_tests(test, request.user)
+            
+        return JsonResponse({'success': True})
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
 
     test.is_active = not test.is_active
     test.save(update_fields=['is_active'])
@@ -578,6 +729,190 @@ def api_update_test(request, test_id):
     test.save()
 
     return JsonResponse({'success': True, 'name': test.name, 'test_type': test.test_type})
+
+
+# ---------------------------------------------------------------------------
+# JSON API — Writing test specific CRUD
+# ---------------------------------------------------------------------------
+
+@mentor_required
+@require_POST
+def api_generate_writing_test(request):
+    """Generate a complete 3-part writing test using Gemini AI."""
+    import os
+    try:
+        from google import genai
+        from google.genai import types as T
+    except ImportError:
+        return JsonResponse({'error': 'google-genai SDK not installed'}, status=500)
+    
+    data = json.loads(request.body)
+    topic = data.get('topic', 'Technology')
+    
+    project_id = os.getenv("GOOGLE_CLOUD_PROJECT")
+    if not project_id:
+        adc_path = os.path.expanduser("~/.config/gcloud/application_default_credentials.json")
+        if os.path.exists(adc_path):
+            with open(adc_path) as f:
+                project_id = json.load(f).get("quota_project_id")
+                
+    try:
+        client = genai.Client(vertexai=True, project=project_id, location="global")
+    except Exception as e:
+        return JsonResponse({'error': f'Failed to init GenAI client: {e}'}, status=500)
+    
+    prompt = f"""You are an expert UzbMB/DTM CEFR B2 Writing exam paper creator for the Uzbekistan national format.
+Generate a COMPLETE and REALISTIC writing exam on the topic: "{topic}".
+
+CRITICAL: Study and follow these REAL exam examples EXACTLY:
+
+=== EXAMPLE 1 (Topic: Theatre) ===
+PART 1:
+situation_context: "You are a member of the theatre group. You receive this email from the secretary."
+shared_input_text: "Dear member,\\nSome of our members have said that they are interested in a theatre trip to London in July. Therefore, I have checked the theatre listings and I have found a musical that I think would appeal to everybody. It is called 'Summer in the City' and is on 17th July. If you are interested in going, please let us know as soon as possible, so that we can book the tickets and a coach."
+task_1_1_prompt: "Write an email to your friend. Write about whether you would like to attend and why it is/isn't of interest to you. Write about 50 words."
+task_1_2_prompt: "Write an email to the secretary. Write about whether you would like to attend and why it is/isn't of interest to you. Write about 120-150 words."
+
+PART 2:
+essay_theme: "We are running a writing competition on our website. The theme this month is entertainment."
+essay_instruction: "Write your essay in response to this statement:"
+essay_statement: "Entertainment plays an important role in the happiness of all people."
+essay_word_count: "Write 180-200 words."
+
+=== EXAMPLE 2 (Topic: Sports) ===
+PART 1:
+situation_context: "You are a member of the sports club. You receive this email from the secretary."
+shared_input_text: "Dear member,\\nMany of our members have expressed an interest in buying second-hand sports equipment. As a result, we will be organising a bring-and-buy sale of used sports equipment at the sports club, on Friday 8th June. Please let the club secretary know if you would be interested in the sale and if you could bring any equipment for sale."
+task_1_1_prompt: "Write an e-mail to your friend. Write about whether you would like to attend and why it is/isn't of interest to you. Write about 50 words."
+task_1_2_prompt: "Write an email to the secretary. Write about whether you would like to attend and why it is/isn't of interest to you. Write about 120-150 words."
+
+PART 2:
+essay_theme: "We are running a writing competition on our website. The theme this month is sport and exercise."
+essay_instruction: "Write your essay in response to this statement:"
+essay_statement: "Sport and exercise can be beneficial for everyone"
+essay_word_count: "Write 180-200 words."
+
+=== IMPORTANT FORMAT RULES ===
+1. PART 1: The student is ALWAYS a member of some club/group/course. They receive an email from an organiser/secretary/teacher about an upcoming event/activity.
+2. The shared_input_text is ALWAYS a polite email (Dear member/student, ...) describing the event and asking for interest/participation.
+3. Task 1.1 is ALWAYS "Write an email to your friend..." (informal, ~50 words)
+4. Task 1.2 is ALWAYS "Write an email to the [sender role]..." (formal, ~120-150 words)
+5. BOTH tasks reference the SAME situation and input text.
+6. PART 2 essay ALWAYS follows this structure: theme intro sentence, "Write your essay in response to this statement:", then a quotable statement in quotes, then word count.
+
+Now generate a NEW, ORIGINAL exam for the topic "{topic}".
+Return STRICTLY this JSON:
+{{
+  "test_name": "Writing Test — [Topic Name]",
+  "situation_context": "You are a member of ... You receive this email from the ...",
+  "shared_input_text": "Dear ...,\\n[3-5 sentences describing an event/opportunity related to {topic}]",
+  "task_1_1_prompt": "Write an email to your friend. Write about whether you would like to ... Write about 50 words.",
+  "task_1_2_prompt": "Write an email to the [role]. Write about whether you would like to ... Write about 120-150 words.",
+  "essay_theme": "We are running a writing competition on our website. The theme this month is [topic area].",
+  "essay_statement": "[A debatable statement related to {topic}]"
+}}"""
+
+    generate_cfg = T.GenerateContentConfig(
+        response_mime_type="application/json",
+    )
+    
+    try:
+        response = client.models.generate_content(
+            model="gemini-3-flash-preview",
+            contents=[prompt],
+            config=generate_cfg,
+        )
+        
+        raw_text = response.text.strip()
+        if raw_text.startswith("```json"):
+            raw_text = raw_text[7:]
+        if raw_text.startswith("```"):
+            raw_text = raw_text[3:]
+        if raw_text.endswith("```"):
+            raw_text = raw_text[:-3]
+        
+        result_data = json.loads(raw_text.strip())
+        
+        # Build the structured content from the AI response
+        situation = result_data.get('situation_context', '')
+        shared_input = result_data.get('shared_input_text', '')
+        # Combine situation + letter into the input_text field
+        full_input_text = f"{situation}\n\n{shared_input}" if situation else shared_input
+        
+        essay_theme = result_data.get('essay_theme', '')
+        essay_statement = result_data.get('essay_statement', '')
+        essay_input = f'{essay_theme}\n\nWrite your essay in response to this statement:\n\n"{essay_statement}"'
+        
+        with transaction.atomic():
+            test_obj = Test.objects.create(
+                name=result_data.get('test_name', f"Writing Test — {topic}"),
+                test_type='writing',
+                author=request.user,
+                is_active=False
+            )
+            
+            # Task 1.1 — Informal (to a friend)
+            WritingTask.objects.create(
+                test=test_obj, task_type='informal', order=1,
+                input_text=full_input_text,
+                prompt=result_data.get('task_1_1_prompt', 'Write an email to your friend. Write about 50 words.'),
+                min_words=40, max_words=60
+            )
+            
+            # Task 1.2 — Formal (to the organiser)
+            WritingTask.objects.create(
+                test=test_obj, task_type='formal', order=2,
+                input_text=full_input_text,  # Same input — shared
+                prompt=result_data.get('task_1_2_prompt', 'Write an email to the organiser. Write about 120-150 words.'),
+                min_words=120, max_words=150
+            )
+            
+            # Task 2 — Essay
+            WritingTask.objects.create(
+                test=test_obj, task_type='essay', order=3,
+                input_text=essay_input,
+                prompt='Write 180-200 words.',
+                min_words=180, max_words=200
+            )
+            
+        return JsonResponse({'success': True, 'test_id': test_obj.id})
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@mentor_required
+@require_POST
+def api_update_writing_task(request, task_id):
+    """Update fields of a manual WritingTask."""
+    wt = get_object_or_404(WritingTask, pk=task_id)
+    if not can_manage_test(request.user, wt.test):
+        return JsonResponse({'error': 'Forbidden'}, status=403)
+
+    data = json.loads(request.body)
+    for field in ['input_text', 'prompt', 'min_words', 'max_words']:
+        if field in data:
+            setattr(wt, field, data[field])
+    wt.save()
+    return JsonResponse({'success': True})
+
+
+@mentor_required
+@require_POST
+def api_create_writing_tasks_for_test(request, test_id):
+    """Initialize empty writing tasks manually for a test."""
+    test = get_object_or_404(Test, pk=test_id)
+    if not can_manage_test(request.user, test):
+        return JsonResponse({'error': 'Forbidden'}, status=403)
+        
+    if test.writing_tasks.exists():
+        return JsonResponse({'error': 'Writing tasks already initialized.'}, status=400)
+        
+    with transaction.atomic():
+        WritingTask.objects.create(test=test, task_type='informal', order=1, prompt='', min_words=40, max_words=60)
+        WritingTask.objects.create(test=test, task_type='formal', order=2, prompt='', min_words=120, max_words=150)
+        WritingTask.objects.create(test=test, task_type='essay', order=3, prompt='', min_words=180, max_words=200)
+        
+    return JsonResponse({'success': True})
 
 
 # ---------------------------------------------------------------------------

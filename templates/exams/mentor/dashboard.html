@@ -21,14 +21,20 @@
         </div>
 
         <div class="flex flex-col sm:flex-row items-center gap-3">
-            <form method="POST" action="{% url 'exams:mentor_create_test' %}">
+            <form method="POST" action="{% url 'exams:mentor_create_test' %}" class="flex items-center gap-2">
                 {% csrf_token %}
-                <button type="submit" class="btn-duo-outline text-sm !py-2.5">
+                <select name="test_type" class="text-sm bg-duo-surface border-2 border-duo-border rounded-xl px-3 py-2 text-white outline-none focus:border-duo-green cursor-pointer h-[42px] font-bold">
+                    <option value="listening">Listening</option>
+                    <option value="reading">Reading</option>
+                    <option value="writing">Writing</option>
+                    <option value="speaking">Speaking</option>
+                </select>
+                <button type="submit" class="btn-duo-outline text-sm !py-2 h-[42px]">
                     <i class="ph-bold ph-plus text-lg"></i>
-                    <span data-i18n="mnt_create_test_manual">Создать вручную</span>
+                    <span data-i18n="mnt_create_test_manual">Создать</span>
                 </button>
             </form>
-            <a href="{% url 'exams:mentor_upload' %}" id="btn-upload-test" class="btn-duo-green text-sm !py-2.5">
+            <a href="{% url 'exams:mentor_upload' %}" id="btn-upload-test" class="btn-duo-green text-sm !py-2 h-[42px]">
                 <i class="ph-fill ph-upload-simple text-lg"></i>
                 <span data-i18n="mnt_upload_test">Загрузить архив</span>
             </a>
@@ -96,6 +102,15 @@
                     </div>
                 </div>
             </div>
+            
+            <!-- Category Tabs -->
+            <div class="px-6 py-3 border-b-2 border-duo-border bg-duo-surface/30 flex gap-2 overflow-x-auto hide-scrollbar" id="category-tabs">
+                <button class="filter-btn active badge-duo bg-duo-surface text-white border-2 border-white/20 whitespace-nowrap cursor-pointer transition-all" data-type="all">Все категории</button>
+                <button class="filter-btn badge-duo bg-duo-surface-2 text-duo-text-muted border-2 border-duo-border hover:border-duo-blue/40 hover:text-white whitespace-nowrap cursor-pointer transition-all" data-type="listening"><i class="ph-fill ph-headphones mr-1.5 text-duo-blue"></i>Listening</button>
+                <button class="filter-btn badge-duo bg-duo-surface-2 text-duo-text-muted border-2 border-duo-border hover:border-duo-green/40 hover:text-white whitespace-nowrap cursor-pointer transition-all" data-type="reading"><i class="ph-fill ph-book-open-text mr-1.5 text-duo-green"></i>Reading</button>
+                <button class="filter-btn badge-duo bg-duo-surface-2 text-duo-text-muted border-2 border-duo-border hover:border-duo-gold/40 hover:text-white whitespace-nowrap cursor-pointer transition-all" data-type="writing"><i class="ph-fill ph-pencil-simple mr-1.5 text-duo-gold"></i>Writing</button>
+                <button class="filter-btn badge-duo bg-duo-surface-2 text-duo-text-muted border-2 border-duo-border hover:border-duo-purple/40 hover:text-white whitespace-nowrap cursor-pointer transition-all" data-type="speaking"><i class="ph-fill ph-microphone mr-1.5 text-duo-purple"></i>Speaking</button>
+            </div>
 
             {% if tests %}
             <div class="overflow-x-auto">
@@ -114,16 +129,23 @@
                     </thead>
                     <tbody class="divide-y-2 divide-duo-border/30">
                         {% for test in tests %}
-                        <tr class="group hover:bg-duo-surface-2/30 transition-colors test-row" data-name="{{ test.name|lower }}">
+                        <tr class="group hover:bg-duo-surface-2/30 transition-colors test-row" data-name="{{ test.name|lower }}" data-type="{{ test.test_type }}">
                             <td class="px-6 py-4">
                                 <div class="flex items-center gap-3">
                                     <div class="w-9 h-9 rounded-xl flex items-center justify-center
                                                 {% if test.test_type == 'listening' %}bg-duo-blue/15 border-2 border-duo-blue/25
-                                                {% else %}bg-duo-green/15 border-2 border-duo-green/25{% endif %}">
+                                                {% elif test.test_type == 'reading' %}bg-duo-green/15 border-2 border-duo-green/25
+                                                {% elif test.test_type == 'writing' %}bg-duo-gold/15 border-2 border-duo-gold/25
+                                                {% elif test.test_type == 'speaking' %}bg-duo-purple/15 border-2 border-duo-purple/25
+                                                {% else %}bg-duo-surface-2 border-2 border-duo-border{% endif %}">
                                         {% if test.test_type == 'listening' %}
                                         <i class="ph-fill ph-headphones text-duo-blue text-base"></i>
-                                        {% else %}
+                                        {% elif test.test_type == 'reading' %}
                                         <i class="ph-fill ph-book-open-text text-duo-green text-base"></i>
+                                        {% elif test.test_type == 'writing' %}
+                                        <i class="ph-fill ph-pencil-simple text-duo-gold text-base"></i>
+                                        {% elif test.test_type == 'speaking' %}
+                                        <i class="ph-fill ph-microphone text-duo-purple text-base"></i>
                                         {% endif %}
                                     </div>
                                     <span class="text-sm font-bold text-white group-hover:text-duo-green transition-colors">{{ test.name }}</span>
@@ -132,7 +154,10 @@
                             <td class="px-6 py-4">
                                 <span class="badge-duo
                                     {% if test.test_type == 'listening' %}bg-duo-blue/15 text-duo-blue border border-duo-blue/25
-                                    {% else %}bg-duo-green/15 text-duo-green border border-duo-green/25{% endif %}">
+                                    {% elif test.test_type == 'reading' %}bg-duo-green/15 text-duo-green border border-duo-green/25
+                                    {% elif test.test_type == 'writing' %}bg-duo-gold/15 text-duo-gold border border-duo-gold/25
+                                    {% elif test.test_type == 'speaking' %}bg-duo-purple/15 text-duo-purple border border-duo-purple/25
+                                    {% endif %}">
                                     {{ test.get_test_type_display }}
                                 </span>
                             </td>
@@ -231,17 +256,59 @@
         if (tqEl) tqEl.textContent = totalQ;
     });
 
-    // ----- Search -----
+    // ----- Search & Filters -----
     const searchInput = document.getElementById('search-tests');
-    if (searchInput) {
-        searchInput.addEventListener('input', () => {
-            const q = searchInput.value.toLowerCase();
-            document.querySelectorAll('.test-row').forEach(row => {
-                const name = row.dataset.name || '';
-                row.style.display = name.includes(q) ? '' : 'none';
-            });
+    const filterBtns = document.querySelectorAll('.filter-btn');
+    let currentCategory = 'all';
+
+    function applyFilters() {
+        const q = searchInput ? searchInput.value.toLowerCase() : '';
+        document.querySelectorAll('.test-row').forEach(row => {
+            const name = row.dataset.name || '';
+            const type = row.dataset.type || '';
+            const matchesSearch = name.includes(q);
+            const matchesCategory = (currentCategory === 'all' || type === currentCategory);
+            
+            row.style.display = (matchesSearch && matchesCategory) ? '' : 'none';
         });
     }
+
+    if (searchInput) {
+        searchInput.addEventListener('input', applyFilters);
+    }
+    
+    filterBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            // Update active styling
+            filterBtns.forEach(b => {
+                b.classList.remove('active', 'bg-duo-surface', 'border-white/20');
+                b.classList.add('bg-duo-surface-2', 'text-duo-text-muted', 'border-duo-border');
+                b.classList.remove('text-white');
+            });
+            btn.classList.add('active', 'bg-duo-surface', 'border-white/20', 'text-white');
+            btn.classList.remove('bg-duo-surface-2', 'text-duo-text-muted', 'border-duo-border');
+            
+            currentCategory = btn.dataset.type;
+            applyFilters();
+        });
+    });
+
+    // ----- Dynamic Upload Link based on selected category -----
+    const testTypeSelect = document.querySelector('select[name="test_type"]');
+    const uploadBtn = document.getElementById('btn-upload-test');
+    if (testTypeSelect && uploadBtn) {
+        testTypeSelect.addEventListener('change', (e) => {
+            if (e.target.value === 'writing') {
+                uploadBtn.href = '/mentor/upload-writing/';
+            } else {
+                uploadBtn.href = '/mentor/upload/';
+            }
+        });
+        
+        // Trigger initial state
+        testTypeSelect.dispatchEvent(new Event('change'));
+    }
+
 
     // ----- Toggle active -----
     function toggleActive(testId, btn) {

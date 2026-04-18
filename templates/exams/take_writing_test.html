@@ -1,0 +1,335 @@
+{% extends "base.html" %}
+
+{% block title %}Writing Test — {{ test.name }}{% endblock %}
+
+{% block extra_head %}
+<style>
+    /* Focus Mode: Hide the global navbar */
+    body > nav { display: none !important; }
+    body > main { padding-top: 0 !important; }
+
+    .timer-badge { font-variant-numeric: tabular-nums; }
+
+    @keyframes pulse-danger {
+        0%, 100% { color: #FFFFFF; border-color: #2B4D56; }
+        50% { color: #FF4B4B; border-color: #FF4B4B; }
+    }
+    .timer-critical {
+        animation: pulse-danger 1s infinite;
+    }
+
+    /* Progress bar */
+    .progress-track {
+        height: 16px;
+        background: #1A2F35;
+        border-radius: 99px;
+        overflow: hidden;
+        border: 2px solid #2B4D56;
+    }
+    .progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #58CC02, #7FE034);
+        border-radius: 99px;
+        box-shadow: 0 0 8px rgba(88, 204, 2, 0.3);
+        width: 100%;
+    }
+
+    /* Input text block — mimics the gray box look from real exam */
+    .exam-input-block {
+        background: rgba(255, 255, 255, 0.03);
+        border: 2px solid rgba(255, 255, 255, 0.08);
+        border-left: 5px solid #6366F1;
+        border-radius: 0 16px 16px 0;
+        padding: 1.5rem 2rem;
+        font-style: italic;
+        line-height: 1.8;
+    }
+
+    /* Part separator */
+    .part-separator {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+    .part-separator::before,
+    .part-separator::after {
+        content: '';
+        flex: 1;
+        height: 2px;
+        background: linear-gradient(90deg, transparent, #2B4D56, transparent);
+    }
+
+    /* Word counter badge */
+    .word-counter {
+        transition: all 0.2s ease;
+    }
+    .word-counter.in-range {
+        color: #58CC02;
+        border-color: rgba(88, 204, 2, 0.3);
+        background: rgba(88, 204, 2, 0.05);
+    }
+    .word-counter.out-range {
+        color: #FFC800;
+        border-color: rgba(255, 200, 0, 0.3);
+        background: rgba(255, 200, 0, 0.05);
+    }
+    .word-counter.over-range {
+        color: #FF4B4B;
+        border-color: rgba(255, 75, 75, 0.3);
+        background: rgba(255, 75, 75, 0.05);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mt-6 pb-20">
+
+    <!-- Header / Timer -->
+    <div class="card-duo p-5 mb-8 animate-fade-in sticky top-4 z-40 shadow-2xl bg-duo-surface bg-opacity-95 backdrop-blur-lg">
+        <div class="flex flex-col md:flex-row items-center justify-between gap-4 mb-4">
+            <div class="flex items-center gap-4">
+                <div class="w-12 h-12 rounded-2xl bg-duo-purple/15 border border-duo-purple/30 flex items-center justify-center font-black text-xl text-duo-purple">
+                    <i class="ph-bold ph-pencil-simple"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-black text-white" id="testName">{{ test.name }}</h1>
+                    <p class="text-xs font-bold text-duo-text-muted uppercase tracking-wide mt-0.5">
+                        <span data-i18n="wt_module">WRITING</span> · PART 1 + PART 2
+                    </p>
+                </div>
+            </div>
+
+            <!-- Timer -->
+            <div class="flex items-center gap-2.5 px-4 py-2.5 rounded-2xl bg-white/5 border border-white/10" id="timer-container">
+                <i class="ph-fill ph-timer text-duo-gold text-xl"></i>
+                <div id="timer" class="timer-badge text-xl font-black tracking-tight text-white">
+                    --:--
+                </div>
+            </div>
+        </div>
+
+        <div class="progress-track">
+            <div class="progress-fill"></div>
+        </div>
+    </div>
+
+    <!-- Form -->
+    <form method="POST" id="test-form" class="space-y-6 animate-slide-up" style="animation-delay: 150ms;">
+        {% csrf_token %}
+        
+        <!-- ═══════════════════════════════════════════════════════ -->
+        <!--                        PART 1                         -->
+        <!-- ═══════════════════════════════════════════════════════ -->
+
+        <div class="part-separator">
+            <span class="bg-duo-surface-2 px-6 py-2 rounded-xl text-sm font-black text-white uppercase tracking-widest border-2 border-duo-border shadow-lg">
+                Part 1
+            </span>
+        </div>
+
+        {% for task in tasks %}
+        {% if task.task_type == 'informal' %}
+        <!-- Shared Input Text (displayed only once, before Task 1.1) -->
+        {% if task.input_text %}
+        <div class="card-duo overflow-hidden !p-0 border-t-4 border-t-duo-blue/60 shadow-xl animate-fade-in">
+            <div class="p-6 md:p-8 space-y-6">
+                <!-- Situation Context (first line like "You are a member of...") -->
+                {% with task.input_text|truncatechars:0 as ignore %}
+                {% endwith %}
+                <div class="text-white font-bold text-lg leading-relaxed">
+                    {{ task.input_text|linebreaksbr }}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Task 1.1 Card -->
+        <div class="card-duo overflow-hidden !p-0 shadow-xl">
+            <div class="px-6 py-4 bg-duo-surface-2 border-b-2 border-duo-border flex justify-between items-center">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-xl bg-duo-green flex items-center justify-center font-black text-white text-xs shadow-sm shadow-duo-green/20">
+                        1.1
+                    </div>
+                    <h2 class="text-lg font-black text-white tracking-tight">Task 1.1</h2>
+                    <span class="text-xs font-bold text-duo-text-muted bg-duo-surface px-2 py-1 rounded-lg">(Informal)</span>
+                </div>
+                <div class="word-counter out-range text-xs font-bold px-3 py-1.5 rounded-xl border" id="badge_{{ task.id }}">
+                    <span id="counter_{{ task.id }}">0</span> / {{ task.max_words }} words
+                </div>
+            </div>
+            <div class="p-6 md:p-8 space-y-5">
+                <div class="text-white font-bold text-base leading-relaxed">
+                    {{ task.prompt }}
+                </div>
+                <textarea name="task_{{ task.id }}" 
+                          class="w-full bg-duo-surface-2 border-2 border-duo-border rounded-2xl p-5 text-white placeholder-duo-text-muted focus:border-duo-green focus:ring-4 focus:ring-duo-green/20 transition-all resize-y text-base leading-relaxed min-h-[180px]"
+                          placeholder="Write your informal email here..." data-i18n-placeholder="wt_placeholder_informal"
+                          oninput="updateWordCount(this, '{{ task.id }}', {{ task.min_words }}, {{ task.max_words }})"></textarea>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if task.task_type == 'formal' %}
+        <!-- Task 1.2 Card -->
+        <div class="card-duo overflow-hidden !p-0 shadow-xl">
+            <div class="px-6 py-4 bg-duo-surface-2 border-b-2 border-duo-border flex justify-between items-center">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-xl bg-duo-blue flex items-center justify-center font-black text-white text-xs shadow-sm shadow-duo-blue/20">
+                        1.2
+                    </div>
+                    <h2 class="text-lg font-black text-white tracking-tight">Task 1.2</h2>
+                    <span class="text-xs font-bold text-duo-text-muted bg-duo-surface px-2 py-1 rounded-lg">(Formal)</span>
+                </div>
+                <div class="word-counter out-range text-xs font-bold px-3 py-1.5 rounded-xl border" id="badge_{{ task.id }}">
+                    <span id="counter_{{ task.id }}">0</span> / {{ task.max_words }} words
+                </div>
+            </div>
+            <div class="p-6 md:p-8 space-y-5">
+                <div class="text-white font-bold text-base leading-relaxed">
+                    {{ task.prompt }}
+                </div>
+                <textarea name="task_{{ task.id }}" 
+                          class="w-full bg-duo-surface-2 border-2 border-duo-border rounded-2xl p-5 text-white placeholder-duo-text-muted focus:border-duo-green focus:ring-4 focus:ring-duo-green/20 transition-all resize-y text-base leading-relaxed min-h-[280px]"
+                          placeholder="Write your formal email here..." data-i18n-placeholder="wt_placeholder_formal"
+                          oninput="updateWordCount(this, '{{ task.id }}', {{ task.min_words }}, {{ task.max_words }})"></textarea>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if task.task_type == 'essay' %}
+        <!-- ═══════════════════════════════════════════════════════ -->
+        <!--                        PART 2                         -->
+        <!-- ═══════════════════════════════════════════════════════ -->
+
+        <div class="part-separator mt-12">
+            <span class="bg-duo-surface-2 px-6 py-2 rounded-xl text-sm font-black text-white uppercase tracking-widest border-2 border-duo-border shadow-lg">
+                Part 2
+            </span>
+        </div>
+
+        <!-- Essay Card -->
+        <div class="card-duo overflow-hidden !p-0 border-t-4 border-t-duo-gold/60 shadow-xl">
+            <div class="px-6 py-4 bg-duo-surface-2 border-b-2 border-duo-border flex justify-between items-center">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-xl bg-duo-gold flex items-center justify-center font-black text-[#3C3100] text-xs shadow-sm shadow-duo-gold/20">
+                        2
+                    </div>
+                    <h2 class="text-lg font-black text-white tracking-tight">Task 2</h2>
+                    <span class="text-xs font-bold text-duo-text-muted bg-duo-surface px-2 py-1 rounded-lg">(Essay)</span>
+                </div>
+                <div class="word-counter out-range text-xs font-bold px-3 py-1.5 rounded-xl border" id="badge_{{ task.id }}">
+                    <span id="counter_{{ task.id }}">0</span> / {{ task.max_words }} words
+                </div>
+            </div>
+            <div class="p-6 md:p-8 space-y-6">
+                {% if task.input_text %}
+                <div class="text-white font-bold text-lg leading-relaxed whitespace-pre-wrap">{{ task.input_text }}</div>
+                {% endif %}
+                <div class="text-duo-gold font-black text-base">
+                    {{ task.prompt }}
+                </div>
+                <textarea name="task_{{ task.id }}" 
+                          class="w-full bg-duo-surface-2 border-2 border-duo-border rounded-2xl p-5 text-white placeholder-duo-text-muted focus:border-duo-green focus:ring-4 focus:ring-duo-green/20 transition-all resize-y text-base leading-relaxed min-h-[350px]"
+                          placeholder="Write your essay here..." data-i18n-placeholder="wt_placeholder_essay"
+                          oninput="updateWordCount(this, '{{ task.id }}', {{ task.min_words }}, {{ task.max_words }})"></textarea>
+            </div>
+        </div>
+        {% endif %}
+        {% endfor %}
+
+        <!-- Navigation / Submit -->
+        <div class="flex justify-end pt-4 pb-8">
+            <button type="submit" id="submit-btn" class="btn-duo-green px-10 py-4 text-xl flex items-center gap-3 shadow-lg shadow-duo-green/20 hover:scale-[1.02] transition-transform">
+                <span data-i18n="wt_submit">Submit Writing Test</span>
+                <i class="ph-bold ph-paper-plane-right"></i>
+            </button>
+        </div>
+    </form>
+</div>
+
+<!-- Timer Logic -->
+<script>
+    function updateWordCount(textarea, taskId, min, max) {
+        let text = textarea.value.trim();
+        let wordCount = text ? text.split(/\s+/).length : 0;
+        let counterEl = document.getElementById('counter_' + taskId);
+        let badgeEl = document.getElementById('badge_' + taskId);
+        counterEl.textContent = wordCount;
+        
+        badgeEl.classList.remove('in-range', 'out-range', 'over-range');
+        if (wordCount >= min && wordCount <= max) {
+            badgeEl.classList.add('in-range');
+        } else if (wordCount > max) {
+            badgeEl.classList.add('over-range');
+        } else {
+            badgeEl.classList.add('out-range');
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const timerDisplay = document.getElementById('timer');
+        const timerContainer = document.getElementById('timer-container');
+        const submitBtn = document.getElementById('submit-btn');
+        let formSubmitted = false;
+
+        // --- Timer Setup ---
+        let timeRemaining = parseInt("{{ time_remaining }}");
+        const endTime = new Date("{{ endtime_iso }}").getTime();
+
+        function updateTimerDisplay() {
+            let now = new Date().getTime();
+            let distance = Math.floor((endTime - now) / 1000);
+            
+            if (distance < 0) distance = 0;
+            
+            let m = Math.floor(distance / 60);
+            let s = distance % 60;
+            timerDisplay.textContent = `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+
+            if (distance <= 300) { // 5 minutes warning
+                timerDisplay.classList.add('text-[#FF4B4B]');
+                timerDisplay.classList.remove('text-white');
+                timerContainer.classList.add('timer-critical', 'bg-[#FF4B4B]/10');
+            }
+            if (distance <= 0 && !formSubmitted) {
+                formSubmitted = true;
+                timerDisplay.textContent = "00:00";
+                document.getElementById('test-form').submit();
+            }
+            return distance;
+        }
+
+        updateTimerDisplay();
+        const timerInterval = setInterval(() => {
+            if (updateTimerDisplay() <= 0) clearInterval(timerInterval);
+        }, 1000);
+
+        // Pre-count logic in case page is reloaded with cached values
+        document.querySelectorAll('textarea').forEach(ta => {
+            ta.dispatchEvent(new Event('input'));
+        });
+
+        document.getElementById('test-form').addEventListener('submit', (e) => {
+            if (formSubmitted) return; // Prevent double submit
+            formSubmitted = true;
+            const btnHtml = submitBtn.innerHTML;
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="ph ph-spinner spin"></i> Submitting...';
+        });
+
+        // Intercept internal link clicks
+        document.querySelectorAll('a').forEach(link => {
+            if (link.getAttribute('target') !== '_blank' && link.href && !link.href.includes('javascript:')) {
+                link.addEventListener('click', async (e) => {
+                    e.preventDefault();
+                    if (typeof DuoModal !== 'undefined' && await DuoModal.confirm("Ваши ответы не сохранятся, если вы покинете страницу. Вы уверены?")) {
+                        window.location.href = link.href;
+                    } else if (typeof DuoModal === 'undefined' && confirm("Your answers will be lost if you leave. Are you sure?")) {
+                        window.location.href = link.href;
+                    }
+                });
+            }
+        });
+    });
+</script>
+{% endblock %}

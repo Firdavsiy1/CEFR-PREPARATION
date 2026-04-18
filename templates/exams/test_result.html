@@ -13,7 +13,8 @@
         </a>
     </div>
 
-    <!-- Main Score Card -->
+    {% if not writing_submissions %}
+    <!-- Main Score Card (Listening/Reading only) -->
     <div class="card-duo p-8 sm:p-12 mb-10 text-center relative overflow-hidden !border-duo-green/30">
         <!-- Decorative elements -->
         <div class="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-duo-green via-duo-gold to-duo-blue"></div>
@@ -89,6 +90,156 @@
             {% endfor %}
         </div>
     </div>
+    {% endif %}
+
+    {% if writing_submissions %}
+    <!-- Writing-specific score card -->
+    <div class="card-duo p-8 sm:p-12 mb-10 text-center relative overflow-hidden !border-duo-purple/30">
+        <div class="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-duo-purple via-duo-blue to-duo-green"></div>
+        <div class="absolute -top-32 -right-32 w-64 h-64 bg-duo-purple/5 rounded-full blur-3xl pointer-events-none"></div>
+        <div class="relative">
+            <div class="w-20 h-20 mx-auto mb-6 rounded-2xl flex items-center justify-center bg-duo-purple shadow-[0_4px_0_#5B21B6] animate-bounce-in">
+                <i class="ph-fill ph-pencil-line text-white text-4xl"></i>
+            </div>
+            <h1 class="text-3xl font-black text-white mb-1" data-i18n="res_writing_results">Результаты Writing</h1>
+            <p class="text-duo-text-dim font-bold text-sm mb-8 uppercase tracking-wider">{{ attempt.test.name }} · {{ attempt.completed_at|date:"d F Y" }}</p>
+
+            <div class="flex flex-col md:flex-row items-center justify-center gap-10 md:gap-16">
+                {% for sub in writing_submissions %}
+                <div class="text-center">
+                    <span class="block text-xs text-duo-text-muted font-extrabold uppercase tracking-widest mb-2">
+                        {% if sub.task.task_type == 'informal' %}Task 1.1{% elif sub.task.task_type == 'formal' %}Task 1.2{% else %}Task 2{% endif %}
+                    </span>
+                    {% if sub.is_graded %}
+                    <span class="text-4xl font-black leading-none
+                        {% if sub.estimated_level == 'C1' or sub.estimated_level == 'B2' %}text-duo-green
+                        {% elif sub.estimated_level == 'B1' %}text-duo-gold
+                        {% else %}text-duo-red{% endif %}"
+                        style="text-shadow: 0 0 30px rgba(88,204,2,0.2);">
+                        {{ sub.estimated_level }}
+                    </span>
+                    {% else %}
+                    <span class="text-2xl font-black text-duo-text-muted"><i class="ph-bold ph-spinner spin"></i></span>
+                    {% endif %}
+                </div>
+                {% if not forloop.last %}
+                <div class="w-px h-16 bg-duo-border hidden md:block"></div>
+                {% endif %}
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Detailed Writing Assessment -->
+    <h2 class="text-xl font-black text-white mb-5 flex items-center gap-2 mt-8">
+        <i class="ph-fill ph-file-text text-duo-purple"></i>
+        <span data-i18n="res_writing_eval">Детальная оценка Writing (AI)</span>
+    </h2>
+    <div class="space-y-8" id="writing-results-container">
+    {% for sub in writing_submissions %}
+        <div class="card-duo overflow-hidden" data-graded="{{ sub.is_graded|yesno:'true,false' }}">
+            <div class="bg-duo-surface-2/50 px-7 py-4 border-b-2 border-duo-border flex justify-between items-center flex-wrap gap-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-xl flex items-center justify-center font-black text-white text-xs
+                        {% if sub.task.task_type == 'essay' %}bg-duo-gold text-[#3C3100]{% elif sub.task.task_type == 'formal' %}bg-duo-blue{% else %}bg-duo-green{% endif %}">
+                        {% if sub.task.task_type == 'informal' %}1.1{% elif sub.task.task_type == 'formal' %}1.2{% else %}2{% endif %}
+                    </div>
+                    <h3 class="text-lg font-black text-white">
+                        {% if sub.task.task_type == 'informal' %}Part 1 — Task 1.1 <span class="text-duo-text-muted font-bold text-sm">(Informal)</span>
+                        {% elif sub.task.task_type == 'formal' %}Part 1 — Task 1.2 <span class="text-duo-text-muted font-bold text-sm">(Formal)</span>
+                        {% else %}Part 2 — Essay{% endif %}
+                    </h3>
+                </div>
+                <div class="flex items-center gap-4">
+                    <span class="text-xs font-bold text-duo-text-muted">{{ sub.word_count }} <span data-i18n="res_words_target">words (target:</span> {{ sub.task.min_words }}–{{ sub.task.max_words }})</span>
+                    {% if sub.is_graded %}
+                        <span class="badge-duo text-sm font-black px-3 py-1
+                            {% if sub.estimated_level == 'C1' or sub.estimated_level == 'B2' %}bg-duo-green/15 text-duo-green border border-duo-green/30
+                            {% elif sub.estimated_level == 'B1' %}bg-duo-gold/15 text-duo-gold border border-duo-gold/30
+                            {% else %}bg-duo-red/15 text-duo-red border border-duo-red/30{% endif %}">
+                            {{ sub.estimated_level }}
+                        </span>
+                    {% else %}
+                        <span class="badge-duo bg-duo-gold/15 text-duo-gold border border-duo-gold/30"><i class="ph-bold ph-spinner spin mr-1"></i> <span data-i18n="res_grading">Grading...</span></span>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="p-7 space-y-6">
+                <!-- Original answer -->
+                <div>
+                    <p class="text-[10px] font-extrabold text-duo-text-muted uppercase tracking-widest mb-2" data-i18n="res_your_answer">Your Answer</p>
+                    <div class="text-white text-base leading-relaxed bg-[rgba(255,255,255,0.02)] border border-white/5 p-4 rounded-xl whitespace-pre-wrap">{{ sub.submitted_text }}</div>
+                </div>
+                
+                {% if sub.is_graded %}
+                    {% if sub.feedback_text %}
+                    <div class="mt-4 p-5 rounded-2xl bg-duo-blue/5 border-2 border-duo-blue/20">
+                        <div class="flex items-center gap-2 mb-2">
+                            <i class="ph-fill ph-lightbulb text-duo-gold"></i>
+                            <span class="text-[10px] font-extrabold text-duo-blue uppercase tracking-widest" data-i18n="res_examiner_feedback">Examiner Feedback</span>
+                        </div>
+                        <p class="text-sm text-duo-text-dim leading-relaxed font-semibold whitespace-pre-wrap">{{ sub.feedback_text }}</p>
+                    </div>
+                    {% endif %}
+                    
+                    {% if sub.corrections_json %}
+                    <div>
+                        <p class="text-[10px] font-extrabold text-duo-text-muted uppercase tracking-widest mb-3 mt-6" data-i18n="res_corrections">Corrections & Improvements</p>
+                        <div class="space-y-3">
+                            {% for corr in sub.corrections_json %}
+                            <div class="group bg-duo-surface-2 border-2 border-duo-border p-5 rounded-2xl hover:border-duo-green/40 transition-colors shadow-sm relative overflow-hidden">
+                                <div class="absolute inset-y-0 left-0 w-1.5 bg-gradient-to-b from-duo-red via-duo-gold to-duo-green"></div>
+                                
+                                <div class="flex flex-col sm:flex-row flex-wrap items-start sm:items-center gap-3 mb-4 pl-2">
+                                    <div class="bg-duo-red/10 border border-duo-red/20 px-3 py-1.5 rounded-xl">
+                                        <span class="text-duo-red font-bold line-through text-base">{{ corr.original }}</span>
+                                    </div>
+                                    <i class="ph-bold ph-arrow-right text-duo-text-muted text-xl hidden sm:block"></i>
+                                    <i class="ph-bold ph-arrow-down text-duo-text-muted text-xl sm:hidden ml-4"></i>
+                                    <div class="bg-duo-green/15 border border-duo-green/30 px-4 py-1.5 rounded-xl shadow-[0_3px_0_rgba(88,204,2,0.15)]">
+                                        <span class="text-duo-green font-black text-base">{{ corr.correction }}</span>
+                                    </div>
+                                </div>
+                                
+                                <div class="bg-duo-surface/80 p-4 rounded-xl border border-duo-border/50 ml-2">
+                                    <h4 class="text-[10px] font-black text-duo-text-muted uppercase tracking-widest mb-1 flex items-center gap-1.5">
+                                        <i class="ph-fill ph-lightbulb-filament text-duo-gold text-sm"></i> 
+                                        <span data-i18n="res_why">WHY</span>
+                                    </h4>
+                                    <p class="text-[15px] leading-relaxed text-white/90 font-semibold">{{ corr.explanation }}</p>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+                {% else %}
+                    <div class="text-center py-6">
+                        <i class="ph-bold ph-spinner spin text-3xl text-duo-gold mb-2"></i>
+                        <p class="text-duo-text-dim font-bold text-sm" data-i18n="res_ai_evaluating">AI is evaluating your writing...</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    {% endfor %}
+    </div>
+    
+    <!-- AJAX auto-polling for ungraded submissions -->
+    <script>
+        (function() {
+            const container = document.getElementById('writing-results-container');
+            const ungradedCards = container.querySelectorAll('[data-graded="false"]');
+            if (ungradedCards.length > 0) {
+                const pollInterval = setInterval(() => {
+                    // Simple reload — will show latest state
+                    window.location.reload();
+                }, 6000);
+            }
+        })();
+    </script>
+
+    {% else %}
 
     <!-- Detailed Question Review -->
     <h2 class="text-xl font-black text-white mb-5 flex items-center gap-2">
@@ -262,6 +413,7 @@
     </div>
 
     </div>
+    {% endif %}
 </div>
 {% endblock %}
 

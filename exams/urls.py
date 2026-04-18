@@ -14,6 +14,7 @@ urlpatterns = [
     path('test/<int:test_id>/tutorial/', views.test_tutorial_view, name='test_tutorial'),
     path('test/<int:test_id>/start/', views.start_test_view, name='start_test'),
     path('attempt/<int:attempt_id>/part/<int:part_number>/', views.take_test_part_view, name='take_test_part'),
+    path('take-writing-test/<int:attempt_id>/', views.take_writing_test_view, name='take_writing_test'),
     path('history/', views.exam_history_view, name='history'),
     path('history/<str:category>/', views.exam_history_view, name='history_category'),
     path('result/<int:attempt_id>/', views.test_result_view, name='test_result'),
@@ -23,6 +24,7 @@ urlpatterns = [
     # -----------------------------------------------------------------------
     path('mentor/', mentor_views.mentor_dashboard, name='mentor_dashboard'),
     path('mentor/upload/', mentor_views.mentor_upload, name='mentor_upload'),
+    path('mentor/upload-writing/', mentor_views.mentor_upload_writing, name='mentor_upload_writing'),
     path('mentor/test/create/', mentor_views.mentor_create_empty_test, name='mentor_create_test'),
     path('mentor/task/<int:task_id>/progress/', mentor_views.mentor_task_progress, name='mentor_task_progress'),
     path('mentor/test/<int:test_id>/builder/', mentor_views.mentor_test_builder, name='mentor_test_builder'),
@@ -33,6 +35,7 @@ urlpatterns = [
     # -----------------------------------------------------------------------
     path('api/mentor/test/<int:test_id>/data/', mentor_views.api_test_data, name='api_test_data'),
     path('api/mentor/test/<int:test_id>/toggle-active/', mentor_views.api_toggle_test_active, name='api_toggle_test_active'),
+    path('api/mentor/test/<int:test_id>/publish/', mentor_views.api_publish_test, name='api_publish_test'),
     path('api/mentor/test/<int:test_id>/update/', mentor_views.api_update_test, name='api_update_test'),
     path('api/mentor/test/<int:test_id>/part/create/', mentor_views.api_create_part, name='api_create_part'),
     path('api/mentor/task/<int:task_id>/status/', mentor_views.api_task_status, name='api_task_status'),
@@ -45,4 +48,9 @@ urlpatterns = [
     path('api/mentor/question/<int:question_id>/choice/create/', mentor_views.api_create_choice, name='api_create_choice'),
     path('api/mentor/choice/<int:choice_id>/update/', mentor_views.api_update_choice, name='api_update_choice'),
     path('api/mentor/choice/<int:choice_id>/delete/', mentor_views.api_delete_choice, name='api_delete_choice'),
+    
+    # Writing Task mentor APIs
+    path('api/mentor/test/generate-writing/', mentor_views.api_generate_writing_test, name='api_generate_writing_test'),
+    path('api/mentor/writing-task/<int:task_id>/update/', mentor_views.api_update_writing_task, name='api_update_writing_task'),
+    path('api/mentor/test/<int:test_id>/writing-tasks/create/', mentor_views.api_create_writing_tasks_for_test, name='api_create_writing_tasks_for_test'),
 ]

@@ -81,6 +81,8 @@ class Test(models.Model):
         choices=[
             ('listening', 'Listening'),
             ('reading', 'Reading'),
+            ('writing', 'Writing'),
+            ('speaking', 'Speaking'),
         ],
         default='listening',
     )
@@ -466,3 +468,85 @@ class IngestionTask(models.Model):
         self.progress = min(progress, 100)
         self.stage = stage
         self.save(update_fields=['progress', 'stage'])
+
+
+# ---------------------------------------------------------------------------
+# Writing Module Models
+# ---------------------------------------------------------------------------
+
+class WritingTask(models.Model):
+    """
+    A writing task (1.1, 1.2, or 2) within a writing test.
+    """
+    TASK_TYPES = [
+        ('informal', 'Informal Message (Task 1.1)'),
+        ('formal', 'Formal Letter (Task 1.2)'),
+        ('essay', 'Academic Essay (Task 2)'),
+    ]
+
+    test = models.ForeignKey(
+        Test,
+        on_delete=models.CASCADE,
+        related_name='writing_tasks'
+    )
+    task_type = models.CharField(max_length=20, choices=TASK_TYPES)
+    input_text = models.TextField(
+        blank=True,
+        help_text="The incoming letter, advert, or text the student reads."
+    )
+    prompt = models.TextField(
+        help_text="The instructions/prompt for writing."
+    )
+    min_words = models.PositiveIntegerField(default=0)
+    max_words = models.PositiveIntegerField(default=0)
+    order = models.PositiveIntegerField(
+        default=1,
+        help_text="Order in the test (1, 2, or 3)"
+    )
+
+    class Meta:
+        ordering = ['order']
+
+    def __str__(self):
+        return f"{self.test.name} - {self.get_task_type_display()}"
+
+
+class WritingSubmission(models.Model):
+    """
+    A student's submission for a single writing task.
+    """
+    attempt = models.ForeignKey(
+        UserAttempt,
+        on_delete=models.CASCADE,
+        related_name='writing_submissions'
+    )
+    task = models.ForeignKey(
+        WritingTask,
+        on_delete=models.CASCADE,
+        related_name='submissions'
+    )
+    submitted_text = models.TextField()
+    word_count = models.PositiveIntegerField(default=0)
+
+    # Automated AI Grading Fields
+    is_graded = models.BooleanField(default=False)
+    estimated_level = models.CharField(
+        max_length=10,
+        blank=True,
+        help_text="CEFR level estimate (A1-C1)"
+    )
+    feedback_text = models.TextField(
+        blank=True,
+        help_text="General feedback on structure and grammar"
+    )
+    corrections_json = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="List of correction dicts: {original, correction, explanation}"
+    )
+
+    class Meta:
+        unique_together = ['attempt', 'task']
+
+    def __str__(self):
+        return f"Submission: {self.attempt.user.username} for {self.task}"

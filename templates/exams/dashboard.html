@@ -131,11 +131,19 @@
         <button onclick="filterParts('all', this)" class="part-filter-btn active-filter px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 bg-duo-green text-white shadow-[0_2px_0_#46A302]">
             <span data-i18n="dash_filter_all">Все</span>
         </button>
-        {% for part_num in "123456"|make_list %}
-        <button onclick="filterParts('part {{ part_num }}', this)" class="part-filter-btn px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 bg-duo-surface-2 text-duo-text-dim border border-duo-border hover:bg-duo-surface-2/80">
-            <span data-i18n="dash_filter_part">Часть</span> {{ part_num }}
-        </button>
-        {% endfor %}
+        {% if category_id == 'writing' %}
+            {% for part_num in "12"|make_list %}
+            <button onclick="filterParts('part {{ part_num }}', this)" class="part-filter-btn px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 bg-duo-surface-2 text-duo-text-dim border border-duo-border hover:bg-duo-surface-2/80">
+                <span data-i18n="dash_filter_part">Часть</span> {{ part_num }}
+            </button>
+            {% endfor %}
+        {% else %}
+            {% for part_num in "123456"|make_list %}
+            <button onclick="filterParts('part {{ part_num }}', this)" class="part-filter-btn px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 bg-duo-surface-2 text-duo-text-dim border border-duo-border hover:bg-duo-surface-2/80">
+                <span data-i18n="dash_filter_part">Часть</span> {{ part_num }}
+            </button>
+            {% endfor %}
+        {% endif %}
     </div>
 
     <div id="grid-micro" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-fade-in hidden">

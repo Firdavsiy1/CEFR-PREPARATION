@@ -97,7 +97,7 @@
             </div>
             <div>
                 <span class="block text-[10px] font-extrabold text-duo-text-muted uppercase tracking-widest mb-0.5" data-i18n="hist_best_res">Лучший результат</span>
-                <span class="block text-xl font-black text-white">{{ best_overall.score_percentage }}% <span class="text-xs text-duo-text-dim font-bold ml-1"><span data-i18n="hist_for">за</span> {{ best_overall.time_formatted }}</span></span>
+                <span class="block text-xl font-black text-white">{{ best_overall.dynamic_score_pct|floatformat:1 }}% <span class="text-xs text-duo-text-dim font-bold ml-1"><span data-i18n="hist_for">за</span> {{ best_overall.time_formatted }}</span></span>
             </div>
         </div>
         {% endif %}
@@ -121,7 +121,7 @@
     <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-10">
         {% for bp in best_parts %}
         <div class="card-duo p-4 text-center !hover:transform-none">
-            <span class="block text-[10px] font-extrabold text-duo-text-muted uppercase tracking-widest mb-1"><span data-i18n="hist_part">Часть</span> {{ bp.part.part_number }}</span>
+            <span class="block text-[10px] font-extrabold text-duo-text-muted uppercase tracking-widest mb-1">{% if bp.attempt.test.test_type != 'writing' %}<span data-i18n="hist_part">Часть</span> {% endif %}{{ bp.part.part_number }}</span>
             <span class="block text-xl font-black {% if bp.pct >= 70 %}text-duo-green{% elif bp.pct >= 50 %}text-duo-gold{% else %}text-duo-red{% endif %}">{{ bp.pct|floatformat:0 }}%</span>
             <span class="block text-[9px] text-duo-text-muted uppercase tracking-widest mt-1 font-bold">{{ bp.attempt.test.name }}</span>
         </div>
@@ -148,8 +148,8 @@
 
             <!-- Score strip at top -->
             <div class="h-2 w-full
-                {% if attempt.score_percentage >= 70 %}bg-duo-green
-                {% elif attempt.score_percentage >= 50 %}bg-duo-gold
+                {% if attempt.dynamic_score_pct >= 70 %}bg-duo-green
+                {% elif attempt.dynamic_score_pct >= 50 %}bg-duo-gold
                 {% else %}bg-duo-red{% endif %}"></div>
 
             <div class="p-7 flex flex-col flex-1">
@@ -161,16 +161,32 @@
 
                     <!-- Score Badge -->
                     <span class="badge-duo
-                        {% if attempt.score_percentage >= 70 %}bg-duo-green/15 text-duo-green border border-duo-green/30
-                        {% elif attempt.score_percentage >= 50 %}bg-duo-gold/15 text-duo-gold border border-duo-gold/30
+                        {% if attempt.dynamic_score_pct >= 70 %}bg-duo-green/15 text-duo-green border border-duo-green/30
+                        {% elif attempt.dynamic_score_pct >= 50 %}bg-duo-gold/15 text-duo-gold border border-duo-gold/30
                         {% else %}bg-duo-red/15 text-duo-red border border-duo-red/30{% endif %}">
-                        {{ attempt.score_percentage }}%
+                        {{ attempt.dynamic_score_pct|floatformat:1 }}%
                     </span>
                 </div>
 
                 <h2 class="text-xl font-black text-white mb-1 group-hover:text-duo-green transition-colors duration-200">{{ attempt.test.name }}</h2>
                 <p class="text-sm text-duo-text-muted mb-5 font-bold uppercase tracking-wide">{{ attempt.test.get_test_type_display }}</p>
 
+                {% if attempt.test.test_type == 'writing' %}
+                <div class="grid grid-cols-3 gap-2 mb-6">
+                    <div class="p-3 rounded-xl bg-duo-surface-2/50 border border-duo-border text-center">
+                        <span class="block text-duo-text-muted mb-0.5 text-[9px] uppercase tracking-widest font-extrabold" data-i18n="res_words_target">Слов</span>
+                        <span class="font-black text-lg text-white">{{ attempt.writing_words|default:"..." }}</span>
+                    </div>
+                    <div class="p-3 rounded-xl bg-duo-surface-2/50 border border-duo-border text-center">
+                        <span class="block text-duo-text-muted mb-0.5 text-[9px] uppercase tracking-widest font-extrabold" data-i18n="res_eval">Уровень</span>
+                        <span class="font-black text-lg text-white {% if attempt.writing_level == 'C1' or attempt.writing_level == 'B2' %}text-duo-green{% elif attempt.writing_level == 'B1' %}text-duo-gold{% else %}text-duo-red{% endif %}">{{ attempt.writing_level|default:"..." }}</span>
+                    </div>
+                    <div class="p-3 rounded-xl bg-duo-surface-2/50 border border-duo-border text-center">
+                        <span class="block text-duo-text-muted mb-0.5 text-[9px] uppercase tracking-widest font-extrabold" data-i18n="hist_time">Время</span>
+                        <span class="font-black text-lg text-white">{{ attempt.time_formatted }}</span>
+                    </div>
+                </div>
+                {% else %}
                 <div class="grid grid-cols-3 gap-2 mb-6">
                     <div class="p-3 rounded-xl bg-duo-surface-2/50 border border-duo-border text-center">
                         <span class="block text-duo-text-muted mb-0.5 text-[9px] uppercase tracking-widest font-extrabold" data-i18n="hist_points">Баллы</span>
@@ -185,6 +201,7 @@
                         <span class="font-black text-lg text-white">{{ attempt.time_formatted }}</span>
                     </div>
                 </div>
+                {% endif %}
 
                 <div class="mt-auto pt-5 border-t-2 border-duo-border">
                     <a href="{% url 'exams:test_result' attempt.id %}"

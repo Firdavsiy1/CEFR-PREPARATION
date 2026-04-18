@@ -181,6 +181,28 @@
         </main>
 
     </div>
+    
+    <!-- Publish Action Panel -->
+    <div class="mt-8 mb-12 p-6 bg-duo-surface-2 border-2 border-duo-border rounded-2xl flex flex-col md:flex-row items-center justify-between gap-6 relative overflow-hidden" id="publish-panel">
+        <div class="absolute -right-20 -top-20 w-64 h-64 bg-duo-green/5 rounded-full blur-3xl pointer-events-none"></div>
+        <div class="relative z-10 w-full md:w-auto">
+            <h3 class="text-xl font-black text-white mb-1" id="publish-title" data-i18n="mnt_bld_publish_title">Ready to Publish?</h3>
+            <p class="text-duo-text-dim text-sm font-bold" data-i18n="mnt_bld_publish_desc">Review your changes. Making this test active will allow students to see and solve it.</p>
+        </div>
+        
+        <div class="flex flex-col sm:flex-row items-center gap-6 relative z-10 w-full md:w-auto">
+            <label class="flex items-center gap-3 cursor-pointer group">
+                <input type="checkbox" id="split-parts-toggle" class="appearance-none w-12 h-6 min-w-[3rem] border-2 border-duo-border rounded-full bg-duo-surface 
+                    checked:bg-duo-blue checked:border-duo-blue outline-none transition-colors relative 
+                    before:content-[''] before:absolute before:w-4 before:h-4 before:bg-white before:rounded-full before:top-[2px] before:left-[2px] 
+                    checked:before:translate-x-6 before:transition-transform shadow-inner">
+                <span class="text-sm font-bold text-white group-hover:text-duo-blue transition-colors" data-i18n="mnt_split_title">Выложить все части отдельно</span>
+            </label>
+            <button class="btn-duo-green px-8 py-4 text-lg flex items-center justify-center gap-2 w-full sm:w-auto hover:-translate-y-1 shadow-[0_4px_0_#46A302] hover:shadow-[0_6px_0_#46A302] active:translate-y-1 active:shadow-none transition-all" onclick="publishTest(this)">
+                <i class="ph-bold ph-check text-xl"></i> <span data-i18n="mnt_wrt_ready" class="uppercase tracking-wide font-black">READY TO PUBLISH</span>
+            </button>
+        </div>
+    </div>
 </div>
 
 <!-- Save Indicator -->
@@ -264,9 +286,16 @@ async function loadTestData() {
     try {
         const resp = await fetch(`/api/mentor/test/${TEST_ID}/data/`);
         testData = await resp.json();
-        renderSidebar();
-        if (testData.parts.length > 0) {
-            selectPart(testData.parts[0].id);
+        
+        if (testData.test_type === 'writing') {
+            document.getElementById('parts-sidebar').style.display = 'none';
+            document.querySelector('.builder-layout').style.display = 'block';
+            renderWritingEditor();
+        } else {
+            renderSidebar();
+            if (testData.parts.length > 0) {
+                selectPart(testData.parts[0].id);
+            }
         }
     } catch (e) {
         console.error('Failed to load test data:', e);
@@ -850,6 +879,329 @@ function escHtml(str) {
 function escAttr(str) {
     if (!str) return '';
     return str.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+// ---------------------------------------------------------------------------
+// Writing Editor
+// ---------------------------------------------------------------------------
+// Re-apply i18n translations to dynamically rendered content
+function _reapplyI18n() {
+    const lang = localStorage.getItem('user_language') || '{{ current_language|default:"ru" }}';
+    if (typeof applyGlobalTranslations === 'function') {
+        applyGlobalTranslations(lang);
+    }
+}
+
+function renderWritingEditor() {
+    const editor = document.getElementById('part-editor');
+    if (!testData.writing_tasks || testData.writing_tasks.length === 0) {
+        editor.innerHTML = `
+            <div class="card-duo p-8 text-center space-y-4 animate-fade-in" style="min-height: 400px; display: flex; flex-direction: column; justify-content: center;">
+                <div class="w-20 h-20 mx-auto mb-4 rounded-2xl flex items-center justify-center bg-duo-purple/15 border-2 border-duo-purple/30">
+                    <i class="ph-fill ph-pencil-line text-duo-purple text-3xl"></i>
+                </div>
+                <h3 class="text-2xl font-black text-white" data-i18n="mnt_wrt_module">Writing Module</h3>
+                <p class="text-duo-text-dim text-base font-semibold max-w-md mx-auto" data-i18n="mnt_wrt_desc">Generate a complete exam (Part 1 + Part 2) using AI or create empty tasks for manual editing.</p>
+                <div class="flex flex-col items-center gap-6 mt-8">
+                    <div class="flex items-center gap-2 bg-duo-surface-2 p-3 rounded-2xl border-2 border-duo-border shadow-lg max-w-lg w-full">
+                        <input id="ai-topic-input" type="text" class="editable-field !py-3 flex-1 text-lg font-bold" placeholder="Topic (e.g. Technology, Sports, Travel)" data-i18n-placeholder="mnt_wrt_topic_placeholder">
+                        <button id="ai-generate-btn" class="btn-duo-green !py-3 !px-8 flex items-center gap-2 text-lg whitespace-nowrap shadow-[0_4px_0_#46A302] active:translate-y-[4px] active:shadow-none" onclick="generateWritingTest()">
+                            <i class="ph-bold ph-magic-wand text-xl"></i> <span data-i18n="mnt_wrt_ai_generate">AI Generate</span>
+                        </button>
+                    </div>
+                    <div class="flex items-center gap-4 text-sm text-duo-text-dim font-bold w-full max-w-sm">
+                        <span class="flex-1 h-px bg-duo-border"></span> <span data-i18n="mnt_wrt_or">OR</span> <span class="flex-1 h-px bg-duo-border"></span>
+                    </div>
+                    <button class="btn-duo-outline !py-3 !px-8 flex items-center gap-2 text-lg text-duo-text-muted hover:text-white" onclick="initManualWritingTasks()">
+                        <i class="ph-fill ph-pencil-simple text-xl"></i> <span data-i18n="mnt_wrt_create_manual">Create manually</span>
+                    </button>
+                </div>
+            </div>
+        `;
+        _reapplyI18n();
+        return;
+    }
+
+    // Find tasks by type
+    const informal = testData.writing_tasks.find(t => t.task_type === 'informal');
+    const formal = testData.writing_tasks.find(t => t.task_type === 'formal');
+    const essay = testData.writing_tasks.find(t => t.task_type === 'essay');
+
+    let html = `
+        <!-- Regenerate bar -->
+        <div class="card-duo p-5 mb-8 bg-duo-green/5 border-2 border-duo-green/20 relative overflow-hidden">
+            <div class="absolute -right-10 -top-10 w-40 h-40 bg-duo-green/10 rounded-full blur-2xl"></div>
+            <div class="flex flex-col sm:flex-row items-center gap-3 relative z-10">
+                <i class="ph-fill ph-magic-wand text-duo-green text-xl"></i>
+                <input id="ai-topic-input" type="text" class="editable-field !w-full sm:!w-72 !py-2.5 font-bold" placeholder="Topic (e.g. Environment)" data-i18n-placeholder="mnt_wrt_topic_placeholder">
+                <button id="ai-generate-btn" class="btn-duo-green !py-2.5 !px-6 flex items-center gap-2 whitespace-nowrap shadow-sm" onclick="generateWritingTest()">
+                    <i class="ph-bold ph-magic-wand"></i> <span data-i18n="mnt_wrt_regenerate">Regenerate</span>
+                </button>
+                <p class="text-[11px] text-duo-text-dim font-bold uppercase tracking-widest sm:ml-2" data-i18n="mnt_wrt_overwrite_warn">Current tasks will be overwritten</p>
+            </div>
+        </div>
+    `;
+
+    // ═══════════════════════════════════════
+    //               PART 1
+    // ═══════════════════════════════════════
+    html += `
+        <div class="flex items-center gap-4 mb-6 mt-2">
+            <div class="h-px flex-1 bg-gradient-to-r from-transparent to-duo-border"></div>
+            <span class="bg-duo-surface-2 px-5 py-2 rounded-xl text-sm font-black text-white uppercase tracking-widest border-2 border-duo-border">Part 1</span>
+            <div class="h-px flex-1 bg-gradient-to-l from-transparent to-duo-border"></div>
+        </div>
+    `;
+
+    // Shared Input Text (for both Task 1.1 and 1.2)
+    if (informal) {
+        html += `
+        <div class="card-duo overflow-hidden !p-0 mb-6 border-t-4 border-t-duo-blue/60 shadow-lg">
+            <div class="px-7 py-4 border-b-2 border-duo-border bg-duo-surface-2/50 flex items-center gap-3">
+                <div class="w-8 h-8 rounded-xl bg-duo-blue/20 flex items-center justify-center text-duo-blue text-sm font-black"><i class="ph-fill ph-envelope-simple"></i></div>
+                <h3 class="text-base font-black text-white uppercase tracking-wide" data-i18n="mnt_wrt_shared_input">Shared Input — Incoming Email / Notice</h3>
+                <span class="text-[10px] font-bold text-duo-text-muted bg-duo-surface px-2 py-1 rounded-lg ml-auto">Task 1.1 + 1.2</span>
+            </div>
+            <div class="p-7">
+                <p class="text-[11px] text-duo-text-dim font-bold uppercase tracking-widest mb-2" data-i18n="mnt_wrt_shared_label">Situation + incoming email (displayed to student)</p>
+                <textarea class="editable-field editable-textarea !bg-[rgba(255,255,255,0.02)] !border-duo-blue/30 focus:!border-duo-blue"
+                          style="min-height: 160px;"
+                          onchange="updateSharedInputText(${informal.id}, ${formal ? formal.id : 0}, this.value)"
+                          placeholder="You are a member of the sports club. You receive this email from the secretary.&#10;&#10;Dear member,&#10;Many of our members have expressed an interest in...">${escHtml(informal.input_text)}</textarea>
+            </div>
+        </div>
+        `;
+    }
+
+    // Task 1.1 (Informal)
+    if (informal) {
+        html += `
+        <div class="card-duo overflow-hidden !p-0 mb-6 shadow-lg">
+            <div class="px-7 py-4 border-b-2 border-duo-border bg-duo-surface-2/50 flex items-center justify-between gap-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-xl bg-duo-green flex items-center justify-center text-white text-xs font-black">1.1</div>
+                    <h3 class="text-base font-black text-white" data-i18n="mnt_wrt_task_11">Task 1.1 — Informal Message</h3>
+                </div>
+                <span class="badge-duo bg-white/5 border-white/10 text-duo-text-muted font-bold text-xs">${informal.min_words} - ${informal.max_words} words</span>
+            </div>
+            <div class="p-7">
+                <label class="block text-[11px] font-extrabold text-duo-gold uppercase tracking-widest mb-2" data-i18n="mnt_wrt_prompt_label"><i class="ph-fill ph-note-pencil text-sm mr-1"></i> Prompt / Instructions</label>
+                <textarea class="editable-field editable-textarea text-base font-bold leading-relaxed text-white/90 focus:!border-duo-gold"
+                          style="min-height: 80px; background: rgba(255,255,255,0.01);"
+                          onchange="updateWritingTask(${informal.id}, 'prompt', this.value)"
+                          placeholder="Write an email to your friend. Write about whether you would like to attend...">${escHtml(informal.prompt)}</textarea>
+            </div>
+        </div>
+        `;
+    }
+
+    // Task 1.2 (Formal)
+    if (formal) {
+        html += `
+        <div class="card-duo overflow-hidden !p-0 mb-6 shadow-lg">
+            <div class="px-7 py-4 border-b-2 border-duo-border bg-duo-surface-2/50 flex items-center justify-between gap-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-xl bg-duo-blue flex items-center justify-center text-white text-xs font-black">1.2</div>
+                    <h3 class="text-base font-black text-white" data-i18n="mnt_wrt_task_12">Task 1.2 — Formal Letter</h3>
+                </div>
+                <span class="badge-duo bg-white/5 border-white/10 text-duo-text-muted font-bold text-xs">${formal.min_words} - ${formal.max_words} words</span>
+            </div>
+            <div class="p-7">
+                <label class="block text-[11px] font-extrabold text-duo-gold uppercase tracking-widest mb-2" data-i18n="mnt_wrt_prompt_label"><i class="ph-fill ph-note-pencil text-sm mr-1"></i> Prompt / Instructions</label>
+                <textarea class="editable-field editable-textarea text-base font-bold leading-relaxed text-white/90 focus:!border-duo-gold"
+                          style="min-height: 80px; background: rgba(255,255,255,0.01);"
+                          onchange="updateWritingTask(${formal.id}, 'prompt', this.value)"
+                          placeholder="Write an email to the secretary. Write about whether you would like to attend...">${escHtml(formal.prompt)}</textarea>
+            </div>
+        </div>
+        `;
+    }
+
+    // ═══════════════════════════════════════
+    //               PART 2
+    // ═══════════════════════════════════════
+    if (essay) {
+        html += `
+        <div class="flex items-center gap-4 mb-6 mt-10">
+            <div class="h-px flex-1 bg-gradient-to-r from-transparent to-duo-border"></div>
+            <span class="bg-duo-surface-2 px-5 py-2 rounded-xl text-sm font-black text-white uppercase tracking-widest border-2 border-duo-border">Part 2</span>
+            <div class="h-px flex-1 bg-gradient-to-l from-transparent to-duo-border"></div>
+        </div>
+
+        <div class="card-duo overflow-hidden !p-0 mb-6 border-t-4 border-t-duo-gold/60 shadow-lg">
+            <div class="px-7 py-4 border-b-2 border-duo-border bg-duo-surface-2/50 flex items-center justify-between gap-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-xl bg-duo-gold flex items-center justify-center text-[#3C3100] text-xs font-black">2</div>
+                    <h3 class="text-base font-black text-white" data-i18n="mnt_wrt_task_2">Task 2 — Academic Essay</h3>
+                </div>
+                <span class="badge-duo bg-white/5 border-white/10 text-duo-text-muted font-bold text-xs">${essay.min_words} - ${essay.max_words} words</span>
+            </div>
+            <div class="p-7 space-y-7">
+                <div>
+                    <label class="block text-[11px] font-extrabold text-duo-blue uppercase tracking-widest mb-2" data-i18n="mnt_wrt_theme_label"><i class="ph-fill ph-article text-sm mr-1"></i> Theme Intro + Quoted Statement</label>
+                    <textarea class="editable-field editable-textarea !bg-[rgba(255,255,255,0.02)] !border-duo-blue/30 focus:!border-duo-blue"
+                              style="min-height: 120px;"
+                              onchange="updateWritingTask(${essay.id}, 'input_text', this.value)"
+                              placeholder="We are running a writing competition on our website. The theme this month is education.&#10;&#10;Write your essay in response to this statement:&#10;&#10;&quot;Education is the most powerful weapon which you can use to change the world.&quot;">${escHtml(essay.input_text)}</textarea>
+                </div>
+                <div>
+                    <label class="block text-[11px] font-extrabold text-duo-gold uppercase tracking-widest mb-2" data-i18n="mnt_wrt_wordcount_label"><i class="ph-fill ph-note-pencil text-sm mr-1"></i> Word Count Instruction</label>
+                    <textarea class="editable-field editable-textarea text-base font-bold leading-relaxed text-white/90 focus:!border-duo-gold"
+                              style="min-height: 50px; background: rgba(255,255,255,0.01);"
+                              onchange="updateWritingTask(${essay.id}, 'prompt', this.value)"
+                              placeholder="Write 180-200 words.">${escHtml(essay.prompt)}</textarea>
+                </div>
+            </div>
+        </div>
+        `;
+    }
+
+    editor.innerHTML = html;
+    // Removed old dummy publish button implementation
+    _reapplyI18n();
+}
+
+window.updateWritingTask = async function(taskId, field, value) {
+    try {
+        const resp = await fetch(`/api/mentor/writing-task/${taskId}/update/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken'),
+            },
+            body: JSON.stringify({ [field]: value })
+        });
+        if (!resp.ok) throw new Error('Failed to update');
+        showNotification('Сохранено', 'success');
+    } catch (e) {
+        console.error(e);
+        showNotification('Ошибка сохранения', 'error');
+    }
+};
+
+// Update the shared input_text for both informal and formal tasks at once
+window.updateSharedInputText = async function(informalId, formalId, value) {
+    try {
+        const headers = {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken'),
+        };
+        const body = JSON.stringify({ input_text: value });
+        
+        const p1 = fetch(`/api/mentor/writing-task/${informalId}/update/`, {
+            method: 'POST', headers, body
+        });
+        
+        const promises = [p1];
+        if (formalId) {
+            const p2 = fetch(`/api/mentor/writing-task/${formalId}/update/`, {
+                method: 'POST', headers, body
+            });
+            promises.push(p2);
+        }
+        
+        const results = await Promise.all(promises);
+        if (results.every(r => r.ok)) {
+            showNotification('Input text saved for both tasks', 'success');
+        } else {
+            throw new Error('One or more updates failed');
+        }
+    } catch (e) {
+        console.error(e);
+        showNotification('Ошибка сохранения', 'error');
+    }
+};
+
+window.generateWritingTest = async function() {
+    const topic = document.getElementById('ai-topic-input').value.trim();
+    if (!topic) {
+        alert('Пожалуйста, введите тему для генерации.');
+        return;
+    }
+    const btn = document.getElementById('ai-generate-btn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="ph-bold ph-spinner spin"></i> Генерация...';
+
+    try {
+        const resp = await fetch('/api/mentor/test/generate-writing/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken'),
+            },
+            body: JSON.stringify({
+                test_name: testData.name,
+                topic: topic
+            })
+        });
+        const data = await resp.json();
+        if (data.success) {
+            window.location.href = `/mentor/test/${data.test_id}/builder/`;
+        } else {
+            alert('Ошибка сервера: ' + data.error);
+            btn.disabled = false;
+            btn.innerHTML = '<i class="ph-bold ph-magic-wand"></i> Сгенерировать';
+        }
+    } catch (e) {
+        console.error(e);
+        alert('Не удалось запустить генерацию.');
+        btn.disabled = false;
+        btn.innerHTML = '<i class="ph-bold ph-magic-wand"></i> Сгенерировать';
+    }
+};
+
+window.initManualWritingTasks = async function() {
+    const btn = document.querySelector('button[onclick="initManualWritingTasks()"]');
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="ph-bold ph-spinner spin"></i> Создаем...';
+    }
+    try {
+        const resp = await fetch(`/api/mentor/test/${TEST_ID}/writing-tasks/create/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+            }
+        });
+        if (resp.ok) {
+            loadTestData();
+        } else {
+            const data = await resp.json();
+            alert(data.error || 'Failed to initialize writing tasks');
+            if(btn) btn.disabled = false;
+        }
+    } catch (e) {
+        console.error(e);
+        alert('Request failed');
+        if(btn) btn.disabled = false;
+    }
+};
+
+// =========================================================================
+// Publish Logic
+// =========================================================================
+async function publishTest(btn) {
+    const originalHtml = btn.innerHTML;
+    btn.innerHTML = '<i class="ph ph-spinner spin"></i> <span data-i18n="mnt_bld_saving">PUBLISHING...</span>';
+    btn.disabled = true;
+    
+    const splitParts = document.getElementById('split-parts-toggle').checked;
+    
+    try {
+        const data = await apiCall(`/api/mentor/test/${TEST_ID}/publish/`, { split_parts: splitParts });
+        if (data.success) {
+            window.location.href = '/mentor/';
+        } else {
+            alert('Error publishing test: ' + (data.error || 'Unknown error'));
+            btn.innerHTML = originalHtml;
+            btn.disabled = false;
+        }
+    } catch (e) {
+        console.error(e);
+        alert('Server error while publishing');
+        btn.innerHTML = originalHtml;
+        btn.disabled = false;
+    }
 }
 </script>
 {% endblock %}

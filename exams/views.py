@@ -13,8 +13,10 @@ from django.db.models import Count
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 import json
+import threading
+from django.db import connection
 
-from .models import Test, Question, UserAttempt, UserAnswer
+from .models import Test, Question, UserAttempt, UserAnswer, WritingTask, WritingSubmission
 
 
 # ---------------------------------------------------------------------------
@@ -36,7 +38,7 @@ def dashboard_view(request, category=None):
     categories = [
         {'id': 'listening', 'name': 'Listening', 'active': True, 'image': 'images/listening_card.png'},
         {'id': 'reading', 'name': 'Reading', 'active': False, 'image': 'images/reading_card.png'},
-        {'id': 'writing', 'name': 'Writing', 'active': False, 'image': 'images/writing_card.png'},
+        {'id': 'writing', 'name': 'Writing', 'active': True, 'image': 'images/writing_card.png'},
         {'id': 'speaking', 'name': 'Speaking', 'active': False, 'image': 'images/speaking_card.png'},
     ]
 
@@ -50,12 +52,14 @@ def dashboard_view(request, category=None):
             Test.objects
             .filter(is_active=True, test_type=category)
             .annotate(num_parts=Count('parts'))
-            .prefetch_related('parts__questions')
+            .prefetch_related('parts__questions', 'writing_tasks')
             .order_by('-pk')
         )
         
-        full_tests = [t for t in tests if t.num_parts >= 6]
-        micro_tests = [t for t in tests if t.num_parts > 0 and t.num_parts < 6]
+        # Writing tests don't have 'parts' relationship, but when split they contain ' - Part ' 
+        # just like other test types split parts.
+        full_tests = [t for t in tests if ' - Part ' not in t.name]
+        micro_tests = [t for t in tests if ' - Part ' in t.name]
         
         category_name = next((c['name'] for c in categories if c['id'] == category), category.capitalize())
         
@@ -77,9 +81,11 @@ def dashboard_view(request, category=None):
 def test_tutorial_view(request, test_id):
     """
     Displays a tutorial and sound check page before starting the actual test.
+    Writing tests get a writing-specific tutorial (no sound check needed).
     """
     test = get_object_or_404(Test, pk=test_id, is_active=True)
-    return render(request, 'exams/tutorial.html', {'test': test})
+    template = 'exams/tutorial_writing.html' if test.test_type == 'writing' else 'exams/tutorial.html'
+    return render(request, template, {'test': test})
 
 @login_required
 def start_test_view(request, test_id):
@@ -93,6 +99,9 @@ def start_test_view(request, test_id):
         user=request.user,
         test=test
     )
+    
+    if test.test_type == 'writing':
+        return redirect('exams:take_writing_test', attempt_id=attempt.id)
     
     first_part = test.parts.order_by('part_number').first()
     if first_part:
@@ -180,6 +189,135 @@ def take_test_part_view(request, attempt_id, part_number):
     return render(request, 'exams/take_test.html', context)
 
 
+@login_required
+def take_writing_test_view(request, attempt_id):
+    """
+    Render all 3 writing tasks on a single page, allow submission.
+    """
+    attempt = get_object_or_404(
+        UserAttempt.objects.select_related('test'),
+        pk=attempt_id,
+        user=request.user,
+        completed_at__isnull=True
+    )
+    
+    # Calculate time remaining (1 hour = 3600s)
+    elapsed = (timezone.now() - attempt.started_at).total_seconds()
+    time_remaining_seconds = max(0, 3600 - int(elapsed))
+    
+    if time_remaining_seconds <= 0 and request.method != 'POST':
+        return _finalize_test(request, attempt)
+    
+    test = attempt.test
+    tasks = list(test.writing_tasks.all().order_by('order'))
+    
+    if request.method == 'POST':
+        with transaction.atomic():
+            for task in tasks:
+                field_name = f'task_{task.id}'
+                given_text = request.POST.get(field_name, '').strip()
+                words = len(given_text.split()) if given_text else 0
+                
+                WritingSubmission.objects.update_or_create(
+                    attempt=attempt,
+                    task=task,
+                    defaults={'submitted_text': given_text, 'word_count': words}
+                )
+            attempt.completed_at = timezone.now()
+            attempt.save()
+            
+        # Kick off background grading thread
+        thread = threading.Thread(target=_grade_writing_submission_background, args=(attempt.id,))
+        thread.daemon = True
+        thread.start()
+        
+        messages.success(request, "Writing test submitted! AI evaluation is in progress.")
+        return redirect('exams:test_result', attempt_id=attempt.id)
+
+    context = {
+        'attempt': attempt,
+        'test': test,
+        'tasks': tasks,
+        'time_remaining': time_remaining_seconds,
+        'endtime_iso': (attempt.started_at + timezone.timedelta(hours=1)).isoformat(),
+    }
+    return render(request, 'exams/take_writing_test.html', context)
+
+
+def _grade_writing_submission_background(attempt_id):
+    """Background thread to grade Writing submissions via Gemini."""
+    connection.close()  # Force new connection in thread
+    import os
+    try:
+        from google import genai
+        from google.genai import types as T
+        
+        attempt = UserAttempt.objects.get(pk=attempt_id)
+        submissions = attempt.writing_submissions.select_related('task').all()
+        
+        project_id = os.getenv("GOOGLE_CLOUD_PROJECT")
+        if not project_id:
+            adc_path = os.path.expanduser("~/.config/gcloud/application_default_credentials.json")
+            if os.path.exists(adc_path):
+                import json
+                with open(adc_path) as f:
+                    project_id = json.load(f).get("quota_project_id")
+                    
+        client = genai.Client(vertexai=True, project=project_id, location="global")
+        
+        for sub in submissions:
+            task = sub.task
+            
+            prompt = f"""Act as an expert CEFR Examiner for B2 Level. 
+Evaluate the following student submission for a writing task.
+Task Type: {task.get_task_type_display()}
+Target Length: {task.min_words} to {task.max_words} words.
+Task Instruction: {task.prompt}
+Incoming text to reply to (if any): {task.input_text}
+
+Student Submission ({sub.word_count} words):
+{sub.submitted_text}
+
+Provide detailed feedback, highlighting grammatical, lexical, and structural errors, and suggesting better phrasing.
+Assign an estimated CEFR Level (A1, A2, B1, B2, C1).
+Return strictly in this JSON format:
+{{
+  "estimated_level": "B2",
+  "feedback": "Your essay is well-structured, but...",
+  "corrections": [
+    {{"original": "incorrect phrase", "correction": "correct phrase", "explanation": "Why..."}}
+  ]
+}}"""
+            
+            generate_cfg = T.GenerateContentConfig(response_mime_type="application/json")
+            resp = client.models.generate_content(
+                model="gemini-3-flash-preview",
+                contents=[prompt],
+                config=generate_cfg,
+            )
+            
+            raw_text = resp.text.strip()
+            if raw_text.startswith("```json"):
+                raw_text = raw_text[7:]
+            if raw_text.startswith("```"):
+                raw_text = raw_text[3:]
+            if raw_text.endswith("```"):
+                raw_text = raw_text[:-3]
+                
+            result = json.loads(raw_text.strip())
+            
+            sub.estimated_level = result.get('estimated_level', 'N/A')
+            sub.feedback_text = result.get('feedback', '')
+            sub.corrections_json = result.get('corrections', [])
+            sub.is_graded = True
+            sub.save()
+            
+    except Exception as e:
+        print(f"Error in background grading: {e}")
+    finally:
+        connection.close()
+
+
 def _finalize_test(request, attempt):
     """
     Calculate final scores and mark test as completed.
@@ -248,11 +386,14 @@ def test_result_view(request, attempt_id):
     
     # Calculate stats per part natively
     part_results = attempt.get_part_results()
+    
+    writing_submissions = attempt.writing_submissions.select_related('task').order_by('task__order') if attempt.test.test_type == 'writing' else None
 
     context = {
         'attempt': attempt,
         'answers': answers,
         'part_results': part_results,
+        'writing_submissions': writing_submissions,
     }
     return render(request, 'exams/test_result.html', context)
 
@@ -266,7 +407,7 @@ def exam_history_view(request, category=None):
         categories = [
             {'id': 'listening', 'name': 'Listening', 'image': 'images/listening_card.png', 'active': True},
             {'id': 'reading', 'name': 'Reading', 'image': 'images/reading_card.png', 'active': False},
-            {'id': 'writing', 'name': 'Writing', 'image': 'images/writing_card.png', 'active': False},
+            {'id': 'writing', 'name': 'Writing', 'image': 'images/writing_card.png', 'active': True},
             {'id': 'speaking', 'name': 'Speaking', 'image': 'images/speaking_card.png', 'active': False},
         ]
         return render(request, 'exams/history.html', {
@@ -274,54 +415,93 @@ def exam_history_view(request, category=None):
             'categories': categories
         })
 
-    if category != 'listening':
+    if category not in ['listening', 'writing']:
         # Simple "Coming Soon" or redirect for non-listening categories
         messages.info(request, f"{category.title()} history is coming soon!")
         return redirect('exams:history')
 
-    # Existing logic for listening history
+    # Existing logic for listening/writing history
     attempts = list(UserAttempt.objects.filter(
         user=request.user,
-        completed_at__isnull=False
+        completed_at__isnull=False,
+        test__test_type=category
     ).select_related('test').order_by('-started_at'))
     
     best_overall = None
     best_parts = {}
+    
+    cefr_scores = {'A1': 20, 'A2': 40, 'B1': 60, 'B2': 80, 'C1': 100, 'N/A': 0, '': 0}
+    cefr_levels = {'A1': 1, 'A2': 2, 'B1': 3, 'B2': 4, 'C1': 5, 'N/A': 0, '': 0}
 
     for attempt in attempts:
         attempt.time_taken = attempt.completed_at - attempt.started_at
+        
+        # Calculate dynamic properties
+        if attempt.test.test_type == 'writing':
+            submissions = list(attempt.writing_submissions.all())
+            total_words = sum(sub.word_count for sub in submissions)
+            attempt.writing_words = total_words
+            
+            levels = [sub.estimated_level for sub in submissions if sub.estimated_level and sub.estimated_level != 'N/A']
+            attempt.writing_level = max(levels, key=lambda x: cefr_levels.get(x, 0)) if levels else '...'
+            
+            # dynamically calculate score percentage for writing
+            if attempt.max_possible_score == 0 and submissions:
+                total_s = sum(cefr_scores.get(sub.estimated_level, 0) for sub in submissions)
+                attempt.dynamic_score_pct = (total_s / (len(submissions) * 100)) * 100 if len(submissions) > 0 else 0
+            else:
+                attempt.dynamic_score_pct = attempt.score_percentage
+        else:
+            attempt.dynamic_score_pct = attempt.score_percentage
         
         # Check best overall
         if best_overall is None:
             best_overall = attempt
         else:
-            if attempt.score_percentage > best_overall.score_percentage:
+            if attempt.dynamic_score_pct > best_overall.dynamic_score_pct:
                 best_overall = attempt
-            elif attempt.score_percentage == best_overall.score_percentage:
+            elif attempt.dynamic_score_pct == best_overall.dynamic_score_pct:
                 if attempt.time_taken < best_overall.time_taken:
                     best_overall = attempt
                     
-        # Check best per part
-        part_results = attempt.get_part_results()
-        for pr in part_results:
-            part_num = pr['part_number']
-            part_pct = (pr['score'] / pr['max_score']) * 100 if pr['max_score'] > 0 else 0
-            
-            if part_num not in best_parts:
-                best_parts[part_num] = {'attempt': attempt, 'part': pr, 'pct': part_pct}
-            else:
-                if part_pct > best_parts[part_num]['pct']:
+        # Check best per part/task
+        if attempt.test.test_type == 'writing':
+            for sub in submissions:
+                task_label = sub.task.get_task_type_display().split('(')[0].strip()
+                score = cefr_scores.get(sub.estimated_level, 0)
+                if task_label not in best_parts:
+                    best_parts[task_label] = {'attempt': attempt, 'part': {'part_number': task_label}, 'pct': score}
+                elif score > best_parts[task_label]['pct']:
+                    best_parts[task_label] = {'attempt': attempt, 'part': {'part_number': task_label}, 'pct': score}
+                elif score == best_parts[task_label]['pct']:
+                    if attempt.time_taken < best_parts[task_label]['attempt'].time_taken:
+                        best_parts[task_label] = {'attempt': attempt, 'part': {'part_number': task_label}, 'pct': score}
+        else:
+            part_results = attempt.get_part_results()
+            for pr in part_results:
+                part_num = pr['part_number']
+                part_pct = (pr['score'] / pr['max_score']) * 100 if pr['max_score'] > 0 else 0
+                
+                if part_num not in best_parts:
                     best_parts[part_num] = {'attempt': attempt, 'part': pr, 'pct': part_pct}
-                elif part_pct == best_parts[part_num]['pct']:
-                    if attempt.time_taken < best_parts[part_num]['attempt'].time_taken:
+                else:
+                    if part_pct > best_parts[part_num]['pct']:
                         best_parts[part_num] = {'attempt': attempt, 'part': pr, 'pct': part_pct}
+                    elif part_pct == best_parts[part_num]['pct']:
+                        if attempt.time_taken < best_parts[part_num]['attempt'].time_taken:
+                            best_parts[part_num] = {'attempt': attempt, 'part': pr, 'pct': part_pct}
                         
         total_seconds = int(attempt.time_taken.total_seconds())
         m = total_seconds // 60
         s = total_seconds % 60
         attempt.time_formatted = f"{m}m {s}s"
 
-    best_parts_list = [best_parts[k] for k in sorted(best_parts.keys())]
+    # For writing, best_parts keys are strings, for others they are ints. 
+    # Sorting mixed types in Python 3 is an error if not careful.
+    if category == 'writing':
+        best_parts_list = list(best_parts.values())
+    else:
+        best_parts_list = [best_parts[k] for k in sorted(best_parts.keys())]
 
     # Prepare chart data
     chronological_attempts = reversed(attempts)
@@ -330,7 +510,7 @@ def exam_history_view(request, category=None):
     for att in chronological_attempts:
         label = f"{att.test.name} ({att.started_at.strftime('%b %d')})"
         chart_labels.append(label)
-        chart_data.append(att.score_percentage)
+        chart_data.append(att.dynamic_score_pct)
 
     context = {
         'show_categories': False,
