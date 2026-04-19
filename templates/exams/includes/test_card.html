@@ -1,83 +1,163 @@
+{% load static %}
 <div class="card-duo p-0 flex flex-col animate-slide-up overflow-hidden group test-card-item"
     style="animation-delay: {{ forloop.counter0 }}00ms" id="test-card-{{ test.id }}"
     data-test-name="{{ test.name|lower }}">
 
-    <!-- Card header colored strip -->
-    <div class="h-2 w-full {% cycle 'bg-duo-green' 'bg-duo-blue' 'bg-duo-gold' 'bg-duo-purple' %}"></div>
-
-    <div class="p-7 flex flex-col flex-1">
-        <!-- Test type badge & Date -->
-        <div class="flex items-center justify-between mb-5">
-            <span
-                class="badge-duo {% if test.test_type == 'listening' %}bg-duo-blue/15 text-duo-blue border border-duo-blue/25{% elif test.test_type == 'reading' %}bg-duo-green/15 text-duo-green border border-duo-green/25{% elif test.test_type == 'writing' %}bg-duo-purple/15 text-duo-purple border border-duo-purple/25{% else %}bg-duo-gold/15 text-duo-gold border border-duo-gold/25{% endif %}">
+    <!-- Card Illustration Container -->
+    <div class="relative h-40 overflow-hidden">
+        <!-- Colored overlay for vibrancy -->
+        <div class="absolute inset-0 z-10 opacity-20 transition-opacity duration-300 group-hover:opacity-30
+            {% if test.test_type == 'listening' %}bg-duo-blue{% elif test.test_type == 'reading' %}bg-duo-green{% elif test.test_type == 'writing' %}bg-duo-purple{% else %}bg-duo-gold{% endif %}">
+        </div>
+        
+        <!-- The Illustration -->
+        {% if test.test_type == 'writing' %}
+            {% if test.writing_tasks.count > 1 %}
+                <img src="{% static 'images/full_writing.png' %}" alt="Writing" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110">
+            {% else %}
+                {% with task=test.writing_tasks.first %}
+                    {% if task.task_type == 'informal' %}
+                        <img src="{% static 'images/writing_informal.png' %}" alt="Informal Writing" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110">
+                    {% elif task.task_type == 'formal' %}
+                        <img src="{% static 'images/writing_formal.png' %}" alt="Formal Writing" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110">
+                    {% else %}
+                        <img src="{% static 'images/writing_essay.png' %}" alt="Essay Writing" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110">
+                    {% endif %}
+                {% endwith %}
+            {% endif %}
+        {% else %}
+            {% if test.parts.count > 1 %}
                 {% if test.test_type == 'listening' %}
-                <i class="ph-fill ph-headphones"></i>
+                    <img src="{% static 'images/full_listening.png' %}" alt="Listening" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110">
                 {% elif test.test_type == 'reading' %}
-                <i class="ph-fill ph-book-open-text"></i>
-                {% elif test.test_type == 'writing' %}
-                <i class="ph-fill ph-pencil-line"></i>
+                    <img src="{% static 'images/full_reading.png' %}" alt="Reading" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110">
+                {% elif test.test_type == 'speaking' %}
+                    <img src="{% static 'images/full_speaking.png' %}" alt="Speaking" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110">
                 {% else %}
-                <i class="ph-fill ph-microphone-stage"></i>
+                    <img src="{% static 'images/full_listening.png' %}" alt="Test" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110">
+                {% endif %}
+            {% else %}
+                {% with part=test.parts.first %}
+                    {% if part.part_number == 1 %}
+                        <img src="{% static 'images/part_1.png' %}" alt="Part 1" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110">
+                    {% elif part.part_number == 2 %}
+                        <img src="{% static 'images/part_2.png' %}" alt="Part 2" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110">
+                    {% elif part.part_number == 3 %}
+                        <img src="{% static 'images/part_3.png' %}" alt="Part 3" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110">
+                    {% elif part.part_number == 4 %}
+                        <img src="{% static 'images/part_4.png' %}" alt="Part 4" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110">
+                    {% elif part.part_number == 5 %}
+                        <img src="{% static 'images/part_5.png' %}" alt="Part 5" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110">
+                    {% elif part.part_number == 6 %}
+                        <img src="{% static 'images/part_6.png' %}" alt="Part 6" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110">
+                    {% else %}
+                        {% if test.test_type == 'listening' %}
+                            <img src="{% static 'images/full_listening.png' %}" alt="Listening" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110">
+                        {% else %}
+                            <img src="{% static 'images/full_listening.png' %}" alt="Test" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110">
+                        {% endif %}
+                    {% endif %}
+                {% endwith %}
+            {% endif %}
+        {% endif %}
+
+
+
+        <!-- Glass Badge Overlay -->
+        <div class="absolute top-4 left-4 z-20">
+            <span class="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-white/20 backdrop-blur-md bg-black/30 text-white text-[10px] font-black uppercase tracking-wider shadow-xl">
+                {% if test.test_type == 'listening' %}
+                <i class="ph-fill ph-headphones text-duo-blue"></i>
+                {% elif test.test_type == 'reading' %}
+                <i class="ph-fill ph-book-open-text text-duo-green"></i>
+                {% elif test.test_type == 'writing' %}
+                <i class="ph-fill ph-pencil-line text-duo-purple"></i>
+                {% else %}
+                <i class="ph-fill ph-microphone-stage text-duo-gold"></i>
                 {% endif %}
                 {{ test.get_test_type_display }}
             </span>
-            <span class="text-xs text-duo-text-muted font-bold">{{ test.created_at|date:"d M Y" }}</span>
         </div>
 
+        <!-- Date Overlay -->
+        <div class="absolute bottom-4 left-4 z-20">
+            <span class="text-[10px] text-white/70 font-bold bg-black/20 backdrop-blur-sm px-2 py-0.5 rounded-md">
+                {{ test.created_at|date:"d M Y" }}
+            </span>
+        </div>
+        
+        <!-- Bottom Fade -->
+        <div class="absolute bottom-0 left-0 w-full h-12 bg-gradient-to-t from-duo-surface to-transparent z-10"></div>
+    </div>
+
+    <!-- Card Content -->
+    <div class="p-6 pt-2 flex flex-col flex-1 relative z-20">
         <!-- Test name -->
-        <h2 class="text-xl font-black text-white mb-5 group-hover:text-duo-green transition-colors duration-200">
+        <h2 class="text-xl font-black text-white mb-5 group-hover:text-duo-green transition-colors duration-200 line-clamp-2 min-h-14">
             {{ test.name }}
         </h2>
 
-        <!-- Stats -->
-        <div class="flex flex-col gap-3 mb-6 text-sm font-bold text-duo-text-dim">
+        <!-- Stats Grid -->
+        <div class="grid grid-cols-1 gap-2.5 mb-6">
             {% if test.test_type == 'writing' %}
-            <!-- Writing-specific stats -->
-            <div class="flex items-center gap-3">
-                <div class="w-8 h-8 rounded-xl bg-duo-surface-2 flex items-center justify-center">
-                    <i class="ph-fill ph-notebook text-duo-purple text-base"></i>
+                <!-- Writing Stats -->
+                <div class="flex items-center gap-3 p-2 rounded-xl bg-duo-surface-2/50 border border-white/5 group-hover:bg-duo-surface-2 transition-colors">
+                    <div class="w-8 h-8 rounded-lg bg-duo-purple/10 flex items-center justify-center">
+                        <i class="ph-fill ph-notebook text-duo-purple text-base"></i>
+                    </div>
+                    <div class="flex flex-col">
+                        <span class="text-xs text-duo-text-muted font-bold leading-none">Задания</span>
+                        <span class="text-sm text-white font-black">{{ test.writing_tasks.count }}</span>
+                    </div>
                 </div>
-                {{ test.writing_tasks.count }} <span data-i18n="card_tasks">задания</span>
-            </div>
-            <div class="flex items-center gap-3">
-                <div class="w-8 h-8 rounded-xl bg-duo-surface-2 flex items-center justify-center">
-                    <i class="ph-fill ph-timer text-duo-gold text-base"></i>
+                <div class="flex items-center gap-3 p-2 rounded-xl bg-duo-surface-2/50 border border-white/5 group-hover:bg-duo-surface-2 transition-colors">
+                    <div class="w-8 h-8 rounded-lg bg-duo-gold/10 flex items-center justify-center">
+                        <i class="ph-fill ph-timer text-duo-gold text-base"></i>
+                    </div>
+                    <div class="flex flex-col">
+                        <span class="text-xs text-duo-text-muted font-bold leading-none">Лимит</span>
+                        <span class="text-sm text-white font-black">60 мин</span>
+                    </div>
                 </div>
-                60 <span data-i18n="card_minutes">минут</span>
-            </div>
-            <div class="flex items-center gap-3">
-                <div class="w-8 h-8 rounded-xl bg-duo-surface-2 flex items-center justify-center">
-                    <i class="ph-fill ph-robot text-duo-blue text-base"></i>
-                </div>
-                <span data-i18n="card_ai_grading">AI оценивание</span>
-            </div>
             {% else %}
-            <!-- Standard test stats -->
-            <div class="flex items-center gap-3">
-                <div class="w-8 h-8 rounded-xl bg-duo-surface-2 flex items-center justify-center">
-                    <i class="ph-fill ph-stack text-duo-blue text-base"></i>
+                <!-- Standard Stats -->
+                <div class="grid grid-cols-2 gap-2">
+                    <div class="flex items-center gap-2.5 p-2 rounded-xl bg-duo-surface-2/50 border border-white/5 group-hover:bg-duo-surface-2 transition-colors">
+                        <div class="w-7 h-7 rounded-lg bg-duo-blue/10 flex items-center justify-center">
+                            <i class="ph-fill ph-stack text-duo-blue text-sm"></i>
+                        </div>
+                        <div class="flex flex-col">
+                            <span class="text-[10px] text-duo-text-muted font-bold leading-none">Секций</span>
+                            <span class="text-xs text-white font-black">{{ test.parts.count }}</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2.5 p-2 rounded-xl bg-duo-surface-2/50 border border-white/5 group-hover:bg-duo-surface-2 transition-colors">
+                        <div class="w-7 h-7 rounded-lg bg-duo-gold/10 flex items-center justify-center">
+                            <i class="ph-fill ph-chat-centered-dots text-duo-gold text-sm"></i>
+                        </div>
+                        <div class="flex flex-col">
+                            <span class="text-[10px] text-duo-text-muted font-bold leading-none">Вопросов</span>
+                            <span class="text-xs text-white font-black">{{ test.total_questions }}</span>
+                        </div>
+                    </div>
                 </div>
-                {{ test.parts.count }} <span data-i18n="card_sections">секций</span>
-            </div>
-            <div class="flex items-center gap-3">
-                <div class="w-8 h-8 rounded-xl bg-duo-surface-2 flex items-center justify-center">
-                    <i class="ph-fill ph-chat-centered-dots text-duo-gold text-base"></i>
+                <div class="flex items-center gap-3 p-2 rounded-xl bg-duo-surface-2/50 border border-white/5 group-hover:bg-duo-surface-2 transition-colors">
+                    <div class="w-8 h-8 rounded-lg bg-duo-purple/10 flex items-center justify-center">
+                        <i class="ph-fill ph-star text-duo-purple text-base"></i>
+                    </div>
+                    <div class="flex flex-col">
+                        <span class="text-xs text-duo-text-muted font-bold leading-none">Макс. балл</span>
+                        <span class="text-sm text-white font-black">{{ test.max_possible_score|floatformat:0 }} PTS</span>
+                    </div>
                 </div>
-                {{ test.total_questions }} <span data-i18n="card_questions">вопросов</span>
-            </div>
-            <div class="flex items-center gap-3">
-                <div class="w-8 h-8 rounded-xl bg-duo-surface-2 flex items-center justify-center">
-                    <i class="ph-fill ph-star text-duo-purple text-base"></i>
-                </div>
-                {{ test.max_possible_score|floatformat:0 }} <span data-i18n="card_pts_max">баллов макс.</span>
-            </div>
             {% endif %}
         </div>
 
         <!-- Action -->
-        <div class="mt-auto pt-5 border-t-2 border-duo-border">
-            <a href="{% url 'exams:test_tutorial' test.id %}" class="btn-duo-green w-full text-sm"
-                id="start-test-{{ test.id }}">
+        <div class="mt-auto">
+            <a href="{% url 'exams:test_tutorial' test.id %}" 
+               class="btn-duo-green w-full text-xs py-3 rounded-2xl shadow-[0_4px_0_#46A302] group-hover:shadow-[0_5px_0_#46A302] group-hover:-translate-y-0.5 transition-all duration-150"
+               id="start-test-{{ test.id }}">
                 <span data-i18n="card_start">НАЧАТЬ ТЕСТ</span>
                 <i class="ph-bold ph-arrow-right"></i>
             </a>

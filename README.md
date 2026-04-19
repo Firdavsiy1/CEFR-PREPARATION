@@ -13,9 +13,10 @@ A Django web application for practicing CEFR (B2) English listening exams with a
 ## Tech Stack
 
 - **Backend:** Python 3.13, Django 4.2
-- **Database:** SQLite
+- **Database:** PostgreSQL (with `python-dotenv` for configuration)
 - **OCR:** tesserocr / pytesseract + Pillow
-- **Frontend:** Django Templates, Tailwind CSS (CDN) *(coming soon)*
+- **Frontend:** Django Templates, Tailwind CSS (CDN), Phosphor Icons
+- **Auth:** Standard Django Auth + `django-allauth` (Google OAuth)
 
 ## Quick Start
 
@@ -24,8 +25,13 @@ A Django web application for practicing CEFR (B2) English listening exams with a
 git clone https://github.com/FirdavsiyT/cefr_preparer.git
 cd cefr_preparer
 
-# Install dependencies
-pip install Pillow tesserocr
+# Install dependencies (including python-dotenv)
+pip install -r requirements.txt
+# Alternatively: pip install Pillow tesserocr psycopg2-binary python-dotenv django-allauth
+
+# Configure Environment Variables
+# Copy the example file and fill in your PostgreSQL and Gmail credentials
+cp .env.example .env
 
 # Download Tesseract training data
 mkdir -p tessdata
@@ -79,14 +85,20 @@ materials/
 
 **Max score per test: 100 points**
 
+## Features Highlight
+- **OTP Verification:** Custom multi-step email verification for registration and "Forgot Password" scenarios.
+- **Social Login:** Secure Google OAuth integration.
+- **Dynamic Localization:** Fully customized i18n support in EN, RU, and UZ.
+- **Mentor Panel:** Custom SaaS dashboard for automated test-generation and manual test administration.
+
 ## Project Status
 
 - [x] Step 1: Data models & architecture
 - [x] Step 2: OCR ingestion & admin interface
-- [ ] Step 3: User authentication
-- [ ] Step 4: Test-taking interface
-- [ ] Step 5: Scoring & results
-- [ ] Step 6: Polish & UX
+- [x] Step 3: User authentication (OTP Verification, Password Reset, Google Auth)
+- [x] Step 4: Test-taking interface
+- [x] Step 5: Scoring & results
+- [x] Step 6: Polish & UX (Glassmorphism, i18n, Duolingo aesthetic)
 
 ## License
 

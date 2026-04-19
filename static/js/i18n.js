@@ -42,6 +42,27 @@ const _i18n = {
         password_hint: 'Minimum 8 characters, not only digits',
         confirm_password: 'Confirm Password',
         change_password_btn: 'Change Password',
+        danger_zone_title: 'Danger Zone',
+        danger_zone_desc: 'Deleting your account is irreversible. All your data, test results, and progress will be permanently deleted.',
+        delete_account_btn: 'Delete Account',
+        delete_modal_title: 'Delete Account?',
+        delete_modal_desc: 'This action is irreversible. All your data will be permanently deleted.',
+        delete_type_confirm: 'Type DELETE to confirm',
+        delete_password_label: 'Confirm your password',
+        delete_confirm_btn: 'Delete permanently',
+
+        // ========== Forgot Password ==========
+        fp_link: 'Forgot password?',
+        fp_title: 'Forgot Password?',
+        fp_subtitle: 'Enter your email and we\'ll send you a reset code',
+        fp_send_code_btn: 'Send Code',
+        fp_remember: 'Remember your password?',
+        fp_verify_title: 'Enter Code',
+        fp_verify_subtitle: 'We sent a 6-digit code to',
+        fp_change_email: '← Change email',
+        fp_newpw_title: 'New Password',
+        fp_newpw_subtitle: 'Create a new password for your account',
+        fp_set_password_btn: 'Set Password',
 
         // ========== Dashboard Page ==========
         dash_title: 'Ready for practice? 🔥',
@@ -339,7 +360,23 @@ const _i18n = {
         msg_lang_success: 'Language updated!',
         msg_lang_invalid: 'Invalid language selection.',
         msg_reg_success: 'Registration successful! Welcome,',
-        msg_reg_fail: 'Registration failed. Please correct the errors below.'
+        msg_reg_fail: 'Registration failed. Please correct the errors below.',
+        msg_delete_wrong_pw: 'Incorrect password. Account was not deleted.',
+        msg_reset_email_required: 'Please enter your email address.',
+        msg_reset_code_sent: 'If this email is registered, a reset code has been sent.',
+        msg_reset_google_account: 'This account uses Google sign-in. Password reset is not available.',
+        msg_no_pending_reset: 'No pending password reset. Please start again.',
+        msg_reset_expired: 'Reset code expired. Please request a new one.',
+        msg_reset_pw_too_short: 'Password must be at least 8 characters.',
+        msg_reset_pw_mismatch: 'Passwords do not match.',
+        msg_reset_pw_numeric: 'Password cannot be entirely numeric.',
+        msg_reset_pw_success: 'Password changed successfully! You can now log in.',
+        msg_email_send_fail: 'Failed to send email. Please try again later.',
+        msg_wrong_code: 'Incorrect code. Please try again.',
+        msg_code_resent: 'A new code has been sent to your email.',
+        msg_verification_expired: 'Verification session expired. Please register again.',
+        msg_no_pending_verification: 'No pending registration found.',
+        msg_code_expired: 'Code has expired. Please request a new one.'
     },
 
     ru: {
@@ -383,6 +420,28 @@ const _i18n = {
         password_hint: 'Минимум 8 символов, не только цифры',
         confirm_password: 'Подтвердите пароль',
         change_password_btn: 'Сменить пароль',
+
+        // ========== Forgot Password ==========
+        fp_link: 'Забыли пароль?',
+        fp_title: 'Забыли пароль?',
+        fp_subtitle: 'Введите ваш email и мы отправим код для сброса',
+        fp_send_code_btn: 'Отправить код',
+        fp_remember: 'Вспомнили пароль?',
+        fp_verify_title: 'Введите код',
+        fp_verify_subtitle: 'Мы отправили 6-значный код на',
+        fp_change_email: '← Изменить email',
+        fp_newpw_title: 'Новый пароль',
+        fp_newpw_subtitle: 'Придумайте новый пароль для вашего аккаунта',
+        fp_set_password_btn: 'Установить пароль',
+
+        danger_zone_title: 'Опасная зона',
+        danger_zone_desc: 'Удаление аккаунта необратимо. Все ваши данные, результаты тестов и прогресс будут удалены навсегда.',
+        delete_account_btn: 'Удалить аккаунт',
+        delete_modal_title: 'Удалить аккаунт?',
+        delete_modal_desc: 'Это действие необратимо. Все ваши данные будут удалены навсегда.',
+        delete_type_confirm: 'Введите DELETE для подтверждения',
+        delete_password_label: 'Подтвердите пароль',
+        delete_confirm_btn: 'Удалить навсегда',
 
         // ========== Dashboard ==========
         dash_title: 'Готов к практике? 🔥',
@@ -674,7 +733,23 @@ const _i18n = {
         msg_lang_success: 'Язык изменен!',
         msg_lang_invalid: 'Неверный выбор языка.',
         msg_reg_success: 'Регистрация успешна! Добро пожаловать,',
-        msg_reg_fail: 'Ошибка регистрации. Пожалуйста, исправьте ошибки ниже.'
+        msg_reg_fail: 'Ошибка регистрации. Пожалуйста, исправьте ошибки ниже.',
+        msg_delete_wrong_pw: 'Неверный пароль. Аккаунт не был удалён.',
+        msg_reset_email_required: 'Пожалуйста, введите ваш email.',
+        msg_reset_code_sent: 'Если этот email зарегистрирован, код для сброса был отправлен.',
+        msg_reset_google_account: 'Этот аккаунт использует вход через Google. Сброс пароля недоступен.',
+        msg_no_pending_reset: 'Нет активного запроса на сброс пароля. Начните заново.',
+        msg_reset_expired: 'Код сброса истёк. Запросите новый.',
+        msg_reset_pw_too_short: 'Пароль должен содержать минимум 8 символов.',
+        msg_reset_pw_mismatch: 'Пароли не совпадают.',
+        msg_reset_pw_numeric: 'Пароль не может состоять только из цифр.',
+        msg_reset_pw_success: 'Пароль успешно изменён! Теперь вы можете войти.',
+        msg_email_send_fail: 'Не удалось отправить email. Пожалуйста, попробуйте позже.',
+        msg_wrong_code: 'Неверный код. Пожалуйста, попробуйте снова.',
+        msg_code_resent: 'Новый код был отправлен на вашу почту.',
+        msg_verification_expired: 'Сессия подтверждения истекла. Пожалуйста, зарегистрируйтесь снова.',
+        msg_no_pending_verification: 'Нет активной регистрации.',
+        msg_code_expired: 'Срок действия кода истёк. Запросите новый.'
     },
 
     uz: {
@@ -718,6 +793,28 @@ const _i18n = {
         password_hint: 'Kamida 8 belgi, faqat raqamlar emas',
         confirm_password: 'Parolni tasdiqlang',
         change_password_btn: 'Parolni o\'zgartirish',
+
+        // ========== Forgot Password ==========
+        fp_link: 'Parolni unutdingizmi?',
+        fp_title: 'Parolni unutdingizmi?',
+        fp_subtitle: 'Emailingizni kiriting va biz sizga tiklash kodini yuboramiz',
+        fp_send_code_btn: 'Kodni yuborish',
+        fp_remember: 'Parolni esladingizmi?',
+        fp_verify_title: 'Kodni kiriting',
+        fp_verify_subtitle: 'Biz 6 xonali kodni yubordik',
+        fp_change_email: '← Emailni o\'zgartirish',
+        fp_newpw_title: 'Yangi parol',
+        fp_newpw_subtitle: 'Akkauntingiz uchun yangi parol o\'ylab toping',
+        fp_set_password_btn: 'Parolni o\'rnatish',
+
+        danger_zone_title: 'Xavfli zona',
+        danger_zone_desc: 'Akkauntni o\'chirish qaytarib bo\'lmaydi. Barcha ma\'lumotlaringiz, test natijalari va progressingiz butunlay o\'chiriladi.',
+        delete_account_btn: 'Akkauntni o\'chirish',
+        delete_modal_title: 'Akkauntni o\'chirasizmi?',
+        delete_modal_desc: 'Bu harakat qaytarib bo\'lmaydi. Barcha ma\'lumotlaringiz butunlay o\'chiriladi.',
+        delete_type_confirm: 'Tasdiqlash uchun DELETE kiriting',
+        delete_password_label: 'Parolni tasdiqlang',
+        delete_confirm_btn: 'Butunlay o\'chirish',
 
         // ========== Dashboard ==========
         dash_title: 'Amaliyotga tayyormisiz? 🔥',
@@ -1009,7 +1106,23 @@ const _i18n = {
         msg_lang_success: 'Til o\'zgartirildi!',
         msg_lang_invalid: 'Noto\'g\'ri til tanlandi.',
         msg_reg_success: 'Ro\'yxatdan o\'tish muvaffaqiyatli! Xush kelibsiz,',
-        msg_reg_fail: 'Ro\'yxatdan o\'tishda xatolik. Iltimos, xatolarni to\'g\'rilang.'
+        msg_reg_fail: 'Ro\'yxatdan o\'tishda xatolik. Iltimos, xatolarni to\'g\'rilang.',
+        msg_delete_wrong_pw: 'Noto\'g\'ri parol. Akkaunt o\'chirilmadi.',
+        msg_reset_email_required: 'Iltimos, emailingizni kiriting.',
+        msg_reset_code_sent: 'Agar bu email ro\'yxatdan o\'tgan bo\'lsa, tiklash kodi yuborildi.',
+        msg_reset_google_account: 'Bu akkaunt Google orqali kiradi. Parolni tiklash mumkin emas.',
+        msg_no_pending_reset: 'Faol parol tiklash so\'rovi yo\'q. Qaytadan boshlang.',
+        msg_reset_expired: 'Tiklash kodi muddati tugadi. Yangi kod so\'rang.',
+        msg_reset_pw_too_short: 'Parol kamida 8 belgidan iborat bo\'lishi kerak.',
+        msg_reset_pw_mismatch: 'Parollar mos kelmaydi.',
+        msg_reset_pw_numeric: 'Parol faqat raqamlardan iborat bo\'lmasligi kerak.',
+        msg_reset_pw_success: 'Parol muvaffaqiyatli o\'zgartirildi! Endi tizimga kirishingiz mumkin.',
+        msg_email_send_fail: 'Email yuborishda xatolik. Iltimos, keyinroq qayta urinib ko\'ring.',
+        msg_wrong_code: 'Noto\'g\'ri kod. Qaytadan urinib ko\'ring.',
+        msg_code_resent: 'Yangi kod pochtangizga yuborildi.',
+        msg_verification_expired: 'Tasdiqlash seansining muddati tugadi. Qaytadan ro\'yxatdan o\'ting.',
+        msg_no_pending_verification: 'Kutilayotgan ro\'yxatdan o\'tish topilmadi.',
+        msg_code_expired: 'Kod muddati tugagan. Yangi kod so\'rang.'
     }
 };
 

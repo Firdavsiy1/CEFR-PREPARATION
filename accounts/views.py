@@ -16,11 +16,187 @@ from django.shortcuts import redirect, render
 from django.views.decorators.http import require_POST
 
 from .forms import CustomUserCreationForm, ProfileUpdateForm
-from .models import UserProfile
+from .models import UserProfile, EmailVerification, PasswordResetCode
+from .emails import send_verification_code_email, send_password_reset_email
 
 
+# =============================================
+# PASSWORD RESET FLOW (Forgot Password)
+# =============================================
+
+def forgot_password_view(request):
+    """
+    Step 1: User enters their email to receive a reset code.
+    """
+    if request.user.is_authenticated:
+        return redirect('exams:dashboard')
+
+    if request.method == 'POST':
+        email = request.POST.get('email', '').strip()
+
+        if not email:
+            messages.error(request, 'msg_reset_email_required')
+            return render(request, 'accounts/forgot_password.html')
+
+        # Check if user exists with this email
+        from django.contrib.auth.models import User
+        try:
+            user = User.objects.get(email=email)
+        except User.DoesNotExist:
+            # Don't reveal whether the email exists — still redirect
+            messages.success(request, 'msg_reset_code_sent')
+            return render(request, 'accounts/forgot_password.html')
+
+        # Check if the user has a usable password (not Google-only)
+        if not user.has_usable_password():
+            messages.error(request, 'msg_reset_google_account')
+            return render(request, 'accounts/forgot_password.html')
+
+        # Create and send OTP
+        reset_code = PasswordResetCode.create_for_email(email)
+        sent = send_password_reset_email(email, reset_code.code)
+
+        if sent:
+            request.session['reset_code_id'] = reset_code.id
+            request.session['reset_email'] = email
+            return redirect('accounts:reset_verify_code')
+        else:
+            messages.error(request, 'msg_email_send_fail')
+
+    return render(request, 'accounts/forgot_password.html')
+
+
+def reset_verify_code_view(request):
+    """
+    Step 2: User enters the 6-digit OTP code.
+    """
+    if request.user.is_authenticated:
+        return redirect('exams:dashboard')
+
+    reset_code_id = request.session.get('reset_code_id')
+    reset_email = request.session.get('reset_email')
+
+    if not reset_code_id or not reset_email:
+        messages.error(request, 'msg_no_pending_reset')
+        return redirect('accounts:forgot_password')
+
+    try:
+        reset_obj = PasswordResetCode.objects.get(id=reset_code_id, is_used=False)
+    except PasswordResetCode.DoesNotExist:
+        messages.error(request, 'msg_reset_expired')
+        return redirect('accounts:forgot_password')
+
+    if reset_obj.is_expired:
+        messages.error(request, 'msg_code_expired')
+        return redirect('accounts:forgot_password')
+
+    if request.method == 'POST':
+        entered_code = ''
+        for i in range(1, 7):
+            digit = request.POST.get(f'digit{i}', '')
+            entered_code += digit
+
+        if entered_code == reset_obj.code:
+            # Mark OTP as verified (but not used yet — used after new password set)
+            request.session['reset_code_verified'] = True
+            return redirect('accounts:reset_set_password')
+        else:
+            messages.error(request, 'msg_wrong_code')
+
+    return render(request, 'accounts/reset_verify_code.html', {
+        'email': reset_email,
+    })
+
+
+def resend_reset_code_view(request):
+    """Resend a new reset code for the pending password reset."""
+    if request.user.is_authenticated:
+        return redirect('exams:dashboard')
+
+    reset_email = request.session.get('reset_email')
+    if not reset_email:
+        return redirect('accounts:forgot_password')
+
+    new_reset = PasswordResetCode.create_for_email(reset_email)
+    sent = send_password_reset_email(reset_email, new_reset.code)
+
+    if sent:
+        request.session['reset_code_id'] = new_reset.id
+        messages.success(request, 'msg_code_resent')
+    else:
+        messages.error(request, 'msg_email_send_fail')
+
+    return redirect('accounts:reset_verify_code')
+
+
+def reset_set_password_view(request):
+    """
+    Step 3: User sets a new password after OTP verification.
+    """
+    if request.user.is_authenticated:
+        return redirect('exams:dashboard')
+
+    reset_code_id = request.session.get('reset_code_id')
+    reset_email = request.session.get('reset_email')
+    code_verified = request.session.get('reset_code_verified')
+
+    if not reset_code_id or not reset_email or not code_verified:
+        messages.error(request, 'msg_no_pending_reset')
+        return redirect('accounts:forgot_password')
+
+    if request.method == 'POST':
+        password1 = request.POST.get('new_password1', '')
+        password2 = request.POST.get('new_password2', '')
+
+        if not password1 or len(password1) < 8:
+            messages.error(request, 'msg_reset_pw_too_short')
+            return render(request, 'accounts/reset_set_password.html', {'email': reset_email})
+
+        if password1 != password2:
+            messages.error(request, 'msg_reset_pw_mismatch')
+            return render(request, 'accounts/reset_set_password.html', {'email': reset_email})
+
+        if password1.isdigit():
+            messages.error(request, 'msg_reset_pw_numeric')
+            return render(request, 'accounts/reset_set_password.html', {'email': reset_email})
+
+        # Set the new password
+        from django.contrib.auth.models import User
+        try:
+            user = User.objects.get(email=reset_email)
+        except User.DoesNotExist:
+            messages.error(request, 'msg_reset_expired')
+            return redirect('accounts:forgot_password')
+
+        # Mark reset code as used
+        try:
+            reset_obj = PasswordResetCode.objects.get(id=reset_code_id, is_used=False)
+            reset_obj.is_used = True
+            reset_obj.save()
+        except PasswordResetCode.DoesNotExist:
+            pass
+
+        user.set_password(password1)
+        user.save()
+
+        # Clean up session
+        for key in ['reset_code_id', 'reset_email', 'reset_code_verified']:
+            request.session.pop(key, None)
+
+        messages.success(request, 'msg_reset_pw_success')
+        return redirect('accounts:login')
+
+    return render(request, 'accounts/reset_set_password.html', {'email': reset_email})
+
+
+# =============================================
+# REGISTRATION FLOW
+# =============================================
 def register_view(request):
-    """View for user registration with required email field."""
+    """
+    Step 1: Validate the registration form and send a verification code.
+    User data is NOT saved yet — stored in EmailVerification model.
+    """
     # Redirect if already logged in
     if request.user.is_authenticated:
         return redirect('exams:dashboard')
@@ -28,16 +204,122 @@ def register_view(request):
     if request.method == 'POST':
         form = CustomUserCreationForm(request.POST)
         if form.is_valid():
-            user = form.save()
-            login(request, user)
-            messages.success(request, f"msg_reg_success*{user.username}")
-            return redirect('exams:dashboard')
+            email = form.cleaned_data['email']
+
+            # Store form data in the verification model
+            registration_data = {
+                'username': form.cleaned_data['username'],
+                'email': email,
+                'password': form.cleaned_data['password1'],
+            }
+
+            verification = EmailVerification.create_for_email(email, registration_data)
+
+            # Send the code
+            sent = send_verification_code_email(email, verification.code)
+            if sent:
+                # Store verification ID in session
+                request.session['pending_verification_id'] = verification.id
+                return redirect('accounts:verify_email')
+            else:
+                messages.error(request, "msg_email_send_fail")
         else:
             messages.error(request, "msg_reg_fail")
     else:
         form = CustomUserCreationForm()
 
     return render(request, 'accounts/register.html', {'form': form})
+
+
+def verify_email_view(request):
+    """
+    Step 2: User enters the 6-digit code sent to their email.
+    On success, create the user account and log them in.
+    """
+    if request.user.is_authenticated:
+        return redirect('exams:dashboard')
+
+    verification_id = request.session.get('pending_verification_id')
+    if not verification_id:
+        messages.error(request, "msg_no_pending_verification")
+        return redirect('accounts:register')
+
+    try:
+        verification = EmailVerification.objects.get(id=verification_id, is_used=False)
+    except EmailVerification.DoesNotExist:
+        messages.error(request, "msg_verification_expired")
+        return redirect('accounts:register')
+
+    if verification.is_expired:
+        messages.error(request, "msg_code_expired")
+        return redirect('accounts:register')
+
+    email = verification.email
+
+    if request.method == 'POST':
+        # Collect digits from individual inputs
+        entered_code = ''
+        for i in range(1, 7):
+            digit = request.POST.get(f'digit{i}', '')
+            entered_code += digit
+
+        if entered_code == verification.code:
+            # Mark as used
+            verification.is_used = True
+            verification.save()
+
+            # Create the user from stored data
+            from django.contrib.auth.models import User
+            data = verification.registration_data
+            user = User.objects.create_user(
+                username=data['username'],
+                email=data['email'],
+                password=data['password'],
+            )
+            login(request, user, backend='django.contrib.auth.backends.ModelBackend')
+
+            # Clean up session
+            del request.session['pending_verification_id']
+
+            messages.success(request, f"msg_reg_success*{user.username}")
+            return redirect('exams:dashboard')
+        else:
+            messages.error(request, "msg_wrong_code")
+
+    return render(request, 'accounts/verify_email.html', {
+        'email': email,
+        'verification_id': verification_id,
+    })
+
+
+def resend_code_view(request):
+    """Resend a new verification code for the pending registration."""
+    if request.user.is_authenticated:
+        return redirect('exams:dashboard')
+
+    verification_id = request.session.get('pending_verification_id')
+    if not verification_id:
+        return redirect('accounts:register')
+
+    try:
+        old_verification = EmailVerification.objects.get(id=verification_id, is_used=False)
+    except EmailVerification.DoesNotExist:
+        return redirect('accounts:register')
+
+    # Create a new code with the same registration data
+    new_verification = EmailVerification.create_for_email(
+        old_verification.email,
+        old_verification.registration_data,
+    )
+
+    sent = send_verification_code_email(new_verification.email, new_verification.code)
+    if sent:
+        request.session['pending_verification_id'] = new_verification.id
+        messages.success(request, "msg_code_resent")
+    else:
+        messages.error(request, "msg_email_send_fail")
+
+    return redirect('accounts:verify_email')
 
 
 @login_required
@@ -173,6 +455,27 @@ def update_avatar(request):
         messages.error(request, 'msg_avatar_invalid')
 
     return redirect('accounts:profile')
+
+
+@login_required
+@require_POST
+def delete_account(request):
+    """Handle account deletion with password confirmation."""
+    user = request.user
+
+    # For users with a usable password (manual registration), verify it
+    if user.has_usable_password():
+        password = request.POST.get('password', '')
+        if not user.check_password(password):
+            messages.error(request, 'msg_delete_wrong_pw')
+            return redirect('accounts:profile')
+
+    # Log out first, then delete
+    from django.contrib.auth import logout
+    logout(request)
+    user.delete()
+
+    return redirect('accounts:login')
 
 
 @login_required

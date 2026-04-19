@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+
+{% block title %}Verify Email — CEFR Prep{% endblock %}
+
+{% block content %}
+<div class="min-h-[75vh] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-md w-full animate-slide-up">
+        <!-- Card -->
+        <div class="card-duo p-8 sm:p-10">
+            <!-- Header -->
+            <div class="text-center mb-8">
+                <div class="w-20 h-20 mx-auto mb-5 rounded-2xl flex items-center justify-center bg-duo-blue shadow-[0_4px_0_#1899D6] animate-bounce-in">
+                    <i class="ph-fill ph-envelope-simple text-white text-4xl"></i>
+                </div>
+                <h2 class="text-2xl font-black text-white mb-2" data-i18n="verify_title">Подтвердите почту</h2>
+                <p class="text-duo-text-dim font-semibold text-sm">
+                    <span data-i18n="verify_subtitle">Мы отправили 6-значный код на</span>
+                </p>
+                <p class="text-duo-blue font-bold text-sm mt-1">{{ email }}</p>
+            </div>
+
+            <form method="POST" id="verify-form" class="space-y-6">
+                {% csrf_token %}
+
+                <!-- OTP Input Grid -->
+                <div class="flex justify-center gap-3" id="otp-container">
+                    <input type="text" name="digit1" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="one-time-code"
+                           class="otp-input w-12 h-14 sm:w-14 sm:h-16 !p-0 text-center text-2xl font-black text-white rounded-2xl border-2 border-duo-border bg-duo-surface focus:border-duo-blue focus:shadow-[0_0_0_3px_rgba(28,176,246,0.25)] outline-none transition-all duration-200"
+                           id="digit1" autofocus>
+                    <input type="text" name="digit2" maxlength="1" inputmode="numeric" pattern="[0-9]"
+                           class="otp-input w-12 h-14 sm:w-14 sm:h-16 !p-0 text-center text-2xl font-black text-white rounded-2xl border-2 border-duo-border bg-duo-surface focus:border-duo-blue focus:shadow-[0_0_0_3px_rgba(28,176,246,0.25)] outline-none transition-all duration-200"
+                           id="digit2">
+                    <input type="text" name="digit3" maxlength="1" inputmode="numeric" pattern="[0-9]"
+                           class="otp-input w-12 h-14 sm:w-14 sm:h-16 !p-0 text-center text-2xl font-black text-white rounded-2xl border-2 border-duo-border bg-duo-surface focus:border-duo-blue focus:shadow-[0_0_0_3px_rgba(28,176,246,0.25)] outline-none transition-all duration-200"
+                           id="digit3">
+                    <input type="text" name="digit4" maxlength="1" inputmode="numeric" pattern="[0-9]"
+                           class="otp-input w-12 h-14 sm:w-14 sm:h-16 !p-0 text-center text-2xl font-black text-white rounded-2xl border-2 border-duo-border bg-duo-surface focus:border-duo-blue focus:shadow-[0_0_0_3px_rgba(28,176,246,0.25)] outline-none transition-all duration-200"
+                           id="digit4">
+                    <input type="text" name="digit5" maxlength="1" inputmode="numeric" pattern="[0-9]"
+                           class="otp-input w-12 h-14 sm:w-14 sm:h-16 !p-0 text-center text-2xl font-black text-white rounded-2xl border-2 border-duo-border bg-duo-surface focus:border-duo-blue focus:shadow-[0_0_0_3px_rgba(28,176,246,0.25)] outline-none transition-all duration-200"
+                           id="digit5">
+                    <input type="text" name="digit6" maxlength="1" inputmode="numeric" pattern="[0-9]"
+                           class="otp-input w-12 h-14 sm:w-14 sm:h-16 !p-0 text-center text-2xl font-black text-white rounded-2xl border-2 border-duo-border bg-duo-surface focus:border-duo-blue focus:shadow-[0_0_0_3px_rgba(28,176,246,0.25)] outline-none transition-all duration-200"
+                           id="digit6">
+                </div>
+
+                <!-- Timer -->
+                <div class="text-center">
+                    <p class="text-sm font-bold text-duo-text-muted flex items-center justify-center gap-1.5">
+                        <i class="ph-fill ph-timer text-duo-gold"></i>
+                        <span data-i18n="verify_expires">Код действителен</span>
+                        <span id="countdown-timer" class="text-duo-gold font-black">10:00</span>
+                    </p>
+                </div>
+
+                <!-- Submit -->
+                <div class="pt-1">
+                    <button type="submit" id="verify-btn" class="btn-duo-blue w-full text-base !py-3.5">
+                        <i class="ph-fill ph-check-circle text-lg"></i>
+                        <span data-i18n="verify_btn">Подтвердить</span>
+                    </button>
+                </div>
+            </form>
+
+            <!-- Resend -->
+            <div class="text-center mt-6 pt-6 border-t-2 border-duo-border">
+                <p class="text-sm text-duo-text-dim font-semibold">
+                    <span data-i18n="verify_no_code">Не получили код?</span>
+                    <a href="{% url 'accounts:resend_code' %}" class="font-extrabold text-duo-blue hover:text-duo-gold transition-colors" data-i18n="verify_resend">Отправить снова</a>
+                </p>
+                <p class="text-xs text-duo-text-muted font-semibold mt-3">
+                    <a href="{% url 'accounts:register' %}" class="hover:text-white transition-colors" data-i18n="verify_change_email">← Изменить email</a>
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+(function() {
+    const inputs = document.querySelectorAll('.otp-input');
+
+    // ===== Auto-focus between inputs =====
+    inputs.forEach((input, index) => {
+        // On input: move to next
+        input.addEventListener('input', function(e) {
+            const val = this.value.replace(/[^0-9]/g, '');
+            this.value = val;
+
+            if (val && index < inputs.length - 1) {
+                inputs[index + 1].focus();
+            }
+
+            // Auto-submit when all 6 digits are entered
+            if (index === inputs.length - 1 && val) {
+                let allFilled = true;
+                inputs.forEach(inp => { if (!inp.value) allFilled = false; });
+                if (allFilled) {
+                    // Small delay for visual feedback
+                    setTimeout(() => document.getElementById('verify-form').submit(), 150);
+                }
+            }
+        });
+
+        // On backspace: move to previous
+        input.addEventListener('keydown', function(e) {
+            if (e.key === 'Backspace' && !this.value && index > 0) {
+                inputs[index - 1].focus();
+                inputs[index - 1].value = '';
+            }
+        });
+
+        // Handle paste — distribute digits across inputs
+        input.addEventListener('paste', function(e) {
+            e.preventDefault();
+            const pasteData = (e.clipboardData || window.clipboardData).getData('text').replace(/[^0-9]/g, '');
+            if (pasteData.length >= 6) {
+                inputs.forEach((inp, i) => {
+                    inp.value = pasteData[i] || '';
+                });
+                inputs[inputs.length - 1].focus();
+                setTimeout(() => document.getElementById('verify-form').submit(), 150);
+            }
+        });
+    });
+
+    // ===== Countdown Timer =====
+    let totalSeconds = 10 * 60; // 10 minutes
+    const timerEl = document.getElementById('countdown-timer');
+
+    const interval = setInterval(() => {
+        totalSeconds--;
+        if (totalSeconds <= 0) {
+            clearInterval(interval);
+            timerEl.textContent = '0:00';
+            timerEl.classList.remove('text-duo-gold');
+            timerEl.classList.add('text-duo-red');
+            return;
+        }
+        const mins = Math.floor(totalSeconds / 60);
+        const secs = totalSeconds % 60;
+        timerEl.textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
+
+        // Turn red in last 2 minutes
+        if (totalSeconds <= 120) {
+            timerEl.classList.remove('text-duo-gold');
+            timerEl.classList.add('text-duo-red');
+        }
+    }, 1000);
+})();
+</script>
+{% endblock %}

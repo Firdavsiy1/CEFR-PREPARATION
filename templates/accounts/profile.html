@@ -152,9 +152,35 @@
                 <form method="post" action="{% url 'accounts:update_profile' %}" class="space-y-5">
                     {% csrf_token %}
 
+                    <!-- First Name -->
+                    <div>
+                        <label class="block text-xs font-extrabold text-duo-text-dim mb-2 uppercase tracking-widest" data-i18n="first_name_label">Имя</label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                                <i class="ph-fill ph-user-circle text-duo-text-muted text-lg"></i>
+                            </div>
+                            <input type="text" name="first_name" value="{{ user.first_name }}"
+                                   class="input-duo input-duo-gold w-full"
+                                   id="id_first_name">
+                        </div>
+                    </div>
+
+                    <!-- Last Name -->
+                    <div>
+                        <label class="block text-xs font-extrabold text-duo-text-dim mb-2 uppercase tracking-widest" data-i18n="last_name_label">Фамилия</label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                                <i class="ph-fill ph-users text-duo-text-muted text-lg"></i>
+                            </div>
+                            <input type="text" name="last_name" value="{{ user.last_name }}"
+                                   class="input-duo input-duo-gold w-full"
+                                   id="id_last_name">
+                        </div>
+                    </div>
+
                     <!-- Username -->
                     <div>
-                        <label class="block text-xs font-extrabold text-duo-text-dim mb-2 uppercase tracking-widest" data-i18n="username_label">Имя пользователя</label>
+                        <label class="block text-xs font-extrabold text-duo-text-dim mb-2 uppercase tracking-widest" data-i18n="username_label">Имя пользователя (Логин)</label>
                         <div class="relative">
                             <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
                                 <i class="ph-fill ph-user text-duo-text-muted text-lg"></i>
@@ -255,7 +281,90 @@
                 </form>
             </div>
 
+            <!-- Danger Zone Card -->
+            <div class="card-duo p-6 sm:p-8 animate-slide-up border border-red-500/20" style="animation-delay: 0.25s">
+                <h2 class="text-lg font-black text-white mb-3 flex items-center gap-2">
+                    <i class="ph-fill ph-warning text-red-400 text-xl"></i>
+                    <span data-i18n="danger_zone_title">Опасная зона</span>
+                </h2>
+                <p class="text-sm text-duo-text-muted font-semibold mb-5" data-i18n="danger_zone_desc">
+                    Удаление аккаунта необратимо. Все ваши данные, результаты тестов и прогресс будут удалены навсегда.
+                </p>
+                <button type="button" id="delete-account-btn"
+                        class="group flex items-center gap-2 px-6 py-3 rounded-xl font-extrabold text-sm
+                               border-2 border-red-500/30 text-red-400
+                               hover:bg-red-500/10 hover:border-red-500/60 hover:text-red-300
+                               transition-all duration-200 cursor-pointer">
+                    <i class="ph-fill ph-trash text-lg group-hover:animate-pulse"></i>
+                    <span data-i18n="delete_account_btn">Удалить аккаунт</span>
+                </button>
+            </div>
+
         </div>
+    </div>
+</div>
+
+<!-- ===== DELETE ACCOUNT CONFIRMATION MODAL ===== -->
+<div id="delete-modal-overlay" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden items-center justify-center p-4 transition-opacity duration-300" style="opacity:0;">
+    <div id="delete-modal" class="card-duo p-6 sm:p-8 w-full max-w-md relative transform transition-all duration-300 scale-95 border border-red-500/30">
+
+        <!-- Close btn -->
+        <button type="button" id="delete-modal-close"
+                class="absolute top-4 right-4 w-8 h-8 rounded-full flex items-center justify-center text-duo-text-muted hover:text-white hover:bg-white/10 transition-all cursor-pointer">
+            <i class="ph-bold ph-x text-lg"></i>
+        </button>
+
+        <!-- Icon -->
+        <div class="flex justify-center mb-5">
+            <div class="w-16 h-16 rounded-2xl flex items-center justify-center" style="background: linear-gradient(135deg, #FF4B4B, #DC2626);">
+                <i class="ph-fill ph-warning text-white text-3xl"></i>
+            </div>
+        </div>
+
+        <h3 class="text-xl font-black text-white text-center mb-2" data-i18n="delete_modal_title">Удалить аккаунт?</h3>
+        <p class="text-sm text-duo-text-muted text-center font-semibold mb-6" data-i18n="delete_modal_desc">
+            Это действие необратимо. Все ваши данные будут удалены навсегда.
+        </p>
+
+        <form method="post" action="{% url 'accounts:delete_account' %}" id="delete-account-form">
+            {% csrf_token %}
+
+            <!-- Type DELETE confirmation -->
+            <div class="mb-4">
+                <label class="block text-xs font-extrabold text-duo-text-dim mb-2 uppercase tracking-widest" data-i18n="delete_type_confirm">
+                    Введите DELETE для подтверждения
+                </label>
+                <input type="text" id="delete-confirm-input" autocomplete="off"
+                       class="input-duo w-full text-center tracking-[0.3em] font-bold uppercase"
+                       placeholder="DELETE"
+                       style="border-color: rgba(239,68,68,0.3);">
+            </div>
+
+            {% if user.has_usable_password %}
+            <!-- Password confirmation (only for non-OAuth users) -->
+            <div class="mb-5">
+                <label class="block text-xs font-extrabold text-duo-text-dim mb-2 uppercase tracking-widest" data-i18n="delete_password_label">
+                    Подтвердите пароль
+                </label>
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                        <i class="ph-fill ph-lock-key text-duo-text-muted text-lg"></i>
+                    </div>
+                    <input type="password" name="password" id="delete-password-input" required
+                           class="input-duo w-full"
+                           style="border-color: rgba(239,68,68,0.3);">
+                </div>
+            </div>
+            {% endif %}
+
+            <button type="submit" id="delete-submit-btn" disabled
+                    class="w-full py-3.5 rounded-xl font-extrabold text-sm text-white/50
+                           bg-red-500/20 border-2 border-red-500/20
+                           cursor-not-allowed transition-all duration-300 flex items-center justify-center gap-2">
+                <i class="ph-fill ph-trash text-lg"></i>
+                <span data-i18n="delete_confirm_btn">Удалить навсегда</span>
+            </button>
+        </form>
     </div>
 </div>
 {% endblock %}
@@ -425,6 +534,60 @@
             });
         });
     });
+
+    // ===== DELETE ACCOUNT MODAL =====
+    const deleteBtn = document.getElementById('delete-account-btn');
+    const overlay = document.getElementById('delete-modal-overlay');
+    const modal = document.getElementById('delete-modal');
+    const closeBtn = document.getElementById('delete-modal-close');
+    const confirmInput = document.getElementById('delete-confirm-input');
+    const submitBtn = document.getElementById('delete-submit-btn');
+    const passwordInput = document.getElementById('delete-password-input');
+
+    function openDeleteModal() {
+        overlay.classList.remove('hidden');
+        overlay.classList.add('flex');
+        requestAnimationFrame(() => {
+            overlay.style.opacity = '1';
+            modal.classList.remove('scale-95');
+            modal.classList.add('scale-100');
+        });
+        confirmInput.value = '';
+        if (passwordInput) passwordInput.value = '';
+        updateDeleteButton();
+    }
+
+    function closeDeleteModal() {
+        overlay.style.opacity = '0';
+        modal.classList.remove('scale-100');
+        modal.classList.add('scale-95');
+        setTimeout(() => {
+            overlay.classList.add('hidden');
+            overlay.classList.remove('flex');
+        }, 300);
+    }
+
+    function updateDeleteButton() {
+        const typed = confirmInput.value.trim().toUpperCase() === 'DELETE';
+        const pwOk = !passwordInput || passwordInput.value.length > 0;
+        const enabled = typed && pwOk;
+
+        submitBtn.disabled = !enabled;
+        if (enabled) {
+            submitBtn.classList.remove('bg-red-500/20', 'border-red-500/20', 'text-white/50', 'cursor-not-allowed');
+            submitBtn.classList.add('bg-red-600', 'border-red-600', 'text-white', 'cursor-pointer', 'hover:bg-red-700', 'hover:border-red-700', 'hover:shadow-[0_0_25px_rgba(239,68,68,0.4)]');
+        } else {
+            submitBtn.classList.add('bg-red-500/20', 'border-red-500/20', 'text-white/50', 'cursor-not-allowed');
+            submitBtn.classList.remove('bg-red-600', 'border-red-600', 'text-white', 'cursor-pointer', 'hover:bg-red-700', 'hover:border-red-700', 'hover:shadow-[0_0_25px_rgba(239,68,68,0.4)]');
+        }
+    }
+
+    deleteBtn.addEventListener('click', openDeleteModal);
+    closeBtn.addEventListener('click', closeDeleteModal);
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) closeDeleteModal(); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !overlay.classList.contains('hidden')) closeDeleteModal(); });
+    confirmInput.addEventListener('input', updateDeleteButton);
+    if (passwordInput) passwordInput.addEventListener('input', updateDeleteButton);
 
     // Apply translations on page load
     (function() {

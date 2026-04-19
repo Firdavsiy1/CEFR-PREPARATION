@@ -4,10 +4,95 @@ Models for the accounts app.
 UserProfile extends Django's built-in User model with:
   - avatar selection (predefined CSS-rendered avatars)
   - language preference (en / ru / uz)
+
+EmailVerification stores OTP codes for email verification during registration.
 """
+
+import random
+import string
+from datetime import timedelta
 
 from django.conf import settings
 from django.db import models
+from django.utils import timezone
+
+
+class EmailVerification(models.Model):
+    """
+    Stores a 6-digit verification code tied to pending registration data.
+    Codes expire after 10 minutes.
+    """
+    email = models.EmailField()
+    code = models.CharField(max_length=6)
+    # Store the full registration form data as JSON so we can recreate the user later
+    registration_data = models.JSONField(default=dict)
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_used = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Verification for {self.email} ({self.code})"
+
+    @property
+    def is_expired(self):
+        """Code expires after 10 minutes."""
+        return timezone.now() > self.created_at + timedelta(minutes=10)
+
+    @classmethod
+    def generate_code(cls):
+        """Generate a random 6-digit numeric code."""
+        return ''.join(random.choices(string.digits, k=6))
+
+    @classmethod
+    def create_for_email(cls, email, registration_data):
+        """
+        Create a new verification code for the given email.
+        Invalidates all previous codes for this email.
+        """
+        # Mark all previous codes as used
+        cls.objects.filter(email=email, is_used=False).update(is_used=True)
+        # Create a new one
+        return cls.objects.create(
+            email=email,
+            code=cls.generate_code(),
+            registration_data=registration_data,
+        )
+
+
+class PasswordResetCode(models.Model):
+    """
+    Stores a 6-digit OTP code for password reset.
+    Codes expire after 10 minutes.
+    """
+    email = models.EmailField()
+    code = models.CharField(max_length=6)
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_used = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Password reset for {self.email} ({self.code})"
+
+    @property
+    def is_expired(self):
+        """Code expires after 10 minutes."""
+        return timezone.now() > self.created_at + timedelta(minutes=10)
+
+    @classmethod
+    def create_for_email(cls, email):
+        """
+        Create a new reset code for the given email.
+        Invalidates all previous codes for this email.
+        """
+        cls.objects.filter(email=email, is_used=False).update(is_used=True)
+        code = ''.join(random.choices(string.digits, k=6))
+        return cls.objects.create(email=email, code=code)
+
+
 
 
 class UserProfile(models.Model):

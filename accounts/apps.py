@@ -9,3 +9,10 @@ class AccountsConfig(AppConfig):
 
     def ready(self):
         import accounts.signals  # noqa: F401
+        
+        # Enforce email uniqueness on the default User model
+        from django.contrib.auth.models import User
+        email_field = User._meta.get_field('email')
+        email_field._unique = True
+        email_field.blank = False
+        email_field.null = False
