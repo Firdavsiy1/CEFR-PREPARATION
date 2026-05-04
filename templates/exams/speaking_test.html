@@ -1,0 +1,123 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Speaking Test: {{ test.name }}{% endblock %}
+
+{% block content %}
+<div class="row h-100 mt-4">
+    <!-- Left Column: Sticky Image (Split-View) -->
+    <div class="col-md-6 sticky-top" style="height: 80vh; overflow-y: auto; position: -webkit-sticky; top: 20px;">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Reference Material</h5>
+            </div>
+            <div class="card-body text-center d-flex align-items-center justify-content-center">
+                {% if parts %}
+                    <img id="current-image" 
+                         src="{% if parts.0.cropped_image %}{{ parts.0.cropped_image.url }}{% else %}{% static 'images/placeholder-speaking.png' %}{% endif %}" 
+                         class="img-fluid rounded" 
+                         alt="{{ parts.0.alt_text|default:'Speaking Reference Material' }}"
+                         style="max-height: 100%; object-fit: contain;">
+                {% else %}
+                    <p class="text-muted">No visual material provided.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Column: Student Interaction (TTS + VAD) -->
+    <div class="col-md-6">
+        <div class="card shadow-sm">
+            <div class="card-header bg-secondary text-white">
+                <h5 class="mb-0">Examiner Interface</h5>
+            </div>
+            <div class="card-body">
+                
+                <div class="text-center mb-4">
+                    <button id="btn-start" class="btn btn-success btn-lg px-5 rounded-pill shadow-sm">
+                        <i class="bi bi-play-circle me-2"></i> Start Speaking Exam
+                    </button>
+                    <p class="text-muted small mt-2">Make sure your microphone is enabled.</p>
+                </div>
+
+                <div id="exam-ui" style="display: none;">
+                    <div class="alert alert-info border-0 shadow-sm" role="alert">
+                        <i class="bi bi-info-circle me-2"></i>
+                        <span id="instruction-text">Please wait for the examiner to finish speaking...</span>
+                    </div>
+
+                    <!-- TTS Indicator -->
+                    <div class="card bg-light border-0 mb-3">
+                        <div class="card-body text-center">
+                            <h6 class="text-uppercase text-muted mb-2">Examiner (TTS)</h6>
+                            <div class="spinner-grow text-primary" role="status" id="tts-spinner" style="display: none;">
+                              <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p id="tts-status" class="text-primary fw-bold mt-2">Idle</p>
+                        </div>
+                    </div>
+
+                    <!-- VAD Indicator -->
+                    <div class="card bg-light border-0">
+                        <div class="card-body text-center">
+                            <h6 class="text-uppercase text-muted mb-2">Your Microphone (VAD)</h6>
+                            <div class="spinner-grow text-danger" role="status" id="vad-spinner" style="display: none;">
+                              <span class="visually-hidden">Recording...</span>
+                            </div>
+                            <p id="vad-status" class="text-danger fw-bold mt-2">Locked</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Placeholder logic for TTS and VAD synchronization
+    document.getElementById('btn-start').addEventListener('click', function() {
+        this.style.display = 'none';
+        document.getElementById('exam-ui').style.display = 'block';
+        
+        simulateExamFlow();
+    });
+
+    function simulateExamFlow() {
+        const ttsSpinner = document.getElementById('tts-spinner');
+        const vadSpinner = document.getElementById('vad-spinner');
+        const ttsStatus = document.getElementById('tts-status');
+        const vadStatus = document.getElementById('vad-status');
+        const instruction = document.getElementById('instruction-text');
+
+        // Step 1: Examiner asks question (TTS Audio plays)
+        instruction.textContent = "Listen to the given instructions...";
+        ttsSpinner.style.display = 'inline-block';
+        ttsStatus.textContent = 'Speaking...';
+        
+        // VAD is locked during TTS
+        vadSpinner.style.display = 'none';
+        vadStatus.textContent = 'Locked (Microphone muted)';
+
+        // Step 2: TTS finishes, VAD unlocks
+        setTimeout(() => {
+            ttsSpinner.style.display = 'none';
+            ttsStatus.textContent = 'Finished';
+            
+            instruction.textContent = "Your turn. Describe the image now.";
+            
+            vadSpinner.style.display = 'inline-block';
+            vadStatus.textContent = 'Listening... (Speak now)';
+            
+            // Step 3: VAD detects silence/end of answer
+            setTimeout(() => {
+                vadSpinner.style.display = 'none';
+                vadStatus.textContent = 'Answer saved';
+                instruction.textContent = "Moving to the next question...";
+            }, 5000);
+            
+        }, 3000);
+    }
+</script>
+{% endblock %}

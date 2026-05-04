@@ -25,12 +25,29 @@ load_dotenv(os.path.join(BASE_DIR, '.env'))
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-default-key-for-dev-fallback')
+_SECRET_KEY_DEFAULT = 'django-insecure-default-key-for-dev-fallback'
+SECRET_KEY = os.environ.get('SECRET_KEY', _SECRET_KEY_DEFAULT)
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 
-ALLOWED_HOSTS = []
+if not DEBUG and SECRET_KEY == _SECRET_KEY_DEFAULT:
+    raise ValueError(
+        "SECRET_KEY environment variable must be set to a strong random value in production."
+    )
+
+# Comma-separated list in ALLOWED_HOSTS env var, e.g. "example.com,www.example.com"
+_ALLOWED_HOSTS_ENV = os.environ.get('ALLOWED_HOSTS', '')
+if _ALLOWED_HOSTS_ENV:
+    ALLOWED_HOSTS = [h.strip() for h in _ALLOWED_HOSTS_ENV.split(',') if h.strip()]
+elif DEBUG:
+    ALLOWED_HOSTS = ['*']
+else:
+    ALLOWED_HOSTS = ['localhost', '127.0.0.1']
+
+# Comma-separated list in CSRF_TRUSTED_ORIGINS env var
+_CSRF_ENV = os.environ.get('CSRF_TRUSTED_ORIGINS', '')
+CSRF_TRUSTED_ORIGINS = [o.strip() for o in _CSRF_ENV.split(',') if o.strip()]
 
 
 # Application definition
@@ -127,7 +144,7 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/4.2/topics/i18n/
 
-LANGUAGE_CODE = 'ru'
+LANGUAGE_CODE = 'en'
 
 LANGUAGES = [
     ('en', 'English'),
@@ -161,6 +178,31 @@ MEDIA_ROOT = BASE_DIR / 'media'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+# ---------------------------------------------------------------------------
+# Celery
+# ---------------------------------------------------------------------------
+
+CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL', 'redis://127.0.0.1:6379/0')
+CELERY_RESULT_BACKEND = os.environ.get('CELERY_RESULT_BACKEND', 'redis://127.0.0.1:6379/0')
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = TIME_ZONE
+CELERY_WORKER_MAX_TASKS_PER_CHILD = 50
+
+# Cache — LocMemCache by default; override with Redis via env
+# CACHE_BACKEND=django.core.cache.backends.redis.RedisCache
+# CACHE_LOCATION=redis://127.0.0.1:6379/1
+CACHES = {
+    "default": {
+        "BACKEND": os.environ.get(
+            "CACHE_BACKEND",
+            "django.core.cache.backends.locmem.LocMemCache",
+        ),
+        "LOCATION": os.environ.get("CACHE_LOCATION", "cefr-main"),
+    }
+}
+
 # Authentication redirects
 LOGIN_URL = 'accounts:login'
 LOGIN_REDIRECT_URL = 'exams:dashboard'
@@ -180,6 +222,9 @@ ACCOUNT_SIGNUP_FIELDS = {
 ACCOUNT_EMAIL_VERIFICATION = 'none' # Can be 'mandatory', 'optional', or 'none'
 
 SOCIALACCOUNT_LOGIN_ON_GET = True
+SOCIALACCOUNT_EMAIL_AUTHENTICATION = True
+SOCIALACCOUNT_EMAIL_AUTHENTICATION_AUTO_CONNECT = True
+SOCIALACCOUNT_ADAPTER = 'accounts.adapters.CEFRSocialAccountAdapter'
 
 SOCIALACCOUNT_PROVIDERS = {
     'google': {
@@ -189,7 +234,8 @@ SOCIALACCOUNT_PROVIDERS = {
         ],
         'AUTH_PARAMS': {
             'access_type': 'online',
-        }
+        },
+        'VERIFIED_EMAIL': True,
     }
 }
 

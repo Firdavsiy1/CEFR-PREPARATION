@@ -86,9 +86,9 @@ class PasswordResetCode(models.Model):
     def create_for_email(cls, email):
         """
         Create a new reset code for the given email.
-        Invalidates all previous codes for this email.
+        Deletes all previous codes for this email.
         """
-        cls.objects.filter(email=email, is_used=False).update(is_used=True)
+        cls.objects.filter(email=email).delete()
         code = ''.join(random.choices(string.digits, k=6))
         return cls.objects.create(email=email, code=code)
 
@@ -128,6 +128,13 @@ class UserProfile(models.Model):
         ('uz', 'O\'zbek'),
     ]
 
+    # --- Role choices ---
+    ROLE_CHOICES = [
+        ('student', 'Student'),
+        ('mentor', 'Mentor'),
+        ('sysmentor', 'SysMentor'),
+    ]
+
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -145,12 +152,91 @@ class UserProfile(models.Model):
         default='ru',
         help_text='Preferred interface language.',
     )
+    role = models.CharField(
+        max_length=10,
+        choices=ROLE_CHOICES,
+        default='student',
+        help_text='Роль пользователя: student или mentor.',
+    )
     custom_avatar = models.ImageField(
         upload_to='avatars/',
         null=True,
         blank=True,
         help_text='User uploaded custom avatar.',
     )
+
+    # --- Streak Days System ---
+    streak_days = models.PositiveIntegerField(
+        default=0,
+        help_text="Текущий стрик (ударные дни)."
+    )
+    last_streak_date = models.DateField(
+        null=True,
+        blank=True,
+        help_text="Дата последнего обновления стрика."
+    )
+    mini_exams_today = models.PositiveIntegerField(
+        default=0,
+        help_text="Количество пройденных мини-экзаменов за сегодня."
+    )
+    last_activity_date = models.DateField(
+        null=True,
+        blank=True,
+        help_text="Дата последней активности (для сброса счетчика мини-экзаменов)."
+    )
+    active_days_history = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="История ударных дней (список дат YYYY-MM-DD)."
+    )
+    streak_goal = models.PositiveIntegerField(
+        default=7,
+        help_text="Цель ударных дней."
+    )
+
+    def record_activity(self, activity_type='exam'):
+        """
+        Record user activity to extend their streak.
+        activity_type can be 'exam' (full test) or 'mini_exam' (e.g. video lesson).
+        1 full exam OR 3 mini exams in a day extends the streak.
+        """
+        today = timezone.localdate()
+
+        if self.last_activity_date != today:
+            self.mini_exams_today = 0
+            self.last_activity_date = today
+
+        if activity_type == 'mini_exam':
+            self.mini_exams_today += 1
+
+        is_qualifying = False
+        if activity_type == 'exam' or self.mini_exams_today >= 3:
+            is_qualifying = True
+
+        if is_qualifying:
+            today_str = today.isoformat()
+            if today_str not in self.active_days_history:
+                self.active_days_history.append(today_str)
+
+            if self.last_streak_date == today:
+                # Already recorded streak for today
+                pass
+            elif self.last_streak_date == today - timedelta(days=1):
+                # Consecutive day
+                self.streak_days += 1
+                self.last_streak_date = today
+                self.mini_exams_today = 0  # reset mini exams to require 3 more for another (though max 1 streak/day)
+            else:
+                # Streak broken, start new
+                self.streak_days = 1
+                self.last_streak_date = today
+
+            # Check if streak reached the goal
+            if self.streak_days > 0 and self.streak_days % self.streak_goal == 0:
+                from accounts.tasks import send_streak_goal_email_task
+                send_streak_goal_email_task.delay(self.user_id, self.streak_days)
+
+        self.save(update_fields=['streak_days', 'last_streak_date', 'mini_exams_today', 'last_activity_date', 'active_days_history'])
 
     def __str__(self):
         return f"{self.user.username}'s profile"

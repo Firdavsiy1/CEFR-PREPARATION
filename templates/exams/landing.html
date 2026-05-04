@@ -1,0 +1,251 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}CEFR Prep — Изучай английский с ИИ{% endblock %}
+
+{% block extra_head %}
+<style>
+    .gradient-text-green {
+        background: linear-gradient(to right, #58CC02, #46A302);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+    .gradient-text-blue {
+        background: linear-gradient(to right, #1CB0F6, #1899D6);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+    .gradient-text-gold {
+        background: linear-gradient(to right, #FFC800, #E5B400);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+    .gradient-text-purple {
+        background: linear-gradient(to right, #CE82FF, #A855F7);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+
+    /* Floating Animation for Images */
+    @keyframes float {
+        0% { transform: translateY(0px); }
+        50% { transform: translateY(-15px); }
+        100% { transform: translateY(0px); }
+    }
+    .animate-float {
+        animation: float 6s ease-in-out infinite;
+    }
+    .animate-float-delayed {
+        animation: float 6s ease-in-out 3s infinite;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="relative w-full overflow-hidden">
+
+    <!-- HERO SECTION -->
+    <section class="relative pt-12 pb-24 lg:pt-20 lg:pb-32 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto flex flex-col lg:flex-row items-center gap-12 lg:gap-20">
+        <div class="flex-1 text-center lg:text-left z-10 animate-fade-in">
+            <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-duo-green/10 border border-duo-green/20 text-duo-green font-bold text-sm mb-6 uppercase tracking-wider">
+                <i class="ph-fill ph-sparkle"></i>
+                <span data-i18n="landing_new_era">Новая эра изучения языка</span>
+            </div>
+            <h1 class="text-4xl sm:text-5xl lg:text-6xl font-black text-white leading-tight mb-6" data-i18n="landing_hero_title">
+                Сдай CEFR на <span class="gradient-text-green">отлично</span>.<br>
+                Без стресса и зубрежки.
+            </h1>
+            <p class="text-lg text-duo-text-dim mb-10 font-medium max-w-2xl mx-auto lg:mx-0" data-i18n="landing_hero_desc">
+                Платформа нового поколения с искусственным интеллектом. Тренируй Reading, Listening, Writing и Speaking в интерактивном формате, получай мгновенный фидбэк и достигай своих целей быстрее.
+            </p>
+            <div class="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4">
+                <a href="{% url 'accounts:register' %}" class="btn-duo-green w-full sm:w-auto text-lg !px-8 !py-4 shadow-[0_8px_30px_rgba(88,204,2,0.3)]">
+                    <span data-i18n="landing_btn_start">Начать бесплатно</span>
+                    <i class="ph-bold ph-arrow-right"></i>
+                </a>
+                <a href="{% url 'accounts:login' %}" class="btn-duo-outline w-full sm:w-auto text-lg !px-8 !py-4">
+                    <span data-i18n="landing_btn_login">У меня уже есть аккаунт</span>
+                </a>
+            </div>
+        </div>
+        
+        <div class="flex-1 w-full max-w-lg lg:max-w-none relative z-10 animate-fade-in" style="animation-delay: 0.2s;">
+            <div class="relative rounded-[2rem] overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.5)] border border-white/10 animate-float group">
+                <div class="absolute inset-0 bg-gradient-to-t from-duo-bg to-transparent opacity-50 z-10"></div>
+                <img src="{% static 'images/landing_hero.png' %}" alt="Students learning together" class="w-full h-auto object-cover transform group-hover:scale-105 transition-transform duration-700">
+            </div>
+            
+            <!-- Decorative Blobs -->
+            <div class="absolute -top-10 -right-10 w-32 h-32 bg-duo-green rounded-full mix-blend-screen filter blur-[60px] opacity-30"></div>
+            <div class="absolute -bottom-10 -left-10 w-40 h-40 bg-duo-purple rounded-full mix-blend-screen filter blur-[80px] opacity-30"></div>
+        </div>
+    </section>
+
+    <!-- DIVIDER -->
+    <div class="w-full h-px bg-gradient-to-r from-transparent via-duo-border to-transparent my-8"></div>
+
+    <!-- STUDENT FEATURES -->
+    <section class="relative py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto flex flex-col lg:flex-row-reverse items-center gap-12 lg:gap-20">
+        <div class="flex-1 z-10">
+            <h2 class="text-3xl sm:text-4xl font-black text-white mb-6" data-i18n="landing_stud_title">
+                Учись <span class="gradient-text-blue">умнее</span>, а не больше
+            </h2>
+            <p class="text-duo-text-dim mb-8 text-lg" data-i18n="landing_stud_desc">
+                Наш дашборд превращает подготовку к экзаменам в увлекательную игру. Отслеживай прогресс, соревнуйся с собой и достигай результатов!
+            </p>
+            
+            <ul class="space-y-6">
+                <li class="flex gap-4 items-start">
+                    <div class="w-12 h-12 rounded-2xl bg-duo-blue/15 border border-duo-blue/30 flex items-center justify-center flex-shrink-0 text-duo-blue">
+                        <i class="ph-fill ph-chart-line-up text-2xl"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-white font-bold text-lg mb-1" data-i18n="landing_stud_f1_title">Детальная аналитика</h3>
+                        <p class="text-duo-text-muted text-sm leading-relaxed" data-i18n="landing_stud_f1_desc">Смотри свои баллы по каждому навыку (Reading, Listening, Writing, Speaking) и знай свои сильные и слабые стороны.</p>
+                    </div>
+                </li>
+                <li class="flex gap-4 items-start">
+                    <div class="w-12 h-12 rounded-2xl bg-duo-gold/15 border border-duo-gold/30 flex items-center justify-center flex-shrink-0 text-duo-gold">
+                        <i class="ph-fill ph-fire text-2xl"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-white font-bold text-lg mb-1" data-i18n="landing_stud_f2_title">Ударный режим (Streak)</h3>
+                        <p class="text-duo-text-muted text-sm leading-relaxed" data-i18n="landing_stud_f2_desc">Занимайся каждый день, накапливай дни в ударном режиме и получай награды за стабильность.</p>
+                    </div>
+                </li>
+                <li class="flex gap-4 items-start">
+                    <div class="w-12 h-12 rounded-2xl bg-duo-green/15 border border-duo-green/30 flex items-center justify-center flex-shrink-0 text-duo-green">
+                        <i class="ph-fill ph-book-bookmark text-2xl"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-white font-bold text-lg mb-1" data-i18n="landing_stud_f3_title">Умный словарь</h3>
+                        <p class="text-duo-text-muted text-sm leading-relaxed" data-i18n="landing_stud_f3_desc">Сохраняй неизвестные слова прямо во время тестов двойным кликом. AI сам добавит транскрипцию и примеры.</p>
+                    </div>
+                </li>
+            </ul>
+        </div>
+        
+        <div class="flex-1 w-full relative z-10">
+            <div class="relative rounded-[2rem] overflow-hidden shadow-[0_20px_60px_rgba(28,176,246,0.15)] border border-duo-blue/20 animate-float-delayed">
+                <img src="{% static 'images/landing_students.png' %}" alt="Student Dashboard Features" class="w-full h-auto object-cover">
+            </div>
+            <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-duo-blue rounded-full mix-blend-screen filter blur-[100px] opacity-20 -z-10"></div>
+        </div>
+    </section>
+
+    <!-- AI SECTION -->
+    <section class="relative py-24 bg-duo-surface/50 border-y border-duo-border overflow-hidden">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+            <div class="text-center max-w-3xl mx-auto mb-16">
+                <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-duo-purple/10 border border-duo-purple/20 text-duo-purple font-bold text-sm mb-4 uppercase tracking-wider">
+                    <i class="ph-fill ph-magic-wand"></i>
+                    <span data-i18n="landing_ai_badge">Искусственный Интеллект</span>
+                </div>
+                <h2 class="text-3xl sm:text-4xl font-black text-white mb-4" data-i18n="landing_ai_title">
+                    Твой персональный <span class="gradient-text-purple">ИИ-Репетитор</span>
+                </h2>
+                <p class="text-duo-text-dim text-lg" data-i18n="landing_ai_desc">
+                    Мы интегрировали передовые нейросети, чтобы дать тебе обратную связь уровня профессионального преподавателя, доступную 24/7.
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+                <div class="relative rounded-[2rem] overflow-hidden shadow-[0_20px_60px_rgba(206,130,255,0.15)] border border-duo-purple/20 animate-float">
+                    <img src="{% static 'images/landing_ai.png' %}" alt="AI Assistant Features" class="w-full h-auto object-cover">
+                </div>
+                
+                <div class="space-y-8">
+                    <div class="card-duo p-6 border-l-4 border-l-duo-purple">
+                        <div class="flex items-center gap-3 mb-3">
+                            <i class="ph-fill ph-pencil-line text-2xl text-duo-purple"></i>
+                            <h3 class="text-white font-bold text-xl" data-i18n="landing_ai_f1_title">Автопроверка Writing и Speaking</h3>
+                        </div>
+                        <p class="text-duo-text-muted" data-i18n="landing_ai_f1_desc">Больше не нужно ждать учителя! Напиши эссе или запиши аудио, и наш AI моментально оценит твой ответ по критериям CEFR, исправит ошибки и даст подробный разбор.</p>
+                    </div>
+                    
+                    <div class="card-duo p-6 border-l-4 border-l-[#1899D6]">
+                        <div class="flex items-center gap-3 mb-3">
+                            <i class="ph-fill ph-youtube-logo text-2xl text-[#1CB0F6]"></i>
+                            <h3 class="text-white font-bold text-xl" data-i18n="landing_ai_f2_title">Интерактивные видео-уроки</h3>
+                        </div>
+                        <p class="text-duo-text-muted" data-i18n="landing_ai_f2_desc">AI автоматически генерирует вопросы на понимание и словарный запас из реальных YouTube видео, подстраиваясь под твой уровень.</p>
+                    </div>
+
+                    <div class="card-duo p-6 border-l-4 border-l-duo-green">
+                        <div class="flex items-center gap-3 mb-3">
+                            <i class="ph-fill ph-chat-centered-text text-2xl text-duo-green"></i>
+                            <h3 class="text-white font-bold text-xl" data-i18n="landing_ai_f3_title">Умный AI Чат</h3>
+                        </div>
+                        <p class="text-duo-text-muted" data-i18n="landing_ai_f3_desc">Практикуй разговорный английский в текстовом формате. AI-помощник поддерживает беседу, поправляет ошибки и помогает расширить словарный запас.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- MENTOR FEATURES -->
+    <section class="relative py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto flex flex-col lg:flex-row items-center gap-12 lg:gap-20">
+        <div class="flex-1 z-10">
+            <h2 class="text-3xl sm:text-4xl font-black text-white mb-6" data-i18n="landing_ment_title">
+                Суперсила для <span class="gradient-text-gold">Менторов</span>
+            </h2>
+            <p class="text-duo-text-dim mb-8 text-lg" data-i18n="landing_ment_desc">
+                Преподаешь английский? CEFR Prep автоматизирует рутину, позволяя тебе сфокусироваться на главном — прогрессе твоих учеников.
+            </p>
+            
+            <ul class="space-y-6">
+                <li class="flex gap-4 items-start">
+                    <div class="w-12 h-12 rounded-2xl bg-duo-gold/15 border border-duo-gold/30 flex items-center justify-center flex-shrink-0 text-duo-gold">
+                        <i class="ph-fill ph-file-pdf text-2xl"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-white font-bold text-lg mb-1" data-i18n="landing_ment_f1_title">Генерация тестов из файлов</h3>
+                        <p class="text-duo-text-muted text-sm leading-relaxed" data-i18n="landing_ment_f1_desc">Загрузи PDF, Word или изображение. Наш AI сам распознает текст, создаст вопросы (Multiple Choice, Fill in the blanks) и соберет готовый тест.</p>
+                    </div>
+                </li>
+                <li class="flex gap-4 items-start">
+                    <div class="w-12 h-12 rounded-2xl bg-[#1CB0F6]/15 border border-[#1899D6]/30 flex items-center justify-center flex-shrink-0 text-[#1CB0F6]">
+                        <i class="ph-fill ph-users-three text-2xl"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-white font-bold text-lg mb-1" data-i18n="landing_ment_f2_title">Управление студентами</h3>
+                        <p class="text-duo-text-muted text-sm leading-relaxed" data-i18n="landing_ment_f2_desc">Следи за успехами каждого ученика, просматривай их ошибки и давай индивидуальные рекомендации.</p>
+                    </div>
+                </li>
+                <li class="flex gap-4 items-start">
+                    <div class="w-12 h-12 rounded-2xl bg-[#FF4B4B]/15 border border-[#E53E3E]/30 flex items-center justify-center flex-shrink-0 text-[#FF4B4B]">
+                        <i class="ph-fill ph-presentation-chart text-2xl"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-white font-bold text-lg mb-1" data-i18n="landing_ment_f3_title">Групповые Kahoot-уроки</h3>
+                        <p class="text-duo-text-muted text-sm leading-relaxed" data-i18n="landing_ment_f3_desc">Проводи интерактивные уроки в реальном времени. Студенты подключаются с телефонов и отвечают на вопросы по видео.</p>
+                    </div>
+                </li>
+            </ul>
+        </div>
+        
+        <div class="flex-1 w-full relative z-10">
+            <div class="relative rounded-[2rem] overflow-hidden shadow-[0_20px_60px_rgba(255,200,0,0.1)] border border-duo-gold/20 animate-float-delayed">
+                <img src="{% static 'images/landing_mentors.png' %}" alt="Mentor Features" class="w-full h-auto object-cover">
+            </div>
+            <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-duo-gold rounded-full mix-blend-screen filter blur-[100px] opacity-10 -z-10"></div>
+        </div>
+    </section>
+
+    <!-- CTA SECTION -->
+    <section class="relative py-24 mb-10 overflow-hidden text-center">
+        <div class="absolute inset-0 bg-duo-green opacity-[0.03]"></div>
+        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-duo-green rounded-full mix-blend-screen filter blur-[150px] opacity-[0.15] -z-10"></div>
+        
+        <div class="max-w-4xl mx-auto px-4 relative z-10 animate-slide-up">
+            <h2 class="text-4xl sm:text-5xl font-black text-white mb-6" data-i18n="landing_cta_title">Готов улучшить свой английский?</h2>
+            <p class="text-xl text-duo-text-dim mb-10 max-w-2xl mx-auto" data-i18n="landing_cta_desc">Присоединяйся к нам сегодня и начни свой путь к свободному владению языком.</p>
+            
+            <a href="{% url 'accounts:register' %}" class="btn-duo-green text-xl !px-12 !py-5 shadow-[0_8px_30px_rgba(88,204,2,0.4)]">
+                <span data-i18n="nav_register">Создать аккаунт</span>
+            </a>
+        </div>
+    </section>
+
+</div>
+{% endblock %}

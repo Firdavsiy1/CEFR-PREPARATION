@@ -1,0 +1,80 @@
+            <div class="flex items-center justify-between pt-2">
+                <a href="{% url 'exams:mentor_dashboard' %}" class="text-sm text-duo-text-dim hover:text-white transition-colors font-bold" data-i18n="mnt_cancel">
+                    Отмена
+                </a>
+                <button type="submit" id="submit-btn" class="btn-duo-green text-sm">
+                    <i class="ph-fill ph-rocket-launch text-lg"></i>
+                    <span id="submit-text" data-i18n="mnt_submit_upload">Опубликовать тест</span>
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Warning -->
+    <div class="mt-6 card-duo !border-duo-gold/30 p-4 animate-slide-up" style="animation-delay: 0.3s">
+        <div class="flex items-start gap-3">
+            <div class="w-10 h-10 rounded-xl bg-duo-gold/15 flex items-center justify-center flex-shrink-0">
+                <i class="ph-fill ph-warning text-duo-gold text-lg"></i>
+            </div>
+            <div>
+                <p class="text-sm font-extrabold text-duo-gold mb-1" data-i18n="mnt_warn_title">Важные замечания</p>
+                <ul class="text-xs text-duo-text-dim space-y-1.5 font-semibold">
+                    <li class="flex items-start gap-2"><i class="ph-fill ph-dot text-duo-gold mt-0.5"></i> <span data-i18n="mnt_warn_ai">Обработка использует</span> <strong class="text-white">Gemini AI OCR</strong> <span data-i18n="mnt_warn_ai_suffix">и выполняется в фоновом режиме.</span></li>
+                    <li class="flex items-start gap-2"><i class="ph-fill ph-dot text-duo-gold mt-0.5"></i> <span data-i18n="mnt_warn_overwrite">Тест с таким же именем будет</span> <strong class="text-white" data-i18n="mnt_warn_overwrite_val">перезаписан</strong>.</li>
+                    <li class="flex items-start gap-2"><i class="ph-fill ph-dot text-duo-gold mt-0.5"></i> <span data-i18n="mnt_warn_edit">Результаты OCR можно редактировать в</span> <strong class="text-white" data-i18n="mnt_warn_edit_val">Конструкторе тестов</strong>.</li>
+                    <li class="flex items-start gap-2"><i class="ph-fill ph-dot text-duo-green mt-0.5"></i> <span data-i18n="mnt_warn_close">Вы можете</span> <strong class="text-white" data-i18n="mnt_warn_close_val">закрыть страницу</strong> <span data-i18n="mnt_warn_close_suffix">— обработка не прервётся.</span></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    const fileInput = document.getElementById('zip_file');
+    const dropContent = document.getElementById('drop-content');
+    const fileSelected = document.getElementById('file-selected');
+    const fileName = document.getElementById('file-name');
+    const fileSize = document.getElementById('file-size');
+    const dropZone = document.getElementById('drop-zone');
+    const form = document.getElementById('upload-form');
+    const submitBtn = document.getElementById('submit-btn');
+    const submitText = document.getElementById('submit-text');
+
+    fileInput.addEventListener('change', () => {
+        if (fileInput.files.length > 0) {
+            const file = fileInput.files[0];
+            dropContent.classList.add('hidden');
+            fileSelected.classList.remove('hidden');
+            fileName.textContent = file.name;
+            fileSize.textContent = (file.size / 1024 / 1024).toFixed(2) + ' MB';
+            dropZone.classList.add('border-duo-green/40', 'bg-duo-green/[0.02]');
+            dropZone.classList.remove('border-duo-border');
+        }
+    });
+
+    // Drag and drop visual feedback
+    ['dragenter', 'dragover'].forEach(ev => {
+        dropZone.addEventListener(ev, (e) => {
+            e.preventDefault();
+            dropZone.classList.add('border-duo-green/60', 'bg-duo-green/[0.05]');
+        });
+    });
+    ['dragleave', 'drop'].forEach(ev => {
+        dropZone.addEventListener(ev, (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('border-duo-green/60', 'bg-duo-green/[0.05]');
+        });
+    });
+
+    // Show uploading state on submit
+    form.addEventListener('submit', () => {
+        const lang = document.documentElement.lang || 'ru';
+        const dict = (typeof _i18n !== 'undefined' && _i18n[lang]) ? _i18n[lang] : {};
+        submitBtn.disabled = true;
+        submitText.innerHTML = '<i class="ph ph-spinner animate-spin"></i> ' + (dict.mnt_uploading || 'Загрузка...');
+    });
+</script>
+{% endblock %}

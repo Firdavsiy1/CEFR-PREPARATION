@@ -1,0 +1,177 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Загрузить Speaking тест — Панель Ментора{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+    {% include "exams/mentor/_workspace_header.html" with icon="ph-fill ph-microphone" accent="green" title="Speaking OCR загрузка" subtitle="Специализированный поток для speaking-страниц: AI parsing, crop wizard, validation и публикация в builder без лишних промежуточных шагов." page_group="upload-speaking" %}
+
+    <!-- Upload Card -->
+    <div class="card-duo overflow-hidden !p-0 animate-fade-in relative min-h-[500px]">
+
+        <div class="grid gap-3 border-b-2 border-duo-border bg-white/[0.02] px-6 py-5 sm:grid-cols-3">
+            <div class="rounded-2xl border border-white/10 bg-white/5 p-4">
+                <p class="text-[11px] font-black uppercase tracking-[0.16em] text-duo-green">Шаг 1</p>
+                <p class="mt-2 text-sm font-black text-white">Создайте draft speaking test</p>
+                <p class="mt-1 text-xs font-semibold text-duo-text-dim">Название связывает OCR, builder и дальнейшую публикацию.</p>
+            </div>
+            <div class="rounded-2xl border border-white/10 bg-white/5 p-4">
+                <p class="text-[11px] font-black uppercase tracking-[0.16em] text-duo-green">Шаг 2</p>
+                <p class="mt-2 text-sm font-black text-white">Загрузите фото страницы</p>
+                <p class="mt-1 text-xs font-semibold text-duo-text-dim">Система извлечёт части, инструкции и вопросы через AI OCR.</p>
+            </div>
+            <div class="rounded-2xl border border-white/10 bg-white/5 p-4">
+                <p class="text-[11px] font-black uppercase tracking-[0.16em] text-duo-green">Шаг 3</p>
+                <p class="mt-2 text-sm font-black text-white">Crop и validation в builder</p>
+                <p class="mt-1 text-xs font-semibold text-duo-text-dim">После OCR проверьте crop для Part 1.2 и 2, затем публикуйте.</p>
+            </div>
+        </div>
+
+        <!-- Form -->
+        <form method="post" enctype="multipart/form-data" class="p-8 space-y-7" id="upload-form">
+            {% csrf_token %}
+
+            <!-- Test Name -->
+            <div>
+                <label for="test_name" class="block text-xs font-extrabold text-duo-text-dim mb-2 uppercase tracking-widest">
+                    <i class="ph-fill ph-text-t text-duo-green mr-1"></i>
+                    <span data-i18n="mnt_test_name_label">Название теста</span>
+                </label>
+                <input type="text" id="test_name" name="test_name" required
+                       data-i18n-placeholder="mnt_test_name_placeholder"
+                       placeholder="Например: Test 12"
+                       class="input-duo !pl-4">
+                <p class="mt-1.5 text-xs text-duo-text-muted font-semibold" data-i18n="mnt_test_name_hint">Это будет отображаемое имя теста</p>
+            </div>
+
+            <!-- ZIP / Photo File Upload -->
+            <div>
+                <label class="block text-xs font-extrabold text-duo-text-dim mb-2 uppercase tracking-widest">
+                    <i class="ph-fill ph-image text-duo-gold mr-1"></i>
+                    <span data-i18n="mnt_photo_label">Фото speaking страницы (.jpg, .png)</span>
+                </label>
+
+                <!-- Drop Zone -->
+                <div id="drop-zone"
+                     class="relative border-2 border-dashed border-duo-border rounded-2xl p-10
+                            text-center cursor-pointer
+                            hover:border-duo-green/50 hover:bg-duo-green/[0.02]
+                            transition-all duration-300 group">
+
+                    <input type="file" name="image" accept=".jpg,.jpeg,.png" id="zip_file"  required
+                           class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10">
+
+                    <div id="drop-content">
+                        <div class="w-16 h-16 mx-auto mb-4 rounded-2xl flex items-center justify-center
+                                    bg-duo-surface-2 border-2 border-duo-border
+                                    group-hover:border-duo-green/40 group-hover:bg-duo-green/5 transition-all">
+                            <i class="ph-fill ph-camera text-3xl text-duo-text-muted group-hover:text-duo-green transition-colors"></i>
+                        </div>
+                        <p class="text-sm font-bold text-white mb-1" data-i18n="mnt_drop_photo_text">Перетащите фото экзамена сюда (или нажмите)</p>
+                        <p class="text-xs text-duo-text-muted font-semibold" data-i18n="mnt_drop_max">Максимальный размер: 500MB</p>
+                    </div>
+
+                    <div id="file-selected" class="hidden">
+                        <div class="w-16 h-16 mx-auto mb-4 rounded-2xl flex items-center justify-center
+                                    bg-duo-green/15 border-2 border-duo-green/30">
+                            <i class="ph-fill ph-image text-3xl text-duo-green"></i>
+                        </div>
+                        <p class="text-sm font-extrabold text-duo-green mb-1" id="file-name">photo.jpg</p>
+                        <p class="text-xs text-duo-text-dim font-bold" id="file-size">0 MB</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Expected Info Box for Writing -->
+            <div class="card-duo !bg-duo-surface/50 p-5">
+                <h3 class="text-xs font-extrabold text-duo-text-dim mb-2 flex items-center gap-2 uppercase tracking-widest">
+                    <i class="ph-fill ph-magic-wand text-duo-purple"></i>
+                    <span data-i18n="mnt_spk_info_title">AI Анализ Экзамена</span>
+                </h3>
+                <p class="text-xs text-duo-text-muted font-semibold leading-relaxed" data-i18n="mnt_spk_info_desc">
+                    Система автоматически проанализирует загруженное фото с помощью Gemini Vision для извлечения всех трех частей Speaking теста. Вы сможете отредактировать их в Конструкторе.
+                </p>
+            </div>
+
+            <!-- Submit -->
+            <div class="flex items-center justify-between pt-2">
+                <a href="{% url 'exams:mentor_dashboard' %}" class="text-sm text-duo-text-dim hover:text-white transition-colors font-bold" data-i18n="mnt_cancel">
+                    Отмена
+                </a>
+                <button type="submit" id="submit-btn" class="btn-duo-green text-sm">
+                    <i class="ph-fill ph-rocket-launch text-lg"></i>
+                    <span id="submit-text" data-i18n="mnt_submit_upload">Создать черновик и открыть builder</span>
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Warning -->
+    <div class="mt-6 card-duo !border-duo-gold/30 p-4 animate-slide-up" style="animation-delay: 0.3s">
+        <div class="flex items-start gap-3">
+            <div class="w-10 h-10 rounded-xl bg-duo-gold/15 flex items-center justify-center flex-shrink-0">
+                <i class="ph-fill ph-warning text-duo-gold text-lg"></i>
+            </div>
+            <div>
+                <p class="text-sm font-extrabold text-duo-gold mb-1" data-i18n="mnt_warn_title">Важные замечания</p>
+                <ul class="text-xs text-duo-text-dim space-y-1.5 font-semibold">
+                    <li class="flex items-start gap-2"><i class="ph-fill ph-dot text-duo-gold mt-0.5"></i> <span data-i18n="mnt_warn_ai">Обработка использует</span> <strong class="text-white">Gemini AI OCR</strong> <span data-i18n="mnt_warn_ai_suffix">— сначала создаётся черновик, затем открывается builder.</span></li>
+                    <li class="flex items-start gap-2"><i class="ph-fill ph-dot text-duo-gold mt-0.5"></i> <span data-i18n="mnt_warn_overwrite">Тест с таким же именем будет</span> <strong class="text-white" data-i18n="mnt_warn_overwrite_val">перезаписан</strong>.</li>
+                    <li class="flex items-start gap-2"><i class="ph-fill ph-dot text-duo-gold mt-0.5"></i> <span data-i18n="mnt_warn_edit">Результаты OCR можно редактировать в</span> <strong class="text-white" data-i18n="mnt_warn_edit_val">Конструкторе тестов</strong>.</li>
+                    <li class="flex items-start gap-2"><i class="ph-fill ph-dot text-duo-green mt-0.5"></i> <span data-i18n="mnt_warn_close">Вы можете</span> <strong class="text-white" data-i18n="mnt_warn_close_val">закрыть страницу</strong> <span data-i18n="mnt_warn_close_suffix">— фоновая обработка продолжится.</span></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    const fileInput = document.getElementById('zip_file');
+    const dropContent = document.getElementById('drop-content');
+    const fileSelected = document.getElementById('file-selected');
+    const fileName = document.getElementById('file-name');
+    const fileSize = document.getElementById('file-size');
+    const dropZone = document.getElementById('drop-zone');
+    const form = document.getElementById('upload-form');
+    const submitBtn = document.getElementById('submit-btn');
+    const submitText = document.getElementById('submit-text');
+
+    fileInput.addEventListener('change', () => {
+        if (fileInput.files.length > 0) {
+            const file = fileInput.files[0];
+            dropContent.classList.add('hidden');
+            fileSelected.classList.remove('hidden');
+            fileName.textContent = file.name;
+            fileSize.textContent = (file.size / 1024 / 1024).toFixed(2) + ' MB';
+            dropZone.classList.add('border-duo-green/40', 'bg-duo-green/[0.02]');
+            dropZone.classList.remove('border-duo-border');
+        }
+    });
+
+    // Drag and drop visual feedback
+    ['dragenter', 'dragover'].forEach(ev => {
+        dropZone.addEventListener(ev, (e) => {
+            e.preventDefault();
+            dropZone.classList.add('border-duo-green/60', 'bg-duo-green/[0.05]');
+        });
+    });
+    ['dragleave', 'drop'].forEach(ev => {
+        dropZone.addEventListener(ev, (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('border-duo-green/60', 'bg-duo-green/[0.05]');
+        });
+    });
+
+    // Show uploading state on submit
+    form.addEventListener('submit', () => {
+        const lang = document.documentElement.lang || 'ru';
+        const dict = (typeof _i18n !== 'undefined' && _i18n[lang]) ? _i18n[lang] : {};
+        submitBtn.disabled = true;
+        submitText.innerHTML = '<i class="ph ph-spinner animate-spin"></i> ' + (dict.mnt_uploading || 'Загрузка...');
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Приглашение в класс — CEFR Prep{% endblock %}
+
+{% block content %}
+<div class="min-h-[60vh] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-md w-full animate-slide-up">
+        <div class="card-duo p-8 sm:p-10 text-center">
+            
+            <div class="w-20 h-20 mx-auto mb-5 rounded-[24px] flex items-center justify-center bg-duo-green shadow-[0_4px_0_#46A302] animate-bounce-in text-4xl select-none border border-duo-green/20">
+                {{ classroom.emoji }}
+            </div>
+            
+            <p class="text-[11px] font-black text-duo-text-muted uppercase tracking-[0.15em] mb-2">Приглашение в класс</p>
+            <h1 class="text-2xl sm:text-3xl font-black text-white mb-2">{{ classroom.name }}</h1>
+            
+            {% if classroom.description %}
+            <p class="text-sm font-semibold text-duo-text-dim leading-relaxed mb-6">{{ classroom.description }}</p>
+            {% endif %}
+
+            <div class="flex items-center justify-center gap-2 mb-8 bg-white/5 rounded-2xl py-3 px-4 border border-white/10 w-max mx-auto">
+                <div class="w-8 h-8 rounded-full bg-duo-blue/20 flex items-center justify-center border border-duo-blue/30 shrink-0">
+                    <i class="ph-fill ph-chalkboard-teacher text-duo-blue text-sm"></i>
+                </div>
+                <div class="text-left">
+                    <p class="text-[10px] font-black uppercase tracking-widest text-duo-text-muted">Ментор</p>
+                    <p class="text-sm font-black text-white leading-tight">
+                        {% if classroom.mentor.first_name %}{{ classroom.mentor.first_name }} {{ classroom.mentor.last_name }}{% else %}{{ classroom.mentor.username }}{% endif %}
+                    </p>
+                </div>
+            </div>
+
+            {% if user.is_authenticated %}
+                {% if already_member %}
+                <div class="bg-duo-blue/15 border border-duo-blue/30 rounded-2xl p-4 mb-6">
+                    <i class="ph-fill ph-check-circle text-duo-blue text-3xl mb-2"></i>
+                    <p class="text-white font-bold text-sm">Вы уже состоите в этом классе!</p>
+                </div>
+                <a href="{% url 'exams:my_classroom' %}?classroom={{ classroom.id }}" class="btn-duo-blue w-full text-base !py-3.5">
+                    Перейти в класс
+                </a>
+                {% else %}
+                <form method="POST">
+                    {% csrf_token %}
+                    <button type="submit" class="btn-duo-green w-full text-base !py-3.5 mb-4">
+                        <i class="ph-fill ph-sign-in text-lg"></i>
+                        Принять приглашение
+                    </button>
+                </form>
+                <a href="{% url 'exams:dashboard' %}" class="text-sm font-bold text-duo-text-dim hover:text-white transition-colors">
+                    Отмена
+                </a>
+                {% endif %}
+            {% else %}
+                <div class="bg-duo-gold/15 border border-duo-gold/30 rounded-2xl p-4 mb-6 text-left flex items-start gap-3">
+                    <i class="ph-fill ph-warning text-duo-gold text-xl shrink-0 mt-0.5"></i>
+                    <div>
+                        <p class="text-sm font-bold text-white mb-1">Необходима авторизация</p>
+                        <p class="text-xs text-duo-text-dim font-semibold">Войдите в аккаунт или зарегистрируйтесь, чтобы присоединиться к классу.</p>
+                    </div>
+                </div>
+                <div class="flex flex-col gap-3">
+                    <a href="{% url 'accounts:login' %}?next={{ request.path }}" class="btn-duo-green w-full text-base !py-3.5">
+                        Войти
+                    </a>
+                    <a href="{% url 'accounts:register' %}?next={{ request.path }}" class="btn-duo-outline w-full text-base !py-3.5">
+                        Зарегистрироваться
+                    </a>
+                </div>
+            {% endif %}
+
+        </div>
+    </div>
+</div>
+{% endblock %}

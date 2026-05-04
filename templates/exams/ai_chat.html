@@ -1,0 +1,756 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}AI Assistant — CEFR Prep{% endblock %}
+
+{% block main_class %}relative z-10 flex-1 p-0{% endblock %}
+
+{% block extra_head %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script>
+    window._mermaidReady = false;
+    window._mermaidQueue = [];
+</script>
+<script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+    window.mermaid = mermaid;
+    window.mermaid.initialize({
+        startOnLoad: false, 
+        theme: 'base',
+        themeVariables: {
+            fontFamily: "'Inter', sans-serif",
+            background: 'transparent',
+            primaryColor: '#1a1a1a',
+            primaryTextColor: '#e5e5e5',
+            primaryBorderColor: 'rgba(255,255,255,0.12)',
+            lineColor: '#4A9EFF',
+            secondaryColor: '#222222',
+            tertiaryColor: '#2a2a2a',
+            clusterBkg: 'rgba(255,255,255,0.03)',
+            clusterBorder: 'rgba(255,255,255,0.08)',
+            nodeBorder: 'rgba(74,158,255,0.3)',
+            nodeTextColor: '#e5e5e5',
+            edgeLabelBackground: '#1a1a1a',
+            labelTextColor: '#a0a0a0',
+            pie1: '#4A9EFF', pie2: '#10B981', pie3: '#F59E0B', pie4: '#EC4899',
+            pie5: '#3B82F6', pie6: '#8B5CF6', pie7: '#06B6D4', pie8: '#F43F5E',
+            pieTitleTextColor: '#ffffff',
+            pieLegendTextColor: '#a0a0a0',
+            pieSectionTextColor: '#ffffff',
+            pieStrokeColor: 'rgba(255,255,255,0.05)',
+            pieStrokeWidth: '1px',
+            pieOpacity: '0.9'
+        },
+        flowchart: { htmlLabels: true, curve: 'basis' }
+    });
+    window._mermaidReady = true;
+    if (window._mermaidQueue.length) {
+        window.mermaid.run({ nodes: window._mermaidQueue });
+        window._mermaidQueue = [];
+    }
+</script>
+<link rel="stylesheet" href="{% static 'css/ai_chat.css' %}">
+{% endblock %}
+
+{% block content %}
+<section class="ai-chat-page">
+    <div class="chat-shell">
+        <div class="chat-sidebar" id="chatSidebar">
+            <div class="chat-sidebar-header">
+                <div class="ai-brand">
+                    <div class="ai-brand-main">
+                        <div class="ai-brand-mark"><i class="ph-fill ph-sparkle"></i></div>
+                        <div class="ai-brand-copy">
+                            <h2>CEFRPrep AI</h2>
+                            <p data-i18n="ai_brand_subtitle">English learning assistant</p>
+                        </div>
+                    </div>
+                </div>
+                <button onclick="startNewChat()" class="new-chat-btn" id="btn-new-chat">
+                    <i class="ph-bold ph-plus"></i>
+                    <span data-i18n="ai_new_chat">New chat</span>
+                </button>
+                <a href="{% url 'exams:dashboard' %}" class="sidebar-app-link">
+                    <i class="ph-bold ph-arrow-left"></i>
+                    <span data-i18n="ai_back_to_app">Back to app</span>
+                </a>
+            </div>
+            <div class="chat-sidebar-list" id="sessionList">
+                <span class="sidebar-section-label" data-i18n="ai_recent">Recent</span>
+                {% for s in sessions %}
+                <a class="session-item {% if current_session.id == s.id %}active{% endif %}" data-id="{{ s.id }}" href="{% url 'exams:ai_chat_detail' s.id %}" onclick="event.preventDefault();loadSession({{ s.id }}, this)">
+                    <i class="ph-fill ph-chat-circle-text session-icon"></i>
+                    <span class="session-title">{{ s.title }}</span>
+                    <button class="delete-btn" onclick="event.preventDefault();event.stopPropagation();deleteSession({{ s.id }},this.closest('a'))" title="Delete" data-i18n-title="ai_delete">
+                        <i class="ph-bold ph-trash"></i>
+                    </button>
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+        <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="closeSidebar()"></div>
+        <div class="chat-main">
+            <button class="sidebar-toggle" onclick="toggleSidebar()"><i class="ph-bold ph-list"></i></button>
+            <header class="chat-topbar">
+                <div class="chat-topbar-presence">
+                    <h1 class="chat-topbar-title">AI Assistant</h1>
+                    <div class="chat-topbar-desc"><span class="status-dot"></span>Online</div>
+                </div>
+                <div class="chat-topbar-actions">
+                    <a href="{% url 'exams:dashboard' %}" class="topbar-link"><i class="ph-fill ph-squares-four"></i> Dashboard</a>
+                    <a href="{% url 'accounts:profile' %}" class="topbar-user-chip">
+                        <span class="topbar-user-avatar" style="background: {% if user_profile %}{{ user_profile.avatar_gradient }}{% else %}linear-gradient(135deg, #4A9EFF, #111){% endif %};">
+                            {% if user_profile.avatar == 'custom' and user_profile.custom_avatar %}
+                            <img src="{{ user_profile.custom_avatar.url }}" alt="{{ user.username }}">
+                            {% else %}
+                            <i class="ph-fill {% if user_profile %}{{ user_profile.avatar_icon }}{% else %}ph-user{% endif %}"></i>
+                            {% endif %}
+                        </span>
+                        <span class="topbar-user-text">
+                            <span class="topbar-user-name">{% if user.first_name %}{{ user.first_name }}{% if user.last_name %} {{ user.last_name }}{% endif %}{% else %}{{ user.username }}{% endif %}</span>
+                            <span class="topbar-user-role">Profile</span>
+                        </span>
+                    </a>
+                </div>
+            </header>
+            <div class="chat-conversation-shell">
+                <div class="chat-messages" id="chatMessages">
+                    <div class="chat-empty" id="emptyState">
+                        <div class="chat-empty-kicker"><i class="ph-fill ph-sparkle"></i> CEFRPrep AI</div>
+                        <div class="chat-empty-icon"><i class="ph-fill ph-robot"></i></div>
+                        <h2 class="chat-empty-title" data-i18n="ai_empty_state_title">How can I help you learn English today?</h2>
+                        <p class="chat-empty-copy" data-i18n="ai_empty_state_copy">Ask about grammar, vocabulary, CEFR preparation, writing, speaking, or any English learning topic.</p>
+                        <div class="empty-feature-grid">
+                            <div class="empty-feature-card">
+                                <div class="empty-feature-icon"><i class="ph-fill ph-book-open-text"></i></div>
+                                <div class="empty-feature-title" data-i18n="ai_feature_grammar_title">Grammar & Vocabulary</div>
+                                <div class="empty-feature-text" data-i18n="ai_feature_grammar_text">Clear explanations with practical examples.</div>
+                            </div>
+                            <div class="empty-feature-card">
+                                <div class="empty-feature-icon"><i class="ph-fill ph-pencil-line"></i></div>
+                                <div class="empty-feature-title" data-i18n="ai_feature_writing_title">Writing Review</div>
+                                <div class="empty-feature-text" data-i18n="ai_feature_writing_text">Get feedback and corrections on your essays.</div>
+                            </div>
+                            <div class="empty-feature-card">
+                                <div class="empty-feature-icon"><i class="ph-fill ph-path"></i></div>
+                                <div class="empty-feature-title" data-i18n="ai_feature_cefr_title">CEFR Strategy</div>
+                                <div class="empty-feature-text" data-i18n="ai_feature_cefr_text">Personalized study plans and exam tips.</div>
+                            </div>
+                        </div>
+                        <div class="suggestions" id="suggestions">
+                            <div class="suggestion-chip" onclick="sendSuggestion(this)" data-i18n="ai_prompt_1">Explain Present Perfect with examples</div>
+                            <div class="suggestion-chip" onclick="sendSuggestion(this)" data-i18n="ai_prompt_2">Make a 7-day B2 Speaking plan</div>
+                            <div class="suggestion-chip" onclick="sendSuggestion(this)" data-i18n="ai_prompt_3">Review my Writing and suggest improvements</div>
+                            <div class="suggestion-chip" onclick="sendSuggestion(this)" data-i18n="ai_prompt_4">Common mistakes in CEFR Reading</div>
+                            <div class="suggestion-chip" onclick="sendSuggestion(this)" data-i18n="ai_prompt_5">Give me 5 phrases for Part 3 discussion</div>
+                            <div class="suggestion-chip" onclick="sendSuggestion(this)" data-i18n="ai_prompt_6">How to improve Listening comprehension?</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="chat-input-area">
+                    <div class="chat-input-wrap">
+                        <textarea id="chatInput" rows="1" placeholder="Ask anything about English..." data-i18n-placeholder="ai_placeholder"
+                            onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMessage()}"></textarea>
+                        <button class="chat-send-btn" id="sendBtn" onclick="sendMessage()">
+                            <i class="ph-bold ph-arrow-up"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+const CSRF = '{{ csrf_token }}';
+const CURRENT_SESSION_ID = {{ current_session.id|default:'null' }};
+const BASE_CHAT_URL = '{% url "exams:ai_chat" %}';
+const USER_DISPLAY_NAME = '{% if user.first_name %}{{ user.first_name|escapejs }}{% if user.last_name %} {{ user.last_name|escapejs }}{% endif %}{% else %}{{ user.username|escapejs }}{% endif %}';
+const USER_AVATAR_HTML = `{% if user_profile.avatar == 'custom' and user_profile.custom_avatar %}<img src="{{ user_profile.custom_avatar.url }}" alt="User avatar" class="msg-avatar-image">{% else %}<span class="msg-avatar-shell" style="background: {% if user_profile %}{{ user_profile.avatar_gradient|escapejs }}{% else %}linear-gradient(135deg, #58CC02, #46A302){% endif %};"><i class="ph-fill {% if user_profile %}{{ user_profile.avatar_icon }}{% else %}ph-bird{% endif %}"></i></span>{% endif %}`;
+const ASSISTANT_AVATAR_HTML = '<span class="msg-avatar-core"><i class="ph-fill ph-robot"></i></span>';
+const MODULE_META = {
+    listening: { name:'Listening', icon:'ph-headphones', color:'#1CB0F6', url:'{% url "exams:dashboard_category" "listening" %}' },
+    reading:   { name:'Reading',   icon:'ph-book-open-text', color:'#58CC02', url:'{% url "exams:dashboard_category" "reading" %}' },
+    writing:   { name:'Writing',   icon:'ph-pencil-line', color:'#CE82FF', url:'{% url "exams:dashboard_category" "writing" %}' },
+    speaking:  { name:'Speaking',  icon:'ph-microphone-stage', color:'#FFC800', url:'{% url "exams:dashboard_category" "speaking" %}' },
+};
+
+let currentSessionId = null;
+let isLoading = false;
+let activeUtterance = null;
+let activeTtsButton = null;
+let activeSpeechSession = 0;
+let ttsVoices = [];
+
+function t(key, fallback) {
+    const lang = document.documentElement.lang || 'ru';
+    if (typeof _i18n !== 'undefined' && _i18n[lang] && _i18n[lang][key]) {
+        return _i18n[lang][key];
+    }
+    if (typeof _i18n !== 'undefined' && _i18n.en && _i18n.en[key]) {
+        return _i18n.en[key];
+    }
+    return fallback;
+}
+
+function getSpeechLang() {
+    const lang = (document.documentElement.lang || 'en').toLowerCase();
+    if (lang.startsWith('ru')) return 'ru-RU';
+    if (lang.startsWith('uz')) return 'uz-UZ';
+    return 'en-US';
+}
+
+function refreshTtsVoices() {
+    if (!('speechSynthesis' in window)) return;
+    ttsVoices = window.speechSynthesis.getVoices() || [];
+}
+
+function detectTokenLang(token) {
+    if (!token) return getSpeechLang();
+    if (/[қғҳў]/i.test(token)) return 'uz-UZ';
+    if (/[а-яёіїєґ]/i.test(token)) return 'ru-RU';
+    if (/[\u0600-\u06FF]/.test(token)) return 'ar-SA';
+    if (/[\u4E00-\u9FFF]/.test(token)) return 'zh-CN';
+    if (/[\u3040-\u30FF]/.test(token)) return 'ja-JP';
+    if (/[\uAC00-\uD7AF]/.test(token)) return 'ko-KR';
+    if (/[\u0900-\u097F]/.test(token)) return 'hi-IN';
+    if (/[\u0590-\u05FF]/.test(token)) return 'he-IL';
+    if (/[\u0E00-\u0E7F]/.test(token)) return 'th-TH';
+    if (/[\u0370-\u03FF]/.test(token)) return 'el-GR';
+
+    // Latin-script heuristics
+    if (/[ñáéíóúü¡¿]/i.test(token)) return 'es-ES';
+    if (/[àâæçéèêëîïôœùûüÿ]/i.test(token)) return 'fr-FR';
+    if (/[äöüß]/i.test(token)) return 'de-DE';
+    if (/[ğüşöçıİ]/i.test(token)) return 'tr-TR';
+    if (/[ãõç]/i.test(token)) return 'pt-PT';
+    if (/[ăâîșț]/i.test(token)) return 'ro-RO';
+    if (/[ąęłńóśźż]/i.test(token)) return 'pl-PL';
+    if (/[čćđšž]/i.test(token)) return 'hr-HR';
+    if (/[a-z]/i.test(token)) return 'en-US';
+
+    return getSpeechLang();
+}
+
+function detectTextLang(text) {
+    const tokens = (text || '').split(/\s+/).filter(Boolean);
+    if (!tokens.length) return getSpeechLang();
+    const counts = {};
+    tokens.forEach((token) => {
+        const lang = detectTokenLang(token);
+        counts[lang] = (counts[lang] || 0) + 1;
+    });
+    return Object.keys(counts).sort((a, b) => counts[b] - counts[a])[0] || getSpeechLang();
+}
+
+function splitSpeechSegments(text) {
+    const chunks = (text || '')
+        .split(/(?<=[.!?。！？؛])\s+|\n+/u)
+        .map((s) => s.trim())
+        .filter(Boolean);
+    const source = chunks.length ? chunks : [(text || '').trim()];
+    return source
+        .filter(Boolean)
+        .map((chunk) => ({ text: chunk, lang: detectTextLang(chunk) }));
+}
+
+function pickVoiceForLang(lang) {
+    if (!ttsVoices.length) return null;
+    const target = (lang || '').toLowerCase();
+    const base = target.split('-')[0];
+
+    let voice = ttsVoices.find((v) => (v.lang || '').toLowerCase() === target);
+    if (voice) return voice;
+
+    voice = ttsVoices.find((v) => (v.lang || '').toLowerCase().startsWith(target + '-'));
+    if (voice) return voice;
+
+    voice = ttsVoices.find((v) => (v.lang || '').toLowerCase().startsWith(base + '-'));
+    if (voice) return voice;
+
+    voice = ttsVoices.find((v) => (v.lang || '').toLowerCase() === base);
+    return voice || null;
+}
+
+let activeAudio = null;
+
+function stopSpeaking() {
+    activeSpeechSession += 1;
+    if (activeAudio) {
+        activeAudio.pause();
+        activeAudio.currentTime = 0;
+        activeAudio = null;
+    }
+    if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+    }
+    activeUtterance = null;
+    if (activeTtsButton) {
+        activeTtsButton.classList.remove('playing');
+        activeTtsButton.innerHTML = '<i class="ph-fill ph-speaker-high"></i>';
+    }
+    activeTtsButton = null;
+}
+
+async function speakText(text, btn) {
+    const clean = (text || '').replace(/\s+/g, ' ').trim();
+    if (!clean) return;
+
+    if (activeTtsButton === btn) {
+        stopSpeaking();
+        return;
+    }
+
+    stopSpeaking();
+
+    const sessionId = activeSpeechSession;
+    activeTtsButton = btn;
+    btn.classList.add('playing');
+    btn.innerHTML = '<i class="ph-fill ph-speaker-simple-slash"></i>';
+
+    try {
+        const lang = detectTextLang(clean);
+        const resp = await fetch('/api/tts/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+            body: JSON.stringify({ text: clean, lang: lang })
+        });
+        
+        if (sessionId !== activeSpeechSession) return;
+        
+        const data = await resp.json();
+        if (data.status === 'ok' && data.audio_base64) {
+            activeAudio = new Audio('data:audio/mp3;base64,' + data.audio_base64);
+            activeAudio.onended = () => {
+                if (sessionId === activeSpeechSession) {
+                    stopSpeaking();
+                }
+            };
+            activeAudio.onerror = () => {
+                if (sessionId === activeSpeechSession) {
+                    stopSpeaking();
+                }
+            };
+            activeAudio.play().catch(e => {
+                console.error("Audio playback error:", e);
+                if (sessionId === activeSpeechSession) {
+                    stopSpeaking();
+                }
+            });
+        } else {
+            console.error("TTS API Error:", data.error);
+            stopSpeaking();
+            DuoModal.alert(t('ai_error_generic', 'Something went wrong while generating speech.'));
+        }
+    } catch (e) {
+        console.error("TTS Network Error:", e);
+        if (sessionId === activeSpeechSession) {
+            stopSpeaking();
+        }
+    }
+}
+
+if ('speechSynthesis' in window) {
+    refreshTtsVoices();
+    window.speechSynthesis.onvoiceschanged = refreshTtsVoices;
+}
+
+// ===== Mermaid queue helper =====
+function renderMermaid(container) {
+    // marked.js outputs <pre><code class="language-mermaid">...</code></pre>
+    // mermaid v10 expects <pre class="mermaid">...</pre> — convert first
+    container.querySelectorAll('pre > code.language-mermaid').forEach(codeEl => {
+        const pre = codeEl.parentElement;
+        const mPre = document.createElement('pre');
+        mPre.className = 'mermaid';
+        mPre.textContent = codeEl.textContent;
+        pre.replaceWith(mPre);
+    });
+    const nodes = Array.from(container.querySelectorAll('pre.mermaid:not([data-processed])'));
+    if (!nodes.length) return;
+    if (window._mermaidReady) {
+        window.mermaid.run({ nodes });
+    } else {
+        window._mermaidQueue.push(...nodes);
+    }
+}
+
+// ===== Init: load session from URL =====
+(function() {
+    if (CURRENT_SESSION_ID) {
+        const el = document.querySelector(`.session-item[data-id="${CURRENT_SESSION_ID}"]`);
+        loadSession(CURRENT_SESSION_ID, el, true);
+    }
+})();
+
+// ===== Simple markdown → HTML =====
+function md(text) {
+    if (!text) return '';
+    if (typeof marked !== 'undefined') {
+        return marked.parse(text);
+    }
+    // fallback
+    let h = text
+        .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+        .replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>')
+        .replace(/`([^`]+)`/g, '<code>$1</code>')
+        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\*(.+?)\*/g, '<em>$1</em>')
+        .replace(/^\s*[-•]\s+(.+)/gm, '<li>$1</li>')
+        .replace(/^\s*\d+\.\s+(.+)/gm, '<li>$1</li>');
+    // Wrap consecutive <li> in <ul>
+    h = h.replace(/((?:<li>.*<\/li>\s*)+)/g, '<ul>$1</ul>');
+    // Paragraphs
+    h = h.split(/\n{2,}/).map(p => {
+        p = p.trim();
+        if (!p || p.startsWith('<ul>') || p.startsWith('<pre>') || p.startsWith('<ol>')) return p;
+        return '<p>' + p.replace(/\n/g,'<br>') + '</p>';
+    }).join('');
+    return h;
+}
+
+// ===== Build module cards HTML =====
+function buildModuleCards(modules) {
+    if (!modules || !modules.length) return '';
+    let html = '<div class="module-cards">';
+    modules.forEach((id, i) => {
+        const m = MODULE_META[id];
+        if (!m) return;
+        const moduleName = t(`ai_module_${id}`, m.name);
+        html += `<a href="${m.url}" class="module-card ${id}" style="animation:cardIn .35s ease-out ${i*100}ms both">
+            <div class="mc-icon"><i class="ph-fill ${m.icon}"></i></div>
+            <div class="module-card-copy">
+                <div class="module-card-label">${t('ai_open_module', 'Open module')}</div>
+                <div class="module-card-name">${moduleName}</div>
+            </div>
+            <i class="ph-bold ph-arrow-right module-card-arrow"></i>
+        </a>`;
+    });
+    return html + '</div>';
+}
+
+function buildEmptyStateMarkup() {
+    return `<div class="chat-empty" id="emptyState">
+        <div class="chat-empty-kicker"><i class="ph-fill ph-sparkle"></i> CEFRPrep AI</div>
+        <div class="chat-empty-icon"><i class="ph-fill ph-robot"></i></div>
+        <h2 class="chat-empty-title">${t('ai_empty_state_title', 'How can I help you learn English today?')}</h2>
+        <p class="chat-empty-copy">${t('ai_empty_state_copy', 'Ask about grammar, vocabulary, CEFR preparation, writing, speaking, or any English learning topic.')}</p>
+        <div class="empty-feature-grid">
+            <div class="empty-feature-card">
+                <div class="empty-feature-icon"><i class="ph-fill ph-book-open-text"></i></div>
+                <div class="empty-feature-title">${t('ai_feature_grammar_title', 'Grammar & Vocabulary')}</div>
+                <div class="empty-feature-text">${t('ai_feature_grammar_text', 'Clear explanations with practical examples.')}</div>
+            </div>
+            <div class="empty-feature-card">
+                <div class="empty-feature-icon"><i class="ph-fill ph-pencil-line"></i></div>
+                <div class="empty-feature-title">${t('ai_feature_writing_title', 'Writing Review')}</div>
+                <div class="empty-feature-text">${t('ai_feature_writing_text', 'Get feedback and corrections on your essays.')}</div>
+            </div>
+            <div class="empty-feature-card">
+                <div class="empty-feature-icon"><i class="ph-fill ph-path"></i></div>
+                <div class="empty-feature-title">${t('ai_feature_cefr_title', 'CEFR Strategy')}</div>
+                <div class="empty-feature-text">${t('ai_feature_cefr_text', 'Personalized study plans and exam tips.')}</div>
+            </div>
+        </div>
+        <div class="suggestions">
+            <div class="suggestion-chip" onclick="sendSuggestion(this)">${t('ai_prompt_1', 'Explain Present Perfect with examples')}</div>
+            <div class="suggestion-chip" onclick="sendSuggestion(this)">${t('ai_prompt_2', 'Make a 7-day B2 Speaking plan')}</div>
+            <div class="suggestion-chip" onclick="sendSuggestion(this)">${t('ai_prompt_3', 'Review my Writing and suggest improvements')}</div>
+            <div class="suggestion-chip" onclick="sendSuggestion(this)">${t('ai_prompt_4', 'Common mistakes in CEFR Reading')}</div>
+            <div class="suggestion-chip" onclick="sendSuggestion(this)">${t('ai_prompt_5', 'Give me 5 phrases for Part 3 discussion')}</div>
+            <div class="suggestion-chip" onclick="sendSuggestion(this)">${t('ai_prompt_6', 'How to improve Listening comprehension?')}</div>
+        </div>
+    </div>`;
+}
+
+function buildAvatar(role) {
+    return role === 'assistant' ? ASSISTANT_AVATAR_HTML : USER_AVATAR_HTML;
+}
+
+function toggleSidebar(forceOpen) {
+    const sidebar = document.getElementById('chatSidebar');
+    const backdrop = document.getElementById('sidebarBackdrop');
+    if (!sidebar) return;
+
+    const shouldOpen = typeof forceOpen === 'boolean'
+        ? forceOpen
+        : !sidebar.classList.contains('open');
+
+    sidebar.classList.toggle('open', shouldOpen);
+    if (backdrop) {
+        backdrop.classList.toggle('visible', shouldOpen);
+    }
+}
+
+function closeSidebar() {
+    toggleSidebar(false);
+}
+
+function buildMeta(role) {
+    return role === 'assistant' ? `<span>${t('ai_assistant_name', 'CEFRPrep AI')}</span>` : `<span>${USER_DISPLAY_NAME}</span>`;
+}
+
+// ===== Render a message =====
+function addMessage(role, content, modules, animate) {
+    const area = document.getElementById('chatMessages');
+    const es = document.getElementById('emptyState');
+    if (es) es.style.display = 'none';
+
+    const row = document.createElement('div');
+    row.className = 'msg-row ' + role;
+
+    const av = document.createElement('div');
+    av.className = 'msg-avatar';
+    av.innerHTML = buildAvatar(role);
+
+    const stack = document.createElement('div');
+    stack.className = 'msg-stack';
+
+    const meta = document.createElement('div');
+    meta.className = 'msg-meta';
+    meta.innerHTML = buildMeta(role);
+
+    const ttsBtn = document.createElement('button');
+    ttsBtn.type = 'button';
+    ttsBtn.className = 'msg-tts-btn';
+    ttsBtn.title = t('ai_listen_message', 'Listen to message');
+    ttsBtn.setAttribute('aria-label', t('ai_listen_message', 'Listen to message'));
+    ttsBtn.innerHTML = '<i class="ph-fill ph-speaker-high"></i>';
+    ttsBtn.onclick = () => speakText(content, ttsBtn);
+    meta.appendChild(ttsBtn);
+
+    const bubble = document.createElement('div');
+    bubble.className = 'msg-bubble';
+
+    stack.appendChild(meta);
+    stack.appendChild(bubble);
+
+    if (role === 'assistant' && animate) {
+        // Streaming effect
+        const parsed = md(content);
+        bubble.innerHTML = '';
+        row.appendChild(av);
+        row.appendChild(stack);
+        area.appendChild(row);
+        area.scrollTop = area.scrollHeight;
+
+        // Type out character by character on the parsed HTML
+        let idx = 0;
+        let inTag = false;
+        const speed = 8; // ms per char
+        const timer = setInterval(() => {
+            if (idx >= parsed.length) {
+                clearInterval(timer);
+                // Append module cards after streaming
+                if (modules && modules.length) {
+                    bubble.innerHTML += buildModuleCards(modules);
+                }
+                renderMermaid(bubble);
+                area.scrollTop = area.scrollHeight;
+                return;
+            }
+            const ch = parsed[idx];
+            if (ch === '<') inTag = true;
+            if (inTag) {
+                // Reveal whole tag at once
+                const close = parsed.indexOf('>', idx);
+                if (close !== -1) {
+                    bubble.innerHTML = parsed.slice(0, close + 1);
+                    idx = close + 1;
+                    inTag = false;
+                } else { idx++; }
+            } else {
+                bubble.innerHTML = parsed.slice(0, idx + 1);
+                idx++;
+            }
+            area.scrollTop = area.scrollHeight;
+        }, speed);
+    } else {
+        bubble.innerHTML = md(content);
+        if (modules && modules.length) bubble.innerHTML += buildModuleCards(modules);
+        row.appendChild(av);
+        row.appendChild(stack);
+        area.appendChild(row);
+        renderMermaid(bubble);
+    }
+    area.scrollTop = area.scrollHeight;
+}
+
+// ===== Typing indicator =====
+function showTyping() {
+    const area = document.getElementById('chatMessages');
+    const row = document.createElement('div');
+    row.className = 'msg-row assistant';
+    row.id = 'typingRow';
+    row.innerHTML = `<div class="msg-avatar">${ASSISTANT_AVATAR_HTML}</div>
+        <div class="msg-stack">
+            <div class="msg-meta"><span>${t('ai_assistant_name', 'CEFRPrep AI')}</span></div>
+            <div class="msg-bubble"><div class="typing-indicator"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div></div>
+        </div>`;
+    area.appendChild(row);
+    area.scrollTop = area.scrollHeight;
+}
+function hideTyping() {
+    const el = document.getElementById('typingRow');
+    if (el) el.remove();
+}
+
+// ===== Send message =====
+async function sendMessage() {
+    const input = document.getElementById('chatInput');
+    const text = input.value.trim();
+    if (!text || isLoading) return;
+
+    isLoading = true;
+    document.getElementById('sendBtn').disabled = true;
+    input.value = '';
+    input.style.height = 'auto';
+
+    addMessage('user', text, [], false);
+    showTyping();
+
+    try {
+        const resp = await fetch('{% url "exams:api_ai_chat_send" %}', {
+            method: 'POST',
+            headers: { 'Content-Type':'application/json', 'X-CSRFToken': CSRF },
+            body: JSON.stringify({ message: text, session_id: currentSessionId }),
+        });
+        const data = await resp.json();
+        hideTyping();
+
+        if (data.status === 'ok') {
+            if (!currentSessionId) {
+                currentSessionId = data.session_id;
+                history.pushState({ sessionId: data.session_id }, '', BASE_CHAT_URL + data.session_id + '/');
+                addSessionToSidebar(data.session_id, data.session_title);
+            }
+            addMessage('assistant', data.message.content, data.message.module_cards, true);
+        } else {
+            addMessage('assistant', data.error || t('ai_error_generic', 'Something went wrong.'), [], false);
+        }
+    } catch(e) {
+        hideTyping();
+        addMessage('assistant', t('ai_error_network', 'Network error. Please try again.'), [], false);
+    }
+
+    isLoading = false;
+    document.getElementById('sendBtn').disabled = false;
+    input.focus();
+}
+
+// ===== Load session history =====
+async function loadSession(id, el, isInitial) {
+    currentSessionId = id;
+    document.querySelectorAll('.session-item').forEach(s => s.classList.remove('active'));
+    if (el) el.classList.add('active');
+    if (!isInitial) {
+        history.pushState({ sessionId: id }, '', BASE_CHAT_URL + id + '/');
+    }
+    closeSidebar();
+
+    const area = document.getElementById('chatMessages');
+    area.innerHTML = '<div class="chat-empty" id="emptyState" style="display:none"></div>';
+
+    try {
+        const resp = await fetch('/api/ai-chat/session/' + id + '/messages/');
+        const data = await resp.json();
+        if (data.messages && data.messages.length) {
+            data.messages.forEach(m => addMessage(m.role, m.content, m.module_cards, false));
+        } else {
+            startNewChatUI();
+        }
+    } catch(e) { console.error(e); }
+}
+
+// ===== New chat UI (no navigation) =====
+function startNewChatUI() {
+    currentSessionId = null;
+    document.querySelectorAll('.session-item').forEach(s => s.classList.remove('active'));
+    const area = document.getElementById('chatMessages');
+    area.innerHTML = buildEmptyStateMarkup();
+    if (typeof applyGlobalTranslations === 'function') {
+        const lang = document.documentElement.lang || 'ru';
+        applyGlobalTranslations(lang);
+    }
+    closeSidebar();
+    document.getElementById('chatInput').focus();
+}
+
+// ===== New chat (navigate) =====
+function startNewChat() {
+    window.location.href = BASE_CHAT_URL;
+}
+
+// ===== Add session to sidebar =====
+function addSessionToSidebar(id, title) {
+    const list = document.getElementById('sessionList');
+    const a = document.createElement('a');
+    a.className = 'session-item active';
+    a.dataset.id = id;
+    a.href = BASE_CHAT_URL + id + '/';
+    a.onclick = function(e) { e.preventDefault(); loadSession(id, a); };
+    a.innerHTML = `<i class="ph-fill ph-chat-circle-text session-icon"></i>
+        <span class="session-title">${title}</span>
+        <button class="delete-btn" onclick="event.preventDefault();event.stopPropagation();deleteSession(${id},this.closest('a'))" title="${t('ai_delete', 'Delete')}"><i class="ph-bold ph-trash"></i></button>`;
+    document.querySelectorAll('.session-item').forEach(s => s.classList.remove('active'));
+    list.prepend(a);
+}
+
+// ===== Delete session =====
+async function deleteSession(id, el) {
+    const shouldDelete = await DuoModal.confirm(t('ai_delete_chat_confirm', 'Delete this chat?'));
+    if (!shouldDelete) return;
+    try {
+        await fetch(`/api/ai-chat/session/${id}/delete/`, {
+            method:'POST', headers:{'X-CSRFToken':CSRF}
+        });
+        el.remove();
+        if (currentSessionId === id) window.location.href = BASE_CHAT_URL;
+    } catch(e) {
+        console.error(e);
+        await DuoModal.alert(t('ai_delete_chat_failed', 'Could not delete chat. Please try again.'));
+    }
+}
+
+// ===== Suggestion chips =====
+function sendSuggestion(el) {
+    document.getElementById('chatInput').value = el.textContent;
+    sendMessage();
+}
+
+// ===== Auto-resize textarea =====
+document.getElementById('chatInput').addEventListener('input', function() {
+    this.style.height = 'auto';
+    this.style.height = Math.min(this.scrollHeight, 150) + 'px';
+});
+
+window.addEventListener('resize', function() {
+    if (window.innerWidth > 960) {
+        closeSidebar();
+    }
+});
+
+document.addEventListener('keydown', function(event) {
+    if (event.key === 'Escape') {
+        closeSidebar();
+    }
+});
+
+// ===== Browser back/forward =====
+window.addEventListener('popstate', function(e) {
+    if (e.state && e.state.sessionId) {
+        const el = document.querySelector(`.session-item[data-id="${e.state.sessionId}"]`);
+        loadSession(e.state.sessionId, el, true);
+    } else {
+        startNewChatUI();
+    }
+});
+
+window.addEventListener('beforeunload', stopSpeaking);
+</script>
+{% endblock %}

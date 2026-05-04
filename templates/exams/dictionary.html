@@ -1,0 +1,568 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Словарь — CEFR Prep{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+
+    <!-- Header -->
+    <div class="card-duo p-8 mb-8 animate-fade-in !border-duo-blue/30 relative overflow-hidden">
+        <div class="absolute -top-20 -right-20 w-60 h-60 bg-duo-blue/5 rounded-full blur-3xl pointer-events-none"></div>
+        <div class="absolute -bottom-20 -left-20 w-40 h-40 bg-duo-purple/5 rounded-full blur-3xl pointer-events-none"></div>
+
+        <div class="relative flex flex-col md:flex-row items-center gap-6">
+            <div class="w-20 h-20 rounded-2xl flex items-center justify-center bg-duo-blue shadow-[0_4px_0_#1899D6] flex-shrink-0 animate-bounce-in">
+                <i class="ph-fill ph-book-bookmark text-white text-4xl"></i>
+            </div>
+            <div class="text-center md:text-left flex-1">
+                <h1 class="text-3xl md:text-4xl font-black text-white mb-2" data-i18n="dict_title">
+                    Мой словарь 📖
+                </h1>
+                <p class="text-duo-text-dim font-semibold text-base max-w-xl" data-i18n="dict_subtitle">
+                    Твоя коллекция слов с переводом, транскрипцией и примерами
+                </p>
+            </div>
+            <div class="flex items-center gap-3">
+                <div class="bg-duo-surface-2 border-2 border-duo-border rounded-2xl px-5 py-3 text-center">
+                    <div class="text-2xl font-black text-duo-blue" id="words-count">{{ entries_count }}</div>
+                    <div class="text-xs font-bold text-duo-text-muted uppercase tracking-wider" data-i18n="dict_words_count">слов</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Search & Add -->
+    <div class="card-duo p-5 mb-8 animate-slide-up" style="animation-delay: 100ms">
+        <div class="flex items-center gap-3">
+            <div class="relative flex-1">
+                <i class="ph-bold ph-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-duo-text-muted"></i>
+                <input type="text" id="dict-search-input"
+                       data-i18n-placeholder="dict_search_placeholder"
+                       placeholder="Введите английское слово для добавления..."
+                       autocomplete="off"
+                       class="w-full !pl-12 !pr-4 !py-3.5 !rounded-xl !text-base !font-bold"
+                       style="padding-left: 48px !important;">
+            </div>
+            <button id="dict-add-btn" onclick="addWordFromSearch()"
+                    class="btn-duo-blue !py-3.5 !px-6 flex-shrink-0 whitespace-nowrap">
+                <i class="ph-bold ph-plus"></i>
+                <span data-i18n="dict_add_btn">Добавить</span>
+            </button>
+        </div>
+        <!-- Loading spinner (hidden by default) -->
+        <div id="dict-loading" class="hidden mt-4 flex items-center justify-center gap-3 text-duo-text-dim font-bold py-3">
+            <svg class="animate-spin h-5 w-5 text-duo-blue" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <span data-i18n="dict_looking_up">Ищем слово...</span>
+        </div>
+    </div>
+
+    <!-- Word Cards Grid -->
+    <div id="dict-cards-container">
+        {% if entries %}
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="dict-grid">
+            {% for entry in entries %}
+            <div class="dict-card card-duo p-5 animate-slide-up cursor-pointer hover:!border-duo-blue/40 transition-all duration-200"
+                 data-entry-id="{{ entry.id }}"
+                 data-word="{{ entry.cached_word.word }}"
+                 data-register="{{ entry.cached_word.register }}"
+                 data-alternative-form="{{ entry.cached_word.alternative_form|escapejs }}"
+                 onclick="openWordCard(this)"
+                 style="animation-delay: {{ forloop.counter0 }}30ms">
+                <div class="flex items-start justify-between gap-3">
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center gap-2 mb-1.5 flex-wrap">
+                            <h3 class="text-lg font-black text-white capitalize">{{ entry.cached_word.word }}</h3>
+                            {% if entry.cached_word.part_of_speech %}
+                            <span class="badge-duo bg-duo-blue/15 text-duo-blue border border-duo-blue/30 !text-[0.6rem]">
+                                {{ entry.cached_word.part_of_speech }}
+                            </span>
+                            {% endif %}
+                            {% if entry.cached_word.register == 'formal' %}
+                            <span class="badge-duo bg-duo-purple/15 text-duo-purple border border-duo-purple/30 !text-[0.6rem] uppercase tracking-wide">formal</span>
+                            {% elif entry.cached_word.register == 'informal' %}
+                            <span class="badge-duo bg-amber-500/15 text-amber-400 border border-amber-500/30 !text-[0.6rem] uppercase tracking-wide">informal</span>
+                            {% elif entry.cached_word.register == 'neutral' %}
+                            <span class="badge-duo bg-duo-surface-2 text-duo-text-muted border border-duo-border !text-[0.6rem] uppercase tracking-wide">neutral</span>
+                            {% endif %}
+                        </div>
+                        {% if entry.cached_word.transcription %}
+                        <p class="text-duo-text-muted text-sm font-semibold mb-1">{{ entry.cached_word.transcription }}</p>
+                        {% endif %}
+                        <p class="text-duo-text-dim text-sm font-bold truncate dict-card-translation"
+                           data-translations='{{ entry.cached_word.translations|safe }}'>
+                        </p>
+                    </div>
+                    <div class="flex items-center gap-1.5 flex-shrink-0">
+                        <button onclick="event.stopPropagation(); speakWord('{{ entry.cached_word.word }}')"
+                                class="w-9 h-9 rounded-xl bg-duo-blue/15 border border-duo-blue/30 flex items-center justify-center text-duo-blue hover:bg-duo-blue/25 transition-colors"
+                                title="Listen">
+                            <i class="ph-fill ph-speaker-high text-base"></i>
+                        </button>
+                        <button onclick="event.stopPropagation(); deleteWord({{ entry.id }}, this)"
+                                class="w-9 h-9 rounded-xl bg-duo-red/10 border border-duo-red/20 flex items-center justify-center text-duo-red hover:bg-duo-red/20 transition-colors"
+                                title="Delete">
+                            <i class="ph-bold ph-trash text-sm"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <!-- Empty state -->
+        <div id="dict-empty-state" class="card-duo p-14 text-center animate-fade-in">
+            <div class="w-24 h-24 mx-auto mb-6 rounded-2xl flex items-center justify-center bg-duo-surface-2 border-2 border-duo-border">
+                <i class="ph-fill ph-book-bookmark text-5xl text-duo-text-muted"></i>
+            </div>
+            <h2 class="text-xl font-black text-white mb-3" data-i18n="dict_empty_title">Словарь пуст</h2>
+            <p class="text-duo-text-dim font-semibold text-sm max-w-md mx-auto mb-6" data-i18n="dict_empty_desc">
+                Добавляйте слова из тестов двойным кликом или вводите их вручную в поле выше
+            </p>
+            <div class="flex flex-wrap gap-2 justify-center">
+                <button onclick="document.getElementById('dict-search-input').focus()" class="btn-duo-blue !text-xs !py-2.5 !px-5">
+                    <i class="ph-bold ph-plus"></i>
+                    <span data-i18n="dict_add_first">Добавить первое слово</span>
+                </button>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Word Detail Modal -->
+    <div id="dict-modal-overlay" class="fixed inset-0 z-[100] bg-[#131F24]/85 backdrop-blur-sm hidden items-center justify-center p-4 transition-opacity duration-200" onclick="closeWordModal(event)">
+        <div id="dict-modal-card" class="w-full max-w-lg bg-[#1A2F35] border-2 border-[#2B4D56] rounded-3xl p-7 shadow-2xl transform transition-transform duration-200 max-h-[85vh] overflow-y-auto" onclick="event.stopPropagation()">
+            <!-- Filled by JS -->
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    const CSRF = '{{ csrf_token }}';
+    const LOOKUP_URL = '{% url "exams:api_dictionary_lookup" %}';
+    const DELETE_URL_TPL = '{% url "exams:api_dictionary_delete" entry_id=0 %}'.replace('/0/', '/{id}/');
+    const REFRESH_URL_TPL = '{% url "exams:api_dictionary_refresh" entry_id=0 %}'.replace('/0/', '/{id}/');
+
+    // ========================== TRANSLATION DISPLAY ==========================
+    function getCurrentLang() {
+        return (localStorage.getItem('cefr_language') || '{{ current_language|default:"ru" }}');
+    }
+
+    function getTranslation(translations) {
+        const lang = getCurrentLang();
+        if (!translations) return '';
+        if (typeof translations === 'string') {
+            try { translations = JSON.parse(translations); } catch { return translations; }
+        }
+        return translations[lang] || translations['ru'] || translations['en'] || '';
+    }
+
+    // Set translations on all cards
+    document.querySelectorAll('.dict-card-translation').forEach(el => {
+        const t = el.getAttribute('data-translations');
+        try {
+            const tr = JSON.parse(t);
+            el.textContent = getTranslation(tr);
+        } catch {}
+    });
+
+    // ========================== SPEECH ==========================
+    function speakWord(word) {
+        if ('speechSynthesis' in window) {
+            window.speechSynthesis.cancel();
+            const utterance = new SpeechSynthesisUtterance(word);
+            utterance.lang = 'en-US';
+            utterance.rate = 0.85;
+            utterance.pitch = 1;
+            // Try to find a good English voice
+            const voices = speechSynthesis.getVoices();
+            const enVoice = voices.find(v => v.lang.startsWith('en') && v.name.includes('Female'))
+                         || voices.find(v => v.lang.startsWith('en-US'))
+                         || voices.find(v => v.lang.startsWith('en'));
+            if (enVoice) utterance.voice = enVoice;
+            speechSynthesis.speak(utterance);
+        }
+    }
+
+    // Preload voices
+    if ('speechSynthesis' in window) {
+        speechSynthesis.getVoices();
+        speechSynthesis.onvoiceschanged = () => speechSynthesis.getVoices();
+    }
+
+    // ========================== ADD WORD FROM SEARCH ==========================
+    async function addWordFromSearch() {
+        const input = document.getElementById('dict-search-input');
+        const word = input.value.trim();
+        if (!word) { input.focus(); return; }
+
+        await lookupAndAdd(word, 'manual');
+        input.value = '';
+    }
+
+    // Enter key in search
+    document.getElementById('dict-search-input').addEventListener('keydown', e => {
+        if (e.key === 'Enter') addWordFromSearch();
+    });
+
+    // ========================== LOOKUP API ==========================
+    async function lookupAndAdd(word, source = 'manual') {
+        const loading = document.getElementById('dict-loading');
+        const addBtn = document.getElementById('dict-add-btn');
+
+        loading.classList.remove('hidden');
+        addBtn.disabled = true;
+        addBtn.style.opacity = '0.5';
+
+        try {
+            const resp = await fetch(LOOKUP_URL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': CSRF,
+                },
+                body: JSON.stringify({ word, source }),
+            });
+
+            const data = await resp.json();
+
+            if (data.status === 'ok') {
+                if (!data.created) {
+                    // Already in dictionary — show toast
+                    showToast('dict_already_added', 'Уже в словаре ✓');
+                } else {
+                    // New word added — insert card
+                    insertWordCard(data.entry);
+                    showToast('dict_added_success', 'Добавлено в словарь! ✓');
+                    updateWordCount(1);
+                }
+            } else {
+                showToast('error', data.error || 'Error');
+            }
+        } catch (err) {
+            console.error(err);
+            showToast('error', 'Network error');
+        } finally {
+            loading.classList.add('hidden');
+            addBtn.disabled = false;
+            addBtn.style.opacity = '1';
+        }
+    }
+
+    // ========================== INSERT CARD INTO DOM ==========================
+    function insertWordCard(entry) {
+        // Remove empty state if present
+        const emptyState = document.getElementById('dict-empty-state');
+        if (emptyState) emptyState.remove();
+
+        // Create or get grid
+        let grid = document.getElementById('dict-grid');
+        if (!grid) {
+            const container = document.getElementById('dict-cards-container');
+            grid = document.createElement('div');
+            grid.className = 'grid grid-cols-1 md:grid-cols-2 gap-4';
+            grid.id = 'dict-grid';
+            container.appendChild(grid);
+        }
+
+        const card = document.createElement('div');
+        card.className = 'dict-card card-duo p-5 animate-slide-up cursor-pointer hover:!border-duo-blue/40 transition-all duration-200';
+        card.setAttribute('data-entry-id', entry.id);
+        card.setAttribute('data-word', entry.word);
+        card.setAttribute('data-register', entry.register || '');
+        card.setAttribute('data-alternative-form', entry.alternative_form || '');
+        card.onclick = function() { openWordCard(this); };
+
+        const translation = getTranslation(entry.translations);
+        const posHtml = entry.part_of_speech
+            ? `<span class="badge-duo bg-duo-blue/15 text-duo-blue border border-duo-blue/30 !text-[0.6rem]">${entry.part_of_speech}</span>`
+            : '';
+        const regHtml = entry.register === 'formal'
+            ? `<span class="badge-duo bg-duo-purple/15 text-duo-purple border border-duo-purple/30 !text-[0.6rem] uppercase tracking-wide">formal</span>`
+            : entry.register === 'informal'
+            ? `<span class="badge-duo bg-amber-500/15 text-amber-400 border border-amber-500/30 !text-[0.6rem] uppercase tracking-wide">informal</span>`
+            : entry.register === 'neutral'
+            ? `<span class="badge-duo bg-duo-surface-2 text-duo-text-muted border border-duo-border !text-[0.6rem] uppercase tracking-wide">neutral</span>`
+            : '';
+
+        card.innerHTML = `
+            <div class="flex items-start justify-between gap-3">
+                <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-2 mb-1.5 flex-wrap">
+                        <h3 class="text-lg font-black text-white capitalize">${entry.word}</h3>
+                        ${posHtml}${regHtml}
+                    </div>
+                    ${entry.transcription ? `<p class="text-duo-text-muted text-sm font-semibold mb-1">${entry.transcription}</p>` : ''}
+                    <p class="text-duo-text-dim text-sm font-bold truncate">${translation}</p>
+                </div>
+                <div class="flex items-center gap-1.5 flex-shrink-0">
+                    <button onclick="event.stopPropagation(); speakWord('${entry.word}')"
+                            class="w-9 h-9 rounded-xl bg-duo-blue/15 border border-duo-blue/30 flex items-center justify-center text-duo-blue hover:bg-duo-blue/25 transition-colors">
+                        <i class="ph-fill ph-speaker-high text-base"></i>
+                    </button>
+                    <button onclick="event.stopPropagation(); deleteWord(${entry.id}, this)"
+                            class="w-9 h-9 rounded-xl bg-duo-red/10 border border-duo-red/20 flex items-center justify-center text-duo-red hover:bg-duo-red/20 transition-colors">
+                        <i class="ph-bold ph-trash text-sm"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+
+        // Store full entry data for modal
+        card._entryData = entry;
+
+        grid.insertBefore(card, grid.firstChild);
+    }
+
+    // ========================== WORD DETAIL MODAL ==========================
+    function openWordCard(cardEl) {
+        const entryId = cardEl.getAttribute('data-entry-id');
+        const word = cardEl.getAttribute('data-word');
+
+        // Try stored data first
+        let entry = cardEl._entryData;
+        if (!entry) {
+            // Parse from DOM for server-rendered cards
+            const transEl = cardEl.querySelector('.dict-card-translation');
+            const transData = transEl ? transEl.getAttribute('data-translations') : '{}';
+            let translations = {};
+            try { translations = JSON.parse(transData); } catch {}
+
+            entry = {
+                id: entryId,
+                word: word,
+                transcription: cardEl.querySelector('.text-duo-text-muted')?.textContent?.trim() || '',
+                part_of_speech: cardEl.querySelector('.badge-duo')?.textContent?.trim() || '',
+                register: cardEl.getAttribute('data-register') || '',
+                alternative_form: cardEl.getAttribute('data-alternative-form') || '',
+                translations: translations,
+                definitions: {},
+                example: '',
+            };
+        }
+
+        const lang = getCurrentLang();
+        const translation = getTranslation(entry.translations);
+        const definition = getTranslation(entry.definitions);
+
+        const regBadge = entry.register === 'formal'
+            ? `<span class="badge-duo bg-duo-purple/15 text-duo-purple border border-duo-purple/30 uppercase tracking-wide">formal</span>`
+            : entry.register === 'informal'
+            ? `<span class="badge-duo bg-amber-500/15 text-amber-400 border border-amber-500/30 uppercase tracking-wide">informal</span>`
+            : entry.register === 'neutral'
+            ? `<span class="badge-duo bg-duo-surface-2 text-duo-text-muted border border-duo-border uppercase tracking-wide">neutral</span>`
+            : '';
+
+        const altFormLabel = entry.register === 'informal'
+            ? (_i18n[lang]?.dict_formal_equiv || 'Formal equivalent')
+            : (_i18n[lang]?.dict_informal_equiv || 'Informal equivalent');
+
+        const i18n = {
+            translation: _i18n[lang]?.dict_translation || 'Перевод',
+            transcription: _i18n[lang]?.dict_transcription || 'Транскрипция',
+            definition: _i18n[lang]?.dict_definition || 'Определение',
+            example: _i18n[lang]?.dict_example || 'Пример',
+            listen: _i18n[lang]?.dict_listen || 'Прослушать',
+            delete_word: _i18n[lang]?.dict_delete || 'Удалить',
+        };
+
+        const modal = document.getElementById('dict-modal-card');
+        modal.innerHTML = `
+            <!-- Header -->
+            <div class="flex items-start justify-between mb-6">
+                <div>
+                    <h2 class="text-2xl font-black text-white capitalize mb-2">${entry.word}</h2>
+                    <div class="flex items-center gap-2 flex-wrap">
+                        ${entry.part_of_speech ? `<span class="badge-duo bg-duo-blue/15 text-duo-blue border border-duo-blue/30">${entry.part_of_speech}</span>` : ''}
+                        ${regBadge}
+                    </div>
+                </div>
+                <button onclick="closeWordModal()" class="w-10 h-10 rounded-xl bg-duo-surface-2 border border-duo-border flex items-center justify-center text-duo-text-muted hover:text-white transition-colors">
+                    <i class="ph-bold ph-x text-lg"></i>
+                </button>
+            </div>
+
+            <!-- Audio Button -->
+            <button onclick="speakWord('${entry.word}')"
+                    class="w-full mb-5 flex items-center justify-center gap-3 py-3.5 rounded-2xl bg-duo-blue/10 border-2 border-duo-blue/25 text-duo-blue font-black text-sm uppercase tracking-wider hover:bg-duo-blue/20 transition-colors">
+                <i class="ph-fill ph-speaker-high text-xl"></i>
+                ${i18n.listen}
+            </button>
+
+            <!-- Info Sections -->
+            ${entry.transcription ? `
+            <div class="mb-4 p-4 rounded-2xl bg-duo-surface-2/50 border border-duo-border">
+                <div class="text-xs font-black text-duo-text-muted uppercase tracking-widest mb-1.5">${i18n.transcription}</div>
+                <div class="text-lg font-bold text-duo-text">${entry.transcription}</div>
+            </div>` : ''}
+
+            <div class="mb-4 p-4 rounded-2xl bg-duo-green/5 border border-duo-green/20">
+                <div class="text-xs font-black text-duo-green uppercase tracking-widest mb-1.5">${i18n.translation}</div>
+                <div class="text-lg font-bold text-white">${translation}</div>
+            </div>
+
+            ${definition ? `
+            <div class="mb-4 p-4 rounded-2xl bg-duo-surface-2/50 border border-duo-border">
+                <div class="text-xs font-black text-duo-text-muted uppercase tracking-widest mb-1.5">${i18n.definition}</div>
+                <div class="text-base font-semibold text-duo-text-dim leading-relaxed">${definition}</div>
+            </div>` : ''}
+
+            ${entry.example ? `
+            <div class="mb-4 p-4 rounded-2xl bg-duo-purple/5 border border-duo-purple/20">
+                <div class="text-xs font-black text-duo-purple uppercase tracking-widest mb-1.5">${i18n.example}</div>
+                <div class="text-base font-semibold text-duo-text-dim leading-relaxed italic">"${entry.example}"</div>
+            </div>` : ''}
+
+            ${entry.alternative_form && (entry.register === 'formal' || entry.register === 'informal') ? `
+            <div class="mb-6 p-4 rounded-2xl ${entry.register === 'informal' ? 'bg-duo-purple/5 border border-duo-purple/25' : 'bg-amber-500/5 border border-amber-500/25'}">
+                <div class="text-xs font-black ${entry.register === 'informal' ? 'text-duo-purple' : 'text-amber-400'} uppercase tracking-widest mb-2 flex items-center gap-2">
+                    <i class="ph-bold ph-arrows-left-right"></i>
+                    ${altFormLabel}
+                </div>
+                <div class="flex items-center gap-3">
+                    <span class="text-base font-black text-white">${entry.alternative_form}</span>
+                    <span class="badge-duo ${entry.register === 'informal' ? 'bg-duo-purple/15 text-duo-purple border border-duo-purple/30' : 'bg-amber-500/15 text-amber-400 border border-amber-500/30'} uppercase tracking-wide !text-[0.6rem]">
+                        ${entry.register === 'informal' ? 'formal' : 'informal'}
+                    </span>
+                </div>
+            </div>` : entry.register === 'neutral' ? `
+            <div class="mb-6 p-4 rounded-2xl bg-duo-surface-2/50 border border-duo-border flex items-center gap-3">
+                <i class="ph-bold ph-equals text-duo-text-muted text-lg"></i>
+                <span class="text-sm font-semibold text-duo-text-muted">Нейтральное слово — подходит для любого стиля речи</span>
+            </div>` : ''}
+
+            <!-- Delete Button -->
+            <button onclick="deleteWord(${entry.id}); closeWordModal();"
+                    class="w-full btn-duo-outline !text-duo-red !border-duo-red/20 hover:!bg-duo-red/10 !py-3 !text-xs">
+                <i class="ph-bold ph-trash"></i>
+                ${i18n.delete_word}
+            </button>
+        `;
+
+        const overlay = document.getElementById('dict-modal-overlay');
+        overlay.classList.remove('hidden');
+        overlay.classList.add('flex');
+        setTimeout(() => overlay.style.opacity = '1', 10);
+
+        // If we don't have full data OR register is missing, fetch/refresh
+        if (!definition && !entry.example) {
+            fetchFullEntry(entry.word, entry.id);
+        } else if (!entry.register) {
+            refreshEntry(entry.id);
+        }
+    }
+
+    async function fetchFullEntry(word, entryId) {
+        // Re-lookup the word to get full data (won't cost API if cached)
+        try {
+            const resp = await fetch(LOOKUP_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+                body: JSON.stringify({ word, source: 'manual' }),
+            });
+            const data = await resp.json();
+            if (data.status === 'ok' && data.entry) {
+                const card = document.querySelector(`[data-entry-id="${entryId}"]`);
+                if (card) {
+                    card._entryData = data.entry;
+                    // If register still missing after lookup, force a refresh
+                    if (!data.entry.register) {
+                        refreshEntry(entryId);
+                    } else {
+                        openWordCard(card);
+                    }
+                }
+            }
+        } catch {}
+    }
+
+    async function refreshEntry(entryId) {
+        // Force re-enrich via Gemini (re-calls AI for missing fields)
+        try {
+            const resp = await fetch(REFRESH_URL_TPL.replace('{id}', entryId), {
+                method: 'POST',
+                headers: { 'X-CSRFToken': CSRF },
+            });
+            const data = await resp.json();
+            if (data.status === 'ok' && data.entry) {
+                const card = document.querySelector(`[data-entry-id="${entryId}"]`);
+                if (card) {
+                    card._entryData = data.entry;
+                    card.setAttribute('data-register', data.entry.register || '');
+                    card.setAttribute('data-alternative-form', data.entry.alternative_form || '');
+                    openWordCard(card);
+                }
+            }
+        } catch {}
+    }
+
+    function closeWordModal(event) {
+        if (event && event.target !== event.currentTarget) return;
+        const overlay = document.getElementById('dict-modal-overlay');
+        overlay.style.opacity = '0';
+        setTimeout(() => {
+            overlay.classList.add('hidden');
+            overlay.classList.remove('flex');
+        }, 200);
+    }
+
+    // Close modal on Escape
+    document.addEventListener('keydown', e => {
+        if (e.key === 'Escape') {
+            const overlay = document.getElementById('dict-modal-overlay');
+            if (!overlay.classList.contains('hidden')) closeWordModal();
+        }
+    });
+
+    // ========================== DELETE ==========================
+    async function deleteWord(entryId, btnEl) {
+        try {
+            const resp = await fetch(DELETE_URL_TPL.replace('{id}', entryId), {
+                method: 'POST',
+                headers: { 'X-CSRFToken': CSRF },
+            });
+            if (resp.ok) {
+                const card = document.querySelector(`[data-entry-id="${entryId}"]`);
+                if (card) {
+                    card.style.opacity = '0';
+                    card.style.transform = 'scale(0.95)';
+                    setTimeout(() => card.remove(), 200);
+                }
+                updateWordCount(-1);
+            }
+        } catch (err) {
+            console.error(err);
+        }
+    }
+
+    // ========================== HELPERS ==========================
+    function updateWordCount(delta) {
+        const el = document.getElementById('words-count');
+        if (el) {
+            const current = parseInt(el.textContent) || 0;
+            el.textContent = Math.max(0, current + delta);
+        }
+    }
+
+    function showToast(key, fallback) {
+        const lang = getCurrentLang();
+        const text = (_i18n[lang] && _i18n[lang][key]) || fallback;
+
+        const toast = document.createElement('div');
+        toast.className = 'fixed bottom-6 left-1/2 -translate-x-1/2 z-[200] bg-duo-surface border-2 border-duo-green/30 text-duo-green font-black text-sm px-6 py-3 rounded-2xl shadow-xl animate-slide-up';
+        toast.textContent = text;
+        document.body.appendChild(toast);
+        setTimeout(() => {
+            toast.style.opacity = '0';
+            toast.style.transition = 'opacity 0.3s ease';
+            setTimeout(() => toast.remove(), 300);
+        }, 2500);
+    }
+</script>
+{% endblock %}

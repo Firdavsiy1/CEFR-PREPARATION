@@ -1,0 +1,205 @@
+{% extends "base.html" %}
+
+{% block title %}Join Video Room{% endblock %}
+
+{% block extra_head %}
+<style>
+    body {
+        background:
+            radial-gradient(700px 380px at 20% -5%, rgba(28, 176, 246, 0.18), transparent 65%),
+            radial-gradient(780px 420px at 85% 105%, rgba(88, 204, 2, 0.13), transparent 70%),
+            linear-gradient(135deg, #131F24, #0B1316);
+    }
+
+    body::after {
+        content: '';
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        z-index: 0;
+        background:
+            linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+        background-size: 22px 22px;
+        mask-image: radial-gradient(circle at center, black 26%, transparent 95%);
+    }
+
+    @keyframes joinCardFloat {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-4px); }
+    }
+
+    @keyframes badgePulse {
+        0%, 100% { box-shadow: 0 0 0 0 rgba(28, 176, 246, 0.25); }
+        50% { box-shadow: 0 0 0 8px rgba(28, 176, 246, 0); }
+    }
+
+    @keyframes buttonShine {
+        0% { background-position: 0% 50%; }
+        100% { background-position: 100% 50%; }
+    }
+
+    .join-container {
+        max-width: 400px;
+        margin: 100px auto;
+        position: relative;
+        z-index: 2;
+        background: linear-gradient(180deg, rgba(30, 53, 59, 0.82), rgba(21, 37, 42, 0.85));
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 24px;
+        padding: 40px 30px;
+        backdrop-filter: blur(12px);
+        text-align: center;
+        box-shadow: 0 26px 50px rgba(0, 0, 0, 0.42), inset 0 1px 0 rgba(255, 255, 255, 0.09);
+        animation: joinCardFloat 4s ease-in-out infinite;
+    }
+
+    .join-container::before {
+        content: '';
+        position: absolute;
+        left: 20px;
+        right: 20px;
+        top: 12px;
+        height: 4px;
+        border-radius: 999px;
+        background: linear-gradient(90deg, #58CC02, #1CB0F6);
+        opacity: 0.8;
+    }
+
+    .join-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 12px;
+        border-radius: 999px;
+        font-size: 0.78rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        color: #d7f3ff;
+        background: rgba(28, 176, 246, 0.14);
+        border: 1px solid rgba(28, 176, 246, 0.35);
+        margin-bottom: 14px;
+        animation: badgePulse 2.8s ease-out infinite;
+    }
+
+    .join-input {
+        width: 100%;
+        background: rgba(8, 16, 20, 0.55);
+        border: 2px solid rgba(255, 255, 255, 0.14);
+        border-radius: 12px;
+        padding: 16px;
+        color: white;
+        font-size: 1.2rem;
+        font-weight: 800;
+        text-align: center;
+        margin-bottom: 16px;
+        letter-spacing: 5px;
+        transition: border-color 0.2s, box-shadow 0.2s;
+        box-shadow: inset 0 -3px 0 rgba(255, 255, 255, 0.08);
+    }
+    .join-input:focus {
+        outline: none;
+        border-color: #1CB0F6;
+        box-shadow: 0 0 0 4px rgba(28, 176, 246, 0.15);
+    }
+    .join-input::placeholder {
+        color: rgba(255, 255, 255, 0.3);
+        letter-spacing: 2px;
+    }
+
+    .join-btn {
+        width: 100%;
+        background: linear-gradient(110deg, #27bcff 0%, #1CB0F6 40%, #33cbff 60%, #1CB0F6 100%);
+        background-size: 220% 220%;
+        color: white;
+        font-weight: 900;
+        font-size: 1.2rem;
+        padding: 16px;
+        border-radius: 12px;
+        border: none;
+        cursor: pointer;
+        transition: transform 0.1s, filter 0.2s;
+        box-shadow: 0 6px 0 #1899D6, 0 16px 24px rgba(28, 176, 246, 0.28);
+        animation: buttonShine 2.8s linear infinite;
+    }
+    .join-btn:active {
+        transform: translateY(6px);
+        box-shadow: 0 0 0 #1899D6;
+    }
+    .join-btn:hover {
+        filter: brightness(1.04);
+    }
+
+    .join-caption {
+        color: #9bb5bc;
+        font-size: 0.9rem;
+        margin-top: 14px;
+        font-weight: 700;
+    }
+
+    .join-icon-shell {
+        width: 80px;
+        height: 80px;
+        background: rgba(28, 176, 246, 0.1);
+        border-radius: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 2px solid rgba(28, 176, 246, 0.3);
+        box-shadow: inset 0 -4px 0 rgba(28, 176, 246, 0.22), 0 10px 26px rgba(28, 176, 246, 0.2);
+    }
+
+    @media (max-width: 640px) {
+        .join-container {
+            margin: 72px 14px;
+            padding: 30px 20px;
+        }
+
+        .join-input {
+            letter-spacing: 3px;
+        }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .join-container,
+        .join-badge,
+        .join-btn {
+            animation: none;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="join-container animate-slide-up">
+    <div class="join-badge"><i class="ph-fill ph-game-controller"></i> Arcade Room</div>
+
+    <div class="mb-6 flex justify-center">
+        <div class="join-icon-shell">
+            <i class="ph-fill ph-users-three text-4xl text-duo-blue"></i>
+        </div>
+    </div>
+    
+    <h1 class="text-3xl font-black text-white mb-2">Join Session</h1>
+    <p class="text-duo-text-muted mb-8 font-semibold">Enter the PIN shown on the main screen.</p>
+
+    {% if messages %}
+    <div class="mb-4">
+        {% for message in messages %}
+        <div class="bg-red-500/10 border border-red-500/30 text-red-400 font-bold p-3 rounded-xl mb-2 text-sm">
+            {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <form method="post">
+        {% csrf_token %}
+        <input type="text" name="pin" class="join-input" placeholder="Game PIN" required autocomplete="off" maxlength="6" pattern="[0-9]{6}">
+        <button type="submit" class="join-btn mt-2">Enter</button>
+    </form>
+
+    <p class="join-caption">Tip: PIN is 6 digits from the host screen.</p>
+</div>
+{% endblock %}

@@ -1,0 +1,420 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Мой класс — CEFR Prep{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12">
+
+    {% if membership %}
+    <!-- =====================================================================
+         CLASSROOM HEADER
+    ====================================================================== -->
+    <section class="mb-8 animate-fade-in">
+        <div class="relative overflow-hidden rounded-[28px] border border-white/10 bg-[linear-gradient(135deg,rgba(255,255,255,0.06),rgba(255,255,255,0.02))] shadow-[0_24px_80px_rgba(0,0,0,0.28)]">
+            <div class="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.08),transparent_35%)]"></div>
+            <div class="absolute -right-10 -top-14 h-40 w-40 rounded-full blur-3xl bg-duo-blue/15"></div>
+            <div class="relative p-5 sm:p-6 lg:p-8">
+                <div class="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
+                    <!-- Left: classroom info -->
+                    <div class="flex items-start gap-4 sm:gap-5">
+                        <div class="flex h-16 w-16 shrink-0 items-center justify-center rounded-[22px] border border-white/10 shadow-[0_12px_28px_rgba(0,0,0,0.2)] bg-duo-blue text-3xl select-none">
+                            {{ classroom.emoji }}
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <div class="mb-2 flex flex-wrap items-center gap-2">
+                                <!-- Classroom Selector if multiple -->
+                                {% if all_memberships|length > 1 %}
+                                <div class="relative group z-20">
+                                    <button class="flex items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-[11px] font-black uppercase tracking-[0.18em] text-white hover:bg-white/20 transition cursor-pointer">
+                                        Мои классы <i class="ph-bold ph-caret-down"></i>
+                                    </button>
+                                    <div class="absolute left-0 top-full mt-2 w-64 rounded-2xl border border-white/10 bg-[#1A1E24] shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all">
+                                        <div class="p-2 space-y-1">
+                                            {% for m in all_memberships %}
+                                            <a href="?classroom={{ m.classroom.id }}" class="flex items-center justify-between gap-3 rounded-xl px-3 py-2 transition hover:bg-white/5 {% if m.classroom.id == classroom.id %}bg-duo-blue/10 border border-duo-blue/20{% endif %}">
+                                                <div class="flex items-center gap-2 truncate">
+                                                    <span class="text-base">{{ m.classroom.emoji }}</span>
+                                                    <span class="truncate text-xs font-bold {% if m.classroom.id == classroom.id %}text-duo-blue{% else %}text-white{% endif %}">{{ m.classroom.name }}</span>
+                                                </div>
+                                                {% if m.classroom.id == classroom.id %}
+                                                <i class="ph-bold ph-check text-duo-blue text-xs"></i>
+                                                {% endif %}
+                                            </a>
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+                                </div>
+                                {% else %}
+                                <span class="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] font-black uppercase tracking-[0.18em] text-duo-text-dim">
+                                    Мой класс
+                                </span>
+                                {% endif %}
+                                {% if not classroom.is_active %}
+                                <span class="rounded-full border border-duo-gold/25 bg-duo-gold/10 px-3 py-1 text-[11px] font-black uppercase tracking-[0.14em] text-duo-gold">
+                                    <i class="ph-fill ph-archive"></i> Архив
+                                </span>
+                                {% endif %}
+                            </div>
+                            <h1 class="text-2xl font-black tracking-tight text-white sm:text-3xl">{{ classroom.name }}</h1>
+                            {% if classroom.description %}
+                            <p class="mt-2 max-w-3xl text-sm font-semibold leading-relaxed text-duo-text-dim sm:text-[15px]">{{ classroom.description }}</p>
+                            {% endif %}
+                            <!-- Stats row -->
+                            <div class="mt-3 flex flex-wrap gap-4">
+                                <div class="flex items-center gap-1.5 text-xs font-bold text-duo-text-dim">
+                                    <i class="ph-fill ph-users text-duo-blue text-sm"></i>
+                                    <span class="text-white font-black">{{ classmate_count }}</span> однокласс{% if classmate_count == 1 %}ник{% else %}ников{% endif %}
+                                </div>
+                                <div class="flex items-center gap-1.5 text-xs font-bold text-duo-text-dim">
+                                    <i class="ph-fill ph-exam text-duo-green text-sm"></i>
+                                    <span class="text-white font-black">{{ tests_with_status|length }}</span> тестов
+                                </div>
+                                <div class="flex items-center gap-1.5 text-xs font-bold text-duo-text-dim">
+                                    <i class="ph-fill ph-calendar-check text-duo-text-dim text-sm"></i>
+                                    С {{ membership.joined_at|date:"d M Y" }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Right: mentor card + leave -->
+                    <div class="flex flex-col gap-3 sm:items-end shrink-0">
+                        <!-- Mentor card -->
+                        <div class="flex items-center gap-2.5 rounded-2xl border border-white/10 bg-white/[0.04] px-3.5 py-2.5">
+                            <div class="w-8 h-8 rounded-full flex items-center justify-center bg-duo-blue/20 border border-duo-blue/25">
+                                <i class="ph-fill ph-chalkboard-teacher text-duo-blue text-sm"></i>
+                            </div>
+                            <div>
+                                <p class="text-[10px] font-black uppercase tracking-widest text-duo-text-muted">Ментор</p>
+                                <p class="text-sm font-black text-white leading-tight">
+                                    {% if mentor.first_name %}{{ mentor.first_name }} {{ mentor.last_name }}{% else %}{{ mentor.username }}{% endif %}
+                                </p>
+                            </div>
+                        </div>
+                        <form method="POST" action="{% url 'exams:leave_classroom' %}">
+                            {% csrf_token %}
+                            <input type="hidden" name="classroom_id" value="{{ classroom.id }}">
+                            <button type="submit"
+                                    class="btn-duo-outline text-xs !py-2 !px-4 hover:!text-duo-red hover:!border-duo-red/30 w-full"
+                                    onclick="return confirm('Покинуть класс «{{ classroom.name }}»?')">
+                                <i class="ph-fill ph-sign-out"></i> Покинуть класс
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- =====================================================================
+         LEADERBOARD
+    ====================================================================== -->
+    {% if leaderboard %}
+    <section class="mb-8 animate-slide-up">
+        <h2 class="text-base font-black text-white mb-3 flex items-center gap-2">
+            <i class="ph-fill ph-trophy text-duo-gold text-lg"></i>
+            Рейтинг класса
+        </h2>
+        <div class="card-duo overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-sm min-w-[500px]">
+                    <thead class="bg-white/[0.02] border-b border-white/10">
+                        <tr>
+                            <th class="px-5 py-3 font-black text-xs text-duo-text-muted uppercase tracking-widest w-16 text-center">Ранг</th>
+                            <th class="px-5 py-3 font-black text-xs text-duo-text-muted uppercase tracking-widest">Ученик</th>
+                            <th class="px-5 py-3 font-black text-xs text-duo-text-muted uppercase tracking-widest text-center">Пройдено</th>
+                            <th class="px-5 py-3 font-black text-xs text-duo-text-muted uppercase tracking-widest text-right">Средний балл</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-white/5">
+                        {% for entry in leaderboard %}
+                        <tr class="transition-colors hover:bg-white/[0.02] {% if entry.is_current_user %}bg-duo-blue/5 border-l-4 border-l-duo-blue{% else %}border-l-4 border-l-transparent{% endif %}">
+                            <td class="px-5 py-4 text-center">
+                                {% if entry.rank == 1 %}
+                                <div class="w-8 h-8 mx-auto rounded-full bg-amber-400/20 flex items-center justify-center border border-amber-400/40 text-amber-400 font-black">1</div>
+                                {% elif entry.rank == 2 %}
+                                <div class="w-8 h-8 mx-auto rounded-full bg-slate-300/20 flex items-center justify-center border border-slate-300/40 text-slate-300 font-black">2</div>
+                                {% elif entry.rank == 3 %}
+                                <div class="w-8 h-8 mx-auto rounded-full bg-amber-700/20 flex items-center justify-center border border-amber-700/40 text-amber-600 font-black">3</div>
+                                {% else %}
+                                <div class="w-8 h-8 mx-auto flex items-center justify-center font-bold text-duo-text-dim">{{ entry.rank }}</div>
+                                {% endif %}
+                            </td>
+                            <td class="px-5 py-4">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-xs font-bold">
+                                        {{ entry.student.username|make_list|first|upper }}
+                                    </div>
+                                    <div>
+                                        <div class="font-bold text-white {% if entry.is_current_user %}text-duo-blue{% endif %}">
+                                            {% if entry.student.first_name %}{{ entry.student.first_name }} {{ entry.student.last_name }}{% else %}{{ entry.student.username }}{% endif %}
+                                            {% if entry.is_current_user %}<span class="ml-2 text-[10px] uppercase tracking-widest bg-duo-blue/20 text-duo-blue px-2 py-0.5 rounded-full border border-duo-blue/30">Вы</span>{% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-5 py-4 text-center">
+                                <span class="font-bold text-white">{{ entry.completed }}</span><span class="text-duo-text-muted text-xs">/{{ entry.total_tests }}</span>
+                            </td>
+                            <td class="px-5 py-4 text-right">
+                                <span class="font-black text-lg {% if entry.avg_score >= 80 %}text-duo-green{% elif entry.avg_score >= 60 %}text-duo-gold{% else %}text-duo-red{% endif %}">
+                                    {{ entry.avg_score }}%
+                                </span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+    {% endif %}
+
+    <!-- =====================================================================
+         ANNOUNCEMENTS (pinned + recent)
+    ====================================================================== -->
+    {% if announcements %}
+    <section class="mb-8 animate-slide-up">
+        <h2 class="text-base font-black text-white mb-3 flex items-center gap-2">
+            <i class="ph-fill ph-megaphone text-duo-gold text-lg"></i>
+            Объявления
+        </h2>
+        <div class="flex flex-col gap-3">
+            {% for ann in announcements %}
+            <div class="relative rounded-[20px] border p-4 sm:p-5
+                {% if ann.is_pinned %}border-duo-gold/30 bg-duo-gold/[0.06]{% else %}border-white/8 bg-white/[0.03]{% endif %}">
+                {% if ann.is_pinned %}
+                <div class="absolute top-3.5 right-3.5">
+                    <span class="flex items-center gap-1 rounded-full border border-duo-gold/30 bg-duo-gold/10 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-widest text-duo-gold">
+                        <i class="ph-fill ph-push-pin"></i> Закреплено
+                    </span>
+                </div>
+                {% endif %}
+                <div class="flex items-start gap-3 pr-24">
+                    <div class="w-8 h-8 shrink-0 rounded-full flex items-center justify-center
+                        {% if ann.is_pinned %}bg-duo-gold/20 border border-duo-gold/25{% else %}bg-white/[0.06] border border-white/10{% endif %}">
+                        <i class="ph-fill ph-megaphone {% if ann.is_pinned %}text-duo-gold{% else %}text-duo-text-dim{% endif %} text-sm"></i>
+                    </div>
+                    <div class="min-w-0">
+                        <p class="text-sm font-black text-white mb-0.5">{{ ann.title }}</p>
+                        {% if ann.body %}
+                        <p class="text-sm text-duo-text-dim font-semibold leading-relaxed whitespace-pre-line">{{ ann.body }}</p>
+                        {% endif %}
+                        <p class="mt-2 text-[11px] text-duo-text-muted font-semibold">
+                            {{ ann.created_at|date:"d M Y, H:i" }}
+                        </p>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+
+    <!-- =====================================================================
+         TESTS GROUPED BY TYPE
+    ====================================================================== -->
+    {% if tests_with_status %}
+
+    <!-- Progress overview mini-banner -->
+    {% with total=tests_with_status|length %}
+    {% with done_count=0 %}
+    {# Count completed tests in template #}
+    {% endwith %}
+    {% endwith %}
+
+    {# Group tests by type #}
+    {% regroup tests_with_status by test.test_type as groups_by_type %}
+
+    {% for group in groups_by_type %}
+    {% with t=group.grouper %}
+    <section class="mb-8 animate-slide-up">
+
+        <!-- Section header with completion pill -->
+        <div class="flex items-center gap-3 mb-4">
+            <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border
+                {% if t == 'listening' %}bg-duo-green/15 border-duo-green/25
+                {% elif t == 'reading' %}bg-duo-blue/15 border-duo-blue/25
+                {% elif t == 'writing' %}bg-duo-gold/15 border-duo-gold/25
+                {% else %}bg-duo-purple/15 border-duo-purple/25{% endif %}">
+                {% if t == 'listening' %}<i class="ph-fill ph-headphones text-duo-green text-lg"></i>
+                {% elif t == 'reading' %}<i class="ph-fill ph-book-open-text text-duo-blue text-lg"></i>
+                {% elif t == 'writing' %}<i class="ph-fill ph-pencil-line text-duo-gold text-lg"></i>
+                {% else %}<i class="ph-fill ph-microphone text-duo-purple text-lg"></i>{% endif %}
+            </div>
+            <div>
+                <h2 class="text-base font-black
+                    {% if t == 'listening' %}text-duo-green
+                    {% elif t == 'reading' %}text-duo-blue
+                    {% elif t == 'writing' %}text-duo-gold
+                    {% else %}text-duo-purple{% endif %}">
+                    {% if t == 'listening' %}Listening
+                    {% elif t == 'reading' %}Reading
+                    {% elif t == 'writing' %}Writing
+                    {% else %}Speaking{% endif %}
+                </h2>
+                <p class="text-xs font-semibold text-duo-text-muted">{{ group.list|length }} тест{% if group.list|length != 1 %}ов{% endif %}</p>
+            </div>
+            <div class="flex-1 ml-1 h-px
+                {% if t == 'listening' %}bg-duo-green/15
+                {% elif t == 'reading' %}bg-duo-blue/15
+                {% elif t == 'writing' %}bg-duo-gold/15
+                {% else %}bg-duo-purple/15{% endif %}"></div>
+        </div>
+
+        <!-- Test cards -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {% for entry in group.list %}
+            {% with test=entry.test %}
+            <a href="{% url 'exams:test_tutorial' test.id %}" class="group relative block rounded-[20px] border p-5 transition hover:-translate-y-0.5
+                {% if t == 'listening' %}border-duo-green/20 bg-duo-green/5 hover:border-duo-green/35 hover:bg-duo-green/10
+                {% elif t == 'reading' %}border-duo-blue/20 bg-duo-blue/5 hover:border-duo-blue/35 hover:bg-duo-blue/10
+                {% elif t == 'writing' %}border-duo-gold/20 bg-duo-gold/5 hover:border-duo-gold/35 hover:bg-duo-gold/10
+                {% else %}border-duo-purple/20 bg-duo-purple/5 hover:border-duo-purple/35 hover:bg-duo-purple/10{% endif %}">
+
+                <!-- Status badge & Due Date -->
+                <div class="absolute top-4 right-4 flex flex-col items-end gap-1.5">
+                    {% if entry.status == 'completed' %}
+                    <span class="flex items-center gap-1 rounded-full border border-duo-green/30 bg-duo-green/15 px-2.5 py-0.5 text-[10px] font-black text-duo-green">
+                        <i class="ph-fill ph-check-circle"></i> {{ entry.score_pct }}%
+                    </span>
+                    {% else %}
+                    <span class="flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-2.5 py-0.5 text-[10px] font-black text-duo-text-muted">
+                        <i class="ph-fill ph-circle-dashed"></i> Не начат
+                    </span>
+                    {% endif %}
+
+                    {% if entry.assignment and entry.assignment.due_date and entry.status != 'completed' %}
+                        {% if entry.assignment.is_overdue %}
+                        <span class="flex items-center gap-1 rounded-full border border-duo-red/30 bg-duo-red/15 px-2 py-0.5 text-[9px] font-black text-duo-red uppercase tracking-widest">
+                            Просрочено
+                        </span>
+                        {% elif entry.assignment.days_remaining <= 1 %}
+                        <span class="flex items-center gap-1 rounded-full border border-duo-gold/30 bg-duo-gold/15 px-2 py-0.5 text-[9px] font-black text-duo-gold uppercase tracking-widest">
+                            <i class="ph-fill ph-clock-countdown"></i> Скоро дедлайн
+                        </span>
+                        {% else %}
+                        <span class="flex items-center gap-1 rounded-full border border-duo-blue/30 bg-duo-blue/15 px-2 py-0.5 text-[9px] font-black text-duo-blue uppercase tracking-widest">
+                            Осталось {{ entry.assignment.days_remaining }} дн.
+                        </span>
+                        {% endif %}
+                    {% endif %}
+                </div>
+
+                <h3 class="text-base font-black text-white mb-1.5 pr-20 group-hover:
+                    {% if t == 'listening' %}group-hover:text-duo-green
+                    {% elif t == 'reading' %}group-hover:text-duo-blue
+                    {% elif t == 'writing' %}group-hover:text-duo-gold
+                    {% else %}group-hover:text-duo-purple{% endif %} transition-colors">
+                    {{ test.name }}
+                </h3>
+
+                <p class="text-xs text-duo-text-muted font-semibold mb-3">
+                    {% if t == 'listening' %}{{ test.parts.count }} частей · {{ test.question_count }} вопросов
+                    {% elif t == 'reading' %}{{ test.reading_parts.count }} частей
+                    {% elif t == 'writing' %}{{ test.writing_tasks.count }} заданий
+                    {% elif t == 'speaking' %}{{ test.speaking_parts.count }} частей
+                    {% endif %}
+                </p>
+
+                <!-- Progress bar -->
+                {% if entry.status == 'completed' %}
+                <div class="mb-3 h-1.5 w-full rounded-full bg-white/10 overflow-hidden">
+                    <div class="h-full rounded-full transition-all
+                        {% if entry.score_pct >= 80 %}bg-duo-green
+                        {% elif entry.score_pct >= 60 %}bg-duo-gold
+                        {% else %}bg-duo-red{% endif %}"
+                        style="width: {{ entry.score_pct }}%"></div>
+                </div>
+                {% endif %}
+
+                <div class="flex items-center gap-1 text-xs font-black transition-all group-hover:gap-2
+                    {% if t == 'listening' %}text-duo-green
+                    {% elif t == 'reading' %}text-duo-blue
+                    {% elif t == 'writing' %}text-duo-gold
+                    {% else %}text-duo-purple{% endif %}">
+                    {% if entry.status == 'completed' %}Пройти ещё раз{% else %}Начать{% endif %}
+                    <i class="ph-fill ph-arrow-right"></i>
+                </div>
+            </a>
+            {% endwith %}
+            {% endfor %}
+        </div>
+    </section>
+    {% endwith %}
+    {% endfor %}
+
+    {% else %}
+    <div class="text-center py-12 card-duo mb-8">
+        <i class="ph-fill ph-exam text-4xl text-duo-text-muted mb-3 block"></i>
+        <p class="text-lg font-black text-white mb-1">Пока нет тестов</p>
+        <p class="text-sm text-duo-text-dim font-semibold">Ментор ещё не добавил тесты в этот класс.</p>
+    </div>
+    {% endif %}
+
+    <!-- =====================================================================
+         VIDEO LESSONS
+    ====================================================================== -->
+    {% if video_lessons %}
+    <section class="mb-8 animate-slide-up">
+        <h2 class="text-base font-black text-white mb-4 flex items-center gap-2">
+            <i class="ph-fill ph-video text-duo-purple text-xl"></i>
+            Видеоуроки от ментора
+            <span class="ml-1 rounded-full border border-duo-purple/20 bg-duo-purple/10 px-2.5 py-0.5 text-xs font-black text-duo-purple">{{ video_lessons|length }}</span>
+        </h2>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {% for lesson in video_lessons %}
+            <a href="{% url 'exams:video_lesson_detail' lesson.id %}" class="card-duo p-5 group block hover:-translate-y-0.5 transition">
+                <!-- Thumbnail -->
+                {% if lesson.thumbnail_url %}
+                <div class="w-full aspect-video rounded-xl overflow-hidden mb-3 bg-black/20">
+                    <img src="{{ lesson.thumbnail_url }}" alt="{{ lesson.title }}" class="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition">
+                </div>
+                {% endif %}
+                <div class="flex items-center gap-2 mb-2">
+                    <span class="badge-duo bg-duo-purple/15 text-duo-purple border border-duo-purple/25">
+                        <i class="ph-fill ph-video-camera"></i> VIDEO
+                    </span>
+                    {% if lesson.cefr_level %}
+                    <span class="badge-duo bg-white/5 text-duo-text-dim border border-white/10 text-[10px]">{{ lesson.cefr_level }}</span>
+                    {% endif %}
+                </div>
+                <h3 class="text-sm font-black text-white group-hover:text-duo-purple transition-colors mb-1 line-clamp-2">{{ lesson.title }}</h3>
+                <p class="text-xs text-duo-text-muted font-semibold">{{ lesson.quiz_count }} вопрос{% if lesson.quiz_count != 1 %}ов{% endif %}</p>
+                <div class="mt-3 pt-3 border-t border-duo-border text-xs font-bold text-duo-purple flex items-center gap-1 group-hover:gap-2 transition-all">
+                    Смотреть <i class="ph-fill ph-play-circle text-base"></i>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+
+    {% else %}
+    <!-- =====================================================================
+         NO CLASSROOM — JOIN PROMPT
+    ====================================================================== -->
+    <div class="min-h-[60vh] flex items-center justify-center">
+        <div class="text-center max-w-md animate-slide-up px-4">
+            <div class="w-24 h-24 mx-auto mb-6 rounded-[28px] flex items-center justify-center bg-duo-blue shadow-[0_6px_0_#1899D6]">
+                <i class="ph-fill ph-chalkboard-teacher text-white text-5xl"></i>
+            </div>
+            <h2 class="text-2xl font-black text-white mb-3">У вас ещё нет класса</h2>
+            <p class="text-duo-text-dim font-semibold mb-6 leading-relaxed">
+                Попросите код у вашего ментора и вступите в класс, чтобы получить доступ к персональным тестам и объявлениям.
+            </p>
+            <a href="{% url 'exams:join_classroom' %}" class="btn-duo-blue text-base !py-3.5 !px-8 inline-flex items-center gap-2">
+                <i class="ph-fill ph-sign-in text-lg"></i>
+                Вступить в класс
+            </a>
+            <div class="mt-5">
+                <a href="{% url 'exams:dashboard' %}" class="text-sm text-duo-text-dim hover:text-white font-bold transition-colors">
+                    или решайте <span class="text-duo-green">открытые тесты</span> на платформе
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}

@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Аркады — CEFR Prep{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex items-center justify-between mb-8">
+        <div>
+            <h1 class="text-3xl sm:text-4xl font-black text-white mb-2 tracking-tight">
+                Аркады <i class="ph-fill ph-game-controller text-duo-purple animate-bounce-in inline-block ml-1"></i>
+            </h1>
+            <p class="text-duo-text-dim font-bold text-lg">Выбирай формат и прокачивай английский весело!</p>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <!-- 1. Video -->
+        <a href="{% url 'exams:video_lessons' %}" class="card-duo group flex flex-col h-full overflow-hidden no-underline hover:border-duo-green transition-all duration-300">
+            <div class="h-48 w-full bg-duo-surface relative overflow-hidden">
+                <img src="{% static 'images/arcade_video.png' %}" alt="Видео" class="w-full h-full object-cover block">
+                <div class="absolute inset-0 bg-gradient-to-t from-[#1A2F35] to-transparent"></div>
+            </div>
+            <div class="p-6 flex-1 flex flex-col items-center text-center -mt-6 relative z-10">
+                <div class="w-16 h-16 rounded-2xl bg-duo-surface border-4 border-duo-green flex items-center justify-center mb-4 shadow-lg group-hover:-translate-y-2 transition-transform duration-300">
+                    <i class="ph-fill ph-youtube-logo text-3xl text-duo-green"></i>
+                </div>
+                <h3 class="text-xl font-black text-white mb-2">Видеоуроки</h3>
+                <p class="text-duo-text-dim font-bold text-sm">Учи английский по любимым роликам с YouTube с интерактивными квизами.</p>
+            </div>
+        </a>
+
+        <!-- 2. Quizzes -->
+        <a href="#" onclick="DuoModal.alert('Квизы скоро появятся! 🚀'); return false;" class="card-duo group flex flex-col h-full overflow-hidden no-underline hover:border-duo-gold transition-all duration-300">
+            <div class="h-48 w-full bg-duo-surface relative overflow-hidden">
+                <img src="{% static 'images/arcade_quizzes.png' %}" alt="Квизы" class="w-full h-full object-cover block">
+                <div class="absolute inset-0 bg-gradient-to-t from-[#1A2F35] to-transparent"></div>
+            </div>
+            <div class="p-6 flex-1 flex flex-col items-center text-center -mt-6 relative z-10">
+                <div class="w-16 h-16 rounded-2xl bg-duo-surface border-4 border-duo-gold flex items-center justify-center mb-4 shadow-lg group-hover:-translate-y-2 transition-transform duration-300">
+                    <i class="ph-fill ph-lightbulb text-3xl text-duo-gold"></i>
+                </div>
+                <h3 class="text-xl font-black text-white mb-2">Квизы</h3>
+                <p class="text-duo-text-dim font-bold text-sm">Быстрые игры на проверку слов и грамматики. Соревнуйся с друзьями!</p>
+            </div>
+        </a>
+
+        <!-- 3. Stories -->
+        <a href="#" onclick="DuoModal.alert('Истории скоро появятся! 📚'); return false;" class="card-duo group flex flex-col h-full overflow-hidden no-underline hover:border-duo-blue transition-all duration-300">
+            <div class="h-48 w-full bg-duo-surface relative overflow-hidden">
+                <img src="{% static 'images/arcade_stories.png' %}" alt="Истории" class="w-full h-full object-cover block">
+                <div class="absolute inset-0 bg-gradient-to-t from-[#1A2F35] to-transparent"></div>
+            </div>
+            <div class="p-6 flex-1 flex flex-col items-center text-center -mt-6 relative z-10">
+                <div class="w-16 h-16 rounded-2xl bg-duo-surface border-4 border-duo-blue flex items-center justify-center mb-4 shadow-lg group-hover:-translate-y-2 transition-transform duration-300">
+                    <i class="ph-fill ph-book-open-text text-3xl text-duo-blue"></i>
+                </div>
+                <h3 class="text-xl font-black text-white mb-2">Истории</h3>
+                <p class="text-duo-text-dim font-bold text-sm">Читай увлекательные диалоги и рассказы, прокачивая понимание на слух.</p>
+            </div>
+        </a>
+    </div>
+</div>
+{% endblock %}

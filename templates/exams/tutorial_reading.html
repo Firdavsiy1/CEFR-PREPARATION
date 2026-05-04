@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Подготовка к тесту — {{ test.name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto px-4 sm:px-6 py-12 animate-fade-in text-center flex flex-col items-center">
+
+    <div class="w-24 h-24 bg-duo-green/15 rounded-3xl flex items-center justify-center shadow-[0_4px_0_rgba(88,204,2,0.3)] mb-8">
+        <i class="ph-fill ph-book-open-text text-duo-green text-6xl"></i>
+    </div>
+
+    <h1 class="text-3xl font-black text-white mb-3"><span data-i18n="tut_prep">Подготовка:</span> {{ test.name }}</h1>
+    <p class="text-duo-text-dim font-bold text-base mb-10 leading-relaxed max-w-lg" data-i18n="tut_reading_desc">
+        Экзамен по чтению состоит из нескольких секций с разными типами заданий. У вас будет 60 минут. Таймер нельзя поставить на паузу.
+    </p>
+
+    <!-- Info Box -->
+    <div class="card-duo w-full p-6 sm:p-8 mb-10">
+        <h3 class="text-lg font-black text-white mb-4" data-i18n="tut_reading_tips_title">Советы</h3>
+        <div class="space-y-3 text-left">
+            <div class="flex items-start gap-3">
+                <i class="ph-fill ph-clock text-duo-gold text-lg mt-0.5"></i>
+                <p class="text-sm font-semibold text-duo-text-muted" data-i18n="tut_reading_tip1">Распределяйте время: ~12 минут на каждую секцию.</p>
+            </div>
+            <div class="flex items-start gap-3">
+                <i class="ph-fill ph-eye text-duo-blue text-lg mt-0.5"></i>
+                <p class="text-sm font-semibold text-duo-text-muted" data-i18n="tut_reading_tip2">Сначала бегло просмотрите текст, затем читайте вопросы.</p>
+            </div>
+            <div class="flex items-start gap-3">
+                <i class="ph-fill ph-pencil text-duo-purple text-lg mt-0.5"></i>
+                <p class="text-sm font-semibold text-duo-text-muted" data-i18n="tut_reading_tip3">Не оставляйте пустых ответов — попробуйте угадать, если не уверены.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Start Action -->
+    <form action="{% url 'exams:start_test' test.id %}" method="POST" class="w-full" id="start-test-form">
+        {% csrf_token %}
+        <button type="submit" class="btn-duo-green w-full sm:w-auto text-lg !px-12 !py-4" id="start-btn">
+            <span data-i18n="tut_reading_start_btn">Начать тест</span>
+            <i class="ph-bold ph-arrow-right ml-2"></i>
+        </button>
+    </form>
+
+</div>
+
+<!-- Fullscreen Countdown Overlay -->
+<div id="countdown-overlay" class="fixed inset-0 z-50 bg-[#131F24] flex flex-col items-center justify-center opacity-0 pointer-events-none transition-opacity duration-500">
+    <h2 class="text-3xl md:text-4xl font-black text-white mb-10 text-center drop-shadow-lg" data-i18n="tut_get_ready">Готовься</h2>
+
+    <div class="relative w-48 h-48 md:w-56 md:h-56 flex items-center justify-center">
+        <svg class="w-full h-full transform -rotate-90 drop-shadow-[0_0_15px_rgba(88,204,2,0.3)]" viewBox="0 0 100 100">
+            <circle cx="50" cy="50" r="45" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="8" />
+            <circle id="countdown-circle" cx="50" cy="50" r="45" fill="none" stroke="#58CC02" stroke-width="8" stroke-dasharray="283" stroke-dashoffset="0" class="transition-all duration-1000 ease-linear" stroke-linecap="round" />
+        </svg>
+        <div id="countdown-number" class="absolute text-7xl font-black text-white">5</div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const startBtn = document.getElementById('start-btn');
+    const form = document.getElementById('start-test-form');
+    const overlay = document.getElementById('countdown-overlay');
+    const countdownNumber = document.getElementById('countdown-number');
+    const countdownCircle = document.getElementById('countdown-circle');
+    const circumference = 2 * Math.PI * 45;
+    let submitting = false;
+
+    form.addEventListener('submit', (e) => {
+        if (submitting) return;
+        e.preventDefault();
+        startBtn.disabled = true;
+        overlay.classList.remove('opacity-0', 'pointer-events-none');
+
+        let count = 5;
+        countdownNumber.textContent = count;
+        countdownCircle.style.strokeDashoffset = '0';
+
+        const interval = setInterval(() => {
+            count--;
+            if (count <= 0) {
+                clearInterval(interval);
+                submitting = true;
+                form.submit();
+                return;
+            }
+            countdownNumber.textContent = count;
+            const offset = circumference * ((5 - count) / 5);
+            countdownCircle.style.strokeDashoffset = offset;
+        }, 1000);
+    });
+});
+</script>
+{% endblock %}

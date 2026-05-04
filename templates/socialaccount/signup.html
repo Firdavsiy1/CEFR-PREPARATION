@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}Завершение регистрации — CEFR Prep{% endblock %}
+
+{% block content %}
+<div class="min-h-[75vh] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-md w-full animate-slide-up">
+        <div class="card-duo p-8 sm:p-10">
+            <div class="text-center mb-8">
+                <div class="w-20 h-20 mx-auto mb-5 rounded-2xl flex items-center justify-center bg-duo-blue shadow-[0_4px_0_#1899D6] animate-bounce-in">
+                    <i class="ph-fill ph-user-plus text-white text-4xl"></i>
+                </div>
+                <h2 class="text-2xl font-black text-white mb-2">Завершите регистрацию</h2>
+                <p class="text-duo-text-dim text-sm font-semibold">
+                    Google уже подтвердил вашу почту. Заполните поля ниже, чтобы создать профиль.
+                </p>
+            </div>
+
+            <form method="post" action="{% url 'socialaccount_signup' %}" class="space-y-5">
+                {% csrf_token %}
+
+                {% if form.non_field_errors %}
+                <div class="rounded-xl border-2 border-duo-red/40 bg-duo-red/10 px-4 py-3 text-sm font-bold text-duo-red">
+                    {% for error in form.non_field_errors %}
+                    <div>{{ error }}</div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                {% for field in form %}
+                    {% if field.is_hidden %}
+                        {{ field }}
+                    {% else %}
+                    <div>
+                        <label for="{{ field.id_for_label }}" class="block text-xs font-extrabold text-duo-text-dim mb-2 uppercase tracking-widest">
+                            {{ field.label }}
+                        </label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                                {% if field.name == 'email' %}
+                                <i class="ph-fill ph-envelope-simple text-duo-text-muted text-lg"></i>
+                                {% elif field.name == 'username' %}
+                                <i class="ph-fill ph-user text-duo-text-muted text-lg"></i>
+                                {% else %}
+                                <i class="ph-fill ph-text-aa text-duo-text-muted text-lg"></i>
+                                {% endif %}
+                            </div>
+                            {{ field }}
+                        </div>
+                        {% if field.errors %}
+                        <div class="mt-2 flex items-center gap-2 text-sm text-duo-red font-bold">
+                            <i class="ph-fill ph-warning-circle"></i>
+                            {{ field.errors.0 }}
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                {% endfor %}
+
+                {% if redirect_field_value %}
+                <input type="hidden" name="{{ redirect_field_name }}" value="{{ redirect_field_value }}">
+                {% endif %}
+
+                <div class="pt-3">
+                    <button type="submit" class="btn-duo-green w-full text-base !py-3.5">
+                        <i class="ph-fill ph-check-circle text-lg"></i>
+                        <span class="relative top-[1px]">Создать аккаунт</span>
+                    </button>
+                </div>
+            </form>
+
+            <p class="text-center text-sm text-duo-text-dim font-semibold mt-6 pt-6 border-t-2 border-duo-border">
+                Если это не ваш аккаунт Google, вернитесь на
+                <a href="{% url 'accounts:login' %}" class="font-extrabold text-duo-green hover:text-duo-gold transition-colors">экран входа</a>.
+            </p>
+        </div>
+    </div>
+</div>
+
+<style>
+ul.errorlist { list-style: none; margin: 0; padding: 0; }
+.helptext { display: none !important; }
+</style>
+{% endblock %}

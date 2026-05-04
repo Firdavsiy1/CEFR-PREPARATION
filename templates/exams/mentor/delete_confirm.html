@@ -4,25 +4,17 @@
 
 {% block content %}
 <div class="max-w-lg mx-auto px-4 sm:px-6 lg:px-8">
-
-    <!-- Back link -->
-    <a href="{% url 'exams:mentor_dashboard' %}" class="btn-duo-outline text-xs !py-2 !px-4 mb-8 inline-flex">
-        <i class="ph-bold ph-arrow-left"></i>
-        <span data-i18n="mnt_back_panel">Назад к панели</span>
-    </a>
+    {% include "exams/mentor/_workspace_header.html" with icon="ph-fill ph-trash" accent="red" title="Подтверждение удаления теста" subtitle="Удаление скрывает тест из публикации и отключает его для студентов. Используйте этот экран как финальную проверку перед деактивацией." page_group="danger" %}
 
     <!-- Delete Card -->
     <div class="card-duo overflow-hidden !p-0 !border-duo-red/30 animate-fade-in">
-        <!-- Header -->
-        <div class="px-8 py-6 border-b-2 border-duo-red/20 bg-duo-red/5">
-            <div class="flex items-center gap-4">
-                <div class="w-14 h-14 rounded-2xl flex items-center justify-center bg-duo-red shadow-[0_4px_0_#E53E3E]">
-                    <i class="ph-fill ph-trash text-white text-2xl"></i>
-                </div>
+        <div class="border-b-2 border-duo-red/20 bg-duo-red/5 px-6 py-4">
+            <div class="flex items-center justify-between gap-3">
                 <div>
-                    <h1 class="text-2xl font-black text-white tracking-tight" data-i18n="mnt_delete_title">Удалить тест</h1>
-                    <p class="text-sm text-duo-text-dim font-semibold mt-0.5" data-i18n="mnt_delete_warning">Это действие необратимо!</p>
+                    <p class="text-xs font-extrabold uppercase tracking-[0.16em] text-duo-red">Danger zone</p>
+                    <p class="mt-2 text-lg font-black text-white">Это действие необратимо</p>
                 </div>
+                <span class="rounded-2xl border border-duo-red/20 bg-duo-red/10 px-3 py-2 text-xs font-black uppercase tracking-[0.16em] text-duo-red">Soft delete</span>
             </div>
         </div>
 
@@ -46,14 +38,46 @@
                         <i class="ph-fill ph-warning text-duo-gold text-base"></i>
                     </div>
                     <div>
-                        <p class="text-sm font-extrabold text-duo-gold mb-1"><span data-i18n="mnt_delete_confirm">Вы уверены, что хотите удалить тест</span> «{{ test.name }}»?</p>
-                        <p class="text-xs text-duo-text-dim font-semibold" data-i18n="mnt_delete_all_data">Все части, вопросы и попытки учеников будут безвозвратно удалены.</p>
+                        <p class="text-sm font-extrabold text-duo-gold mb-1"><span data-i18n="mnt_delete_confirm">Вы уверены, что хотите скрыть тест</span> «{{ test.name }}»?</p>
+                        <p class="text-xs text-duo-text-dim font-semibold" data-i18n="mnt_delete_all_data">Тест будет снят с публикации и скрыт от учеников. История попыток сохранится.</p>
                     </div>
                 </div>
             </div>
 
             <form method="post">
                 {% csrf_token %}
+
+                {% if cloned_tests %}
+                <!-- Cloned parts section -->
+                <div class="card-duo !border-duo-red/20 p-4 mb-6">
+                    <div class="flex items-start gap-3">
+                        <div class="w-9 h-9 rounded-xl bg-duo-red/15 flex items-center justify-center flex-shrink-0">
+                            <i class="ph-fill ph-copy text-duo-red text-base"></i>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-extrabold text-duo-red mb-1">Обнаружены клонированные части ({{ cloned_tests|length }})</p>
+                            <p class="text-xs text-duo-text-dim font-semibold mb-3">Этот тест был разбит на части командой «Дублировать по частям». Выберите, удалять ли их вместе с оригиналом.</p>
+                            <ul class="space-y-1 mb-3 max-h-40 overflow-y-auto">
+                                {% for clone in cloned_tests %}
+                                <li class="flex items-center gap-2 text-xs text-duo-text-muted font-semibold">
+                                    <i class="ph-fill ph-file-text text-duo-text-muted/60 flex-shrink-0"></i>
+                                    <span class="truncate">{{ clone.name }}</span>
+                                    {% if clone.is_active %}<span class="shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-black bg-duo-green/15 text-duo-green border border-duo-green/25">активен</span>{% endif %}
+                                </li>
+                                {% endfor %}
+                            </ul>
+                            <label class="flex items-center gap-2.5 cursor-pointer select-none group">
+                                <input type="checkbox" name="delete_clones" value="1" id="delete-clones-cb"
+                                       class="h-4 w-4 rounded border-duo-border bg-duo-surface text-duo-red focus:ring-duo-red">
+                                <span class="text-sm font-bold text-white group-hover:text-duo-red transition-colors">
+                                    Удалить все {{ cloned_tests|length }} клонированных части вместе с оригиналом
+                                </span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
                 <div class="flex items-center justify-between">
                     <a href="{% url 'exams:mentor_dashboard' %}"
                        class="btn-duo-outline text-xs">
@@ -61,7 +85,7 @@
                     </a>
                     <button type="submit" class="btn-duo-red text-sm">
                         <i class="ph-fill ph-trash text-lg"></i>
-                        <span data-i18n="mnt_delete_btn">Удалить навсегда</span>
+                        <span data-i18n="mnt_delete_btn">Скрыть тест</span>
                     </button>
                 </div>
             </form>

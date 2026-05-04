@@ -1,0 +1,316 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Video Lessons — Mentor Panel{% endblock %}
+
+{% block extra_head %}
+<style>
+    .video-card {
+        background: #1A2F35;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 20px;
+        overflow: hidden;
+        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .video-card:hover {
+        border-color: rgba(255, 75, 75, 0.3);
+        transform: translateY(-4px);
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 75, 75, 0.15);
+    }
+    .video-card .thumb-wrapper {
+        position: relative;
+        width: 100%;
+        aspect-ratio: 16 / 9;
+        overflow: hidden;
+        background: #0F1A1E;
+    }
+    .video-card .thumb-wrapper img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transition: transform 0.3s ease;
+    }
+    .video-card:hover .thumb-wrapper img {
+        transform: scale(1.05);
+    }
+    .thumb-overlay {
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(to top, rgba(0,0,0,0.6) 0%, transparent 50%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        transition: opacity 0.25s ease;
+    }
+    .video-card:hover .thumb-overlay {
+        opacity: 1;
+    }
+    .play-icon {
+        width: 56px;
+        height: 56px;
+        border-radius: 50%;
+        background: rgba(255, 75, 75, 0.9);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 4px 20px rgba(255, 75, 75, 0.4);
+    }
+    .cefr-badge {
+        position: absolute;
+        top: 12px;
+        right: 12px;
+        background: rgba(0, 0, 0, 0.6);
+        backdrop-filter: blur(8px);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        padding: 4px 10px;
+        border-radius: 8px;
+        font-size: 0.7rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+    .quiz-badge {
+        position: absolute;
+        bottom: 12px;
+        left: 12px;
+        background: rgba(255, 75, 75, 0.15);
+        border: 1px solid rgba(255, 75, 75, 0.3);
+        color: #FF4B4B;
+        padding: 4px 10px;
+        border-radius: 8px;
+        font-size: 0.7rem;
+        font-weight: 800;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+    .add-video-form {
+        background: linear-gradient(135deg, #1A2F35, #233E46);
+        border: 2px solid rgba(255, 75, 75, 0.15);
+        border-radius: 24px;
+        padding: 32px;
+        position: relative;
+    }
+    .add-video-form:focus-within {
+        border-color: rgba(255, 75, 75, 0.3);
+        box-shadow: 0 0 0 4px rgba(255, 75, 75, 0.08);
+    }
+    .empty-state {
+        text-align: center;
+        padding: 80px 24px;
+    }
+    .empty-state .icon-circle {
+        width: 80px;
+        height: 80px;
+        border-radius: 24px;
+        background: rgba(255, 75, 75, 0.1);
+        border: 2px solid rgba(255, 75, 75, 0.2);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 20px;
+    }
+    .submit-btn .spinner {
+        display: none;
+        will-change: transform;
+        animation: spin 0.8s linear infinite;
+    }
+    .submit-btn.loading .spinner { display: inline-block; }
+    .submit-btn.loading .btn-text { display: none; }
+    .submit-btn.loading {
+        pointer-events: none;
+        opacity: 0.85;
+    }
+    @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+    /* Progress bar */
+    #video-progress-bar-wrap {
+        position: fixed;
+        top: 0; left: 0; right: 0;
+        z-index: 9999;
+        height: 4px;
+        background: rgba(255,255,255,0.08);
+        display: none;
+    }
+    #video-progress-bar-wrap.active { display: block; }
+    #video-progress-bar {
+        height: 100%;
+        width: 0%;
+        background: linear-gradient(90deg, #FF4B4B, #ff8c8c);
+        border-radius: 2px;
+        transition: width 0.4s ease;
+        box-shadow: 0 0 8px rgba(255,75,75,0.6);
+    }
+    #video-progress-label {
+        position: fixed;
+        top: 10px; left: 50%;
+        transform: translateX(-50%);
+        background: rgba(26,47,53,0.95);
+        border: 1px solid rgba(255,75,75,0.3);
+        color: #fff;
+        font-size: 0.78rem;
+        font-weight: 800;
+        padding: 6px 18px;
+        border-radius: 20px;
+        z-index: 9999;
+        display: none;
+        white-space: nowrap;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+    }
+    #video-progress-label.active { display: block; }
+    .magic-glow {
+        position: absolute;
+        top: -50%; left: -50%;
+        width: 200%; height: 200%;
+        background: conic-gradient(from 0deg, transparent 0%, rgba(255,75,75,0.1) 25%, transparent 50%, rgba(255,75,75,0.1) 75%, transparent 100%);
+        animation: rotateGlow 10s linear infinite;
+        z-index: 0;
+        pointer-events: none;
+    }
+    @keyframes rotateGlow { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+
+    {% include "exams/mentor/_workspace_header.html" with icon="ph-fill ph-youtube-logo" accent="red" title="Video Lessons" subtitle="Загрузите YouTube-видео — оно будет доступно всем студентам." page_group="video-lessons" %}
+
+    <!-- Add New Video Form -->
+    <form method="post" class="add-video-form mb-10 relative overflow-hidden" id="add-video-form">
+        <div class="magic-glow"></div>
+        {% csrf_token %}
+        <div class="relative z-10 flex flex-col md:flex-row items-end gap-4">
+            <div class="flex-grow w-full">
+                <label class="block text-xs font-bold text-duo-text-dim uppercase tracking-wider mb-2">
+                    <i class="ph-fill ph-magic-wand text-duo-red mr-1"></i> Добавить публичный урок
+                </label>
+                <div class="relative">
+                    <i class="ph-fill ph-youtube-logo absolute left-4 top-1/2 -translate-y-1/2 text-duo-red text-xl"></i>
+                    <input type="url" name="youtube_url" required
+                           placeholder="Вставьте ссылку на YouTube..."
+                           class="!pl-12 !pr-4 !py-4 w-full bg-[#0F1A1E] border-2 border-[rgba(255,255,255,0.1)] focus:border-duo-red focus:ring-4 focus:ring-duo-red/20 text-white rounded-xl transition-all"
+                           id="input-youtube-url">
+                </div>
+                <p class="mt-3 text-xs text-duo-text-muted font-semibold">
+                    <i class="ph ph-info"></i>
+                    ИИ определит уровень CEFR, загрузит субтитры и создаст интерактивный квиз. Видео будет видно всем студентам.
+                </p>
+            </div>
+            <div class="w-full md:w-auto flex-shrink-0">
+                <button type="submit"
+                        class="btn-duo-red submit-btn w-full md:w-[180px] h-[58px] relative overflow-hidden group mb-[32px] md:mb-[28px]"
+                        id="btn-add-video">
+                    <span class="btn-text flex items-center justify-center gap-2 text-lg">
+                        <i class="ph-fill ph-sparkle"></i> СОЗДАТЬ
+                    </span>
+                    <svg class="spinner h-5 w-5" viewBox="0 0 24 24" fill="none">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </form>
+
+    <!-- Video Lessons Grid -->
+    {% if lessons %}
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        {% for lesson in lessons %}
+        <div class="video-card animate-slide-up" style="animation-delay: {{ forloop.counter0 }}00ms">
+            <a href="{% url 'exams:video_lesson_detail' lesson_id=lesson.id %}" class="block">
+                <div class="thumb-wrapper">
+                    <img src="{{ lesson.thumbnail_url }}"
+                         alt="{{ lesson.title }}"
+                         loading="lazy"
+                         onerror="this.src='https://img.youtube.com/vi/default/hqdefault.jpg'">
+                    <div class="thumb-overlay">
+                        <div class="play-icon">
+                            <i class="ph-fill ph-play text-white text-xl ml-0.5"></i>
+                        </div>
+                    </div>
+                    <div class="cefr-badge text-duo-blue">{{ lesson.cefr_level }}</div>
+                    <div class="quiz-badge">
+                        <i class="ph-fill ph-question"></i>
+                        {{ lesson.quiz_count }} quiz{{ lesson.quiz_count|pluralize:"zes" }}
+                    </div>
+                </div>
+            </a>
+            <div class="p-5">
+                <h3 class="font-bold text-white text-sm leading-snug mb-3 line-clamp-2">{{ lesson.title }}</h3>
+                <div class="flex items-center justify-between gap-2">
+                    <span class="text-xs text-duo-text-muted font-semibold">
+                        <i class="ph ph-clock"></i> {{ lesson.created_at|timesince }} ago
+                    </span>
+                    <!-- Delete button -->
+                    <form method="post"
+                          action="{% url 'exams:mentor_video_lesson_delete' lesson_id=lesson.id %}"
+                          onsubmit="return confirm('Удалить видеоурок «{{ lesson.title }}»?')">
+                        {% csrf_token %}
+                        <button type="submit"
+                                class="inline-flex items-center gap-1 text-xs font-bold text-duo-red/70 hover:text-duo-red transition-colors px-2 py-1 rounded-lg hover:bg-duo-red/10">
+                            <i class="ph-bold ph-trash"></i> Удалить
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state animate-fade-in">
+        <div class="icon-circle">
+            <i class="ph-fill ph-youtube-logo text-3xl text-duo-red"></i>
+        </div>
+        <h3 class="text-xl font-black text-white mb-2">Нет публичных видеоуроков</h3>
+        <p class="text-duo-text-dim font-semibold text-sm max-w-md mx-auto">
+            Вставьте ссылку на YouTube выше — ИИ создаст интерактивный урок, доступный всем студентам.
+        </p>
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<!-- Progress bar elements -->
+<div id="video-progress-bar-wrap"><div id="video-progress-bar"></div></div>
+<div id="video-progress-label">⚙️ Создание урока…</div>
+<script>
+(function () {
+    var STEPS = [
+        { pct: 8,  label: '🔍 Извлекаем ID…',                  delay: 400  },
+        { pct: 20, label: '📝 Загружаем субтитры…',            delay: 3000 },
+        { pct: 38, label: '🧠 ИИ анализирует транскрипцию…', delay: 7000 },
+        { pct: 55, label: '❓ Генерируем вопросы…',         delay: 13000 },
+        { pct: 70, label: '🎯 Назначаем таймкоды…',           delay: 20000 },
+        { pct: 82, label: '💾 Сохраняем урок…',               delay: 28000 },
+        { pct: 90, label: '✅ Почти гото…',                    delay: 36000 },
+    ];
+
+    var bar   = document.getElementById('video-progress-bar');
+    var wrap  = document.getElementById('video-progress-bar-wrap');
+    var label = document.getElementById('video-progress-label');
+
+    document.getElementById('add-video-form').addEventListener('submit', function () {
+        var url = document.getElementById('input-youtube-url').value.trim();
+        if (!url) return;
+
+        var btn = document.getElementById('btn-add-video');
+        requestAnimationFrame(function () {
+            btn.classList.add('loading');
+            wrap.classList.add('active');
+            label.classList.add('active');
+
+            STEPS.forEach(function (step) {
+                setTimeout(function () {
+                    bar.style.width = step.pct + '%';
+                    label.textContent = step.label;
+                }, step.delay);
+            });
+        });
+    });
+})();
+</script>
+{% endblock %}

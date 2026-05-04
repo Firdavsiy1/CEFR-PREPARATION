@@ -12,7 +12,8 @@ from django.contrib.auth.models import User
 
 class CustomUserCreationForm(UserCreationForm):
     """
-    Extends Django's UserCreationForm to include a required email field.
+    Extends Django's UserCreationForm to include a required email field
+    and a role selection (student / mentor).
     """
     email = forms.EmailField(
         required=True,
@@ -20,6 +21,12 @@ class CustomUserCreationForm(UserCreationForm):
         widget=forms.EmailInput(attrs={
             'placeholder': 'you@example.com',
         }),
+    )
+    role = forms.ChoiceField(
+        choices=[('student', 'Ученик'), ('mentor', 'Ментор')],
+        initial='student',
+        widget=forms.HiddenInput(),  # Visual selection handled by JS in template
+        label='Роль',
     )
 
     class Meta:

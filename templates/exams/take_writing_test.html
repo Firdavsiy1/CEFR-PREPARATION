@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load static %}
 
 {% block title %}Writing Test — {{ test.name }}{% endblock %}
 
@@ -16,6 +17,22 @@
     }
     .timer-critical {
         animation: pulse-danger 1s infinite;
+    }
+
+    /* Anti-cheat: text protection (allow textarea input) */
+    .test-protected {
+        user-select: none;
+        -webkit-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+    }
+    .test-protected textarea {
+        user-select: text;
+        -webkit-user-select: text;
+    }
+    .test-protected .highlightable-text {
+        user-select: text;
+        -webkit-user-select: text;
     }
 
     /* Progress bar */
@@ -82,7 +99,23 @@
 {% endblock %}
 
 {% block content %}
-<div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mt-6 pb-20">
+{% if not preview_mode %}
+<!-- Autosave & Anti-Cheat Configuration -->
+<div id="autosave-config"
+     data-attempt-id="{{ attempt.id }}"
+     data-autosave-url="{% url 'exams:api_autosave' attempt.id %}"
+     data-tabblur-url="{% url 'exams:api_log_tab_blur' attempt.id %}"
+     style="display:none;"></div>
+<script id="server-draft-data" type="application/json">{{ draft_answers|safe }}</script>
+{% endif %}
+
+<div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mt-6 pb-20 test-protected" data-test-id="{{ test.id }}" data-part-id="writing">
+    {% if preview_mode %}
+    <div class="card-duo p-4 mb-6 border border-duo-blue/20 bg-duo-blue/10">
+        <p class="text-sm font-black text-white">Preview Mode</p>
+        <p class="mt-1 text-sm font-semibold text-duo-text-dim">Оригинальный writing template без отправки ответов.</p>
+    </div>
+    {% endif %}
 
     <!-- Header / Timer -->
     <div class="card-duo p-5 mb-8 animate-fade-in sticky top-4 z-40 shadow-2xl bg-duo-surface bg-opacity-95 backdrop-blur-lg">
@@ -94,16 +127,24 @@
                 <div>
                     <h1 class="text-xl font-black text-white" id="testName">{{ test.name }}</h1>
                     <p class="text-xs font-bold text-duo-text-muted uppercase tracking-wide mt-0.5">
-                        <span data-i18n="wt_module">WRITING</span> · PART 1 + PART 2
+                        <span data-i18n="wt_module">WRITING</span> · <span data-i18n="wt_parts_label">PART 1 + PART 2</span>
                     </p>
                 </div>
             </div>
 
             <!-- Timer -->
-            <div class="flex items-center gap-2.5 px-4 py-2.5 rounded-2xl bg-white/5 border border-white/10" id="timer-container">
-                <i class="ph-fill ph-timer text-duo-gold text-xl"></i>
-                <div id="timer" class="timer-badge text-xl font-black tracking-tight text-white">
-                    --:--
+            <div class="flex items-center gap-3">
+                <!-- Tab blur tracker (hidden until first blur) -->
+                <div class="blur-tracker hidden flex items-center gap-1.5 px-3 py-2 rounded-2xl bg-duo-red/10 border border-duo-red/30" title="Tab switches detected">
+                    <i class="ph-fill ph-eye-slash text-duo-red text-sm"></i>
+                    <span id="blur-counter" class="text-sm font-black text-duo-red">0</span>
+                </div>
+
+                <div class="flex items-center gap-2.5 px-4 py-2.5 rounded-2xl bg-white/5 border border-white/10" id="timer-container">
+                    <i class="ph-fill ph-timer text-duo-gold text-xl"></i>
+                    <div id="timer" class="timer-badge text-xl font-black tracking-tight text-white">
+                        --:--
+                    </div>
                 </div>
             </div>
         </div>
@@ -123,7 +164,7 @@
 
         <div class="part-separator">
             <span class="bg-duo-surface-2 px-6 py-2 rounded-xl text-sm font-black text-white uppercase tracking-widest border-2 border-duo-border shadow-lg">
-                Part 1
+                <span data-i18n="wt_part_1">Part 1</span>
             </span>
         </div>
 
@@ -136,7 +177,7 @@
                 <!-- Situation Context (first line like "You are a member of...") -->
                 {% with task.input_text|truncatechars:0 as ignore %}
                 {% endwith %}
-                <div class="text-white font-bold text-lg leading-relaxed">
+                <div class="text-white font-bold text-lg leading-relaxed highlightable-text">
                     {{ task.input_text|linebreaksbr }}
                 </div>
             </div>
@@ -150,15 +191,15 @@
                     <div class="w-8 h-8 rounded-xl bg-duo-green flex items-center justify-center font-black text-white text-xs shadow-sm shadow-duo-green/20">
                         1.1
                     </div>
-                    <h2 class="text-lg font-black text-white tracking-tight">Task 1.1</h2>
-                    <span class="text-xs font-bold text-duo-text-muted bg-duo-surface px-2 py-1 rounded-lg">(Informal)</span>
+                    <h2 class="text-lg font-black text-white tracking-tight" data-i18n="wt_task_11">Task 1.1</h2>
+                    <span class="text-xs font-bold text-duo-text-muted bg-duo-surface px-2 py-1 rounded-lg">(<span data-i18n="wt_type_informal">Informal</span>)</span>
                 </div>
                 <div class="word-counter out-range text-xs font-bold px-3 py-1.5 rounded-xl border" id="badge_{{ task.id }}">
-                    <span id="counter_{{ task.id }}">0</span> / {{ task.max_words }} words
+                    <span id="counter_{{ task.id }}">0</span> / {{ task.max_words }} <span data-i18n="wt_words">words</span>
                 </div>
             </div>
             <div class="p-6 md:p-8 space-y-5">
-                <div class="text-white font-bold text-base leading-relaxed">
+                <div class="text-white font-bold text-base leading-relaxed highlightable-text">
                     {{ task.prompt }}
                 </div>
                 <textarea name="task_{{ task.id }}" 
@@ -177,15 +218,15 @@
                     <div class="w-8 h-8 rounded-xl bg-duo-blue flex items-center justify-center font-black text-white text-xs shadow-sm shadow-duo-blue/20">
                         1.2
                     </div>
-                    <h2 class="text-lg font-black text-white tracking-tight">Task 1.2</h2>
-                    <span class="text-xs font-bold text-duo-text-muted bg-duo-surface px-2 py-1 rounded-lg">(Formal)</span>
+                    <h2 class="text-lg font-black text-white tracking-tight" data-i18n="wt_task_12">Task 1.2</h2>
+                    <span class="text-xs font-bold text-duo-text-muted bg-duo-surface px-2 py-1 rounded-lg">(<span data-i18n="wt_type_formal">Formal</span>)</span>
                 </div>
                 <div class="word-counter out-range text-xs font-bold px-3 py-1.5 rounded-xl border" id="badge_{{ task.id }}">
-                    <span id="counter_{{ task.id }}">0</span> / {{ task.max_words }} words
+                    <span id="counter_{{ task.id }}">0</span> / {{ task.max_words }} <span data-i18n="wt_words">words</span>
                 </div>
             </div>
             <div class="p-6 md:p-8 space-y-5">
-                <div class="text-white font-bold text-base leading-relaxed">
+                <div class="text-white font-bold text-base leading-relaxed highlightable-text">
                     {{ task.prompt }}
                 </div>
                 <textarea name="task_{{ task.id }}" 
@@ -203,7 +244,7 @@
 
         <div class="part-separator mt-12">
             <span class="bg-duo-surface-2 px-6 py-2 rounded-xl text-sm font-black text-white uppercase tracking-widest border-2 border-duo-border shadow-lg">
-                Part 2
+                <span data-i18n="wt_part_2">Part 2</span>
             </span>
         </div>
 
@@ -214,18 +255,18 @@
                     <div class="w-8 h-8 rounded-xl bg-duo-gold flex items-center justify-center font-black text-[#3C3100] text-xs shadow-sm shadow-duo-gold/20">
                         2
                     </div>
-                    <h2 class="text-lg font-black text-white tracking-tight">Task 2</h2>
-                    <span class="text-xs font-bold text-duo-text-muted bg-duo-surface px-2 py-1 rounded-lg">(Essay)</span>
+                    <h2 class="text-lg font-black text-white tracking-tight" data-i18n="wt_task_2">Task 2</h2>
+                    <span class="text-xs font-bold text-duo-text-muted bg-duo-surface px-2 py-1 rounded-lg">(<span data-i18n="wt_type_essay">Essay</span>)</span>
                 </div>
                 <div class="word-counter out-range text-xs font-bold px-3 py-1.5 rounded-xl border" id="badge_{{ task.id }}">
-                    <span id="counter_{{ task.id }}">0</span> / {{ task.max_words }} words
+                    <span id="counter_{{ task.id }}">0</span> / {{ task.max_words }} <span data-i18n="wt_words">words</span>
                 </div>
             </div>
             <div class="p-6 md:p-8 space-y-6">
                 {% if task.input_text %}
-                <div class="text-white font-bold text-lg leading-relaxed whitespace-pre-wrap">{{ task.input_text }}</div>
+                <div class="text-white font-bold text-lg leading-relaxed whitespace-pre-wrap highlightable-text">{{ task.input_text }}</div>
                 {% endif %}
-                <div class="text-duo-gold font-black text-base">
+                <div class="text-duo-gold font-black text-base highlightable-text">
                     {{ task.prompt }}
                 </div>
                 <textarea name="task_{{ task.id }}" 
@@ -239,13 +280,22 @@
 
         <!-- Navigation / Submit -->
         <div class="flex justify-end pt-4 pb-8">
-            <button type="submit" id="submit-btn" class="btn-duo-green px-10 py-4 text-xl flex items-center gap-3 shadow-lg shadow-duo-green/20 hover:scale-[1.02] transition-transform">
+            <button {% if preview_mode %}type="button" disabled{% else %}type="submit"{% endif %} id="submit-btn" class="{% if preview_mode %}btn-duo-outline opacity-70 cursor-default{% else %}btn-duo-green shadow-lg shadow-duo-green/20 hover:scale-[1.02] transition-transform{% endif %} px-10 py-4 text-xl flex items-center gap-3">
+                {% if preview_mode %}
+                <span>Preview mode</span>
+                <i class="ph-bold ph-eye"></i>
+                {% else %}
                 <span data-i18n="wt_submit">Submit Writing Test</span>
                 <i class="ph-bold ph-paper-plane-right"></i>
+                {% endif %}
             </button>
         </div>
     </form>
 </div>
+
+<!-- Auto-Save & Anti-Cheat Module -->
+<script src="{% static 'js/autosave.js' %}"></script>
+<script src="{% static 'js/reading_highlighter.js' %}?v=20260501b"></script>
 
 <!-- Timer Logic -->
 <script>
@@ -266,6 +316,9 @@
         }
     }
 
+    const PREVIEW_MODE = {% if preview_mode %}true{% else %}false{% endif %};
+
+    if (!PREVIEW_MODE) {
     document.addEventListener('DOMContentLoaded', () => {
         const timerDisplay = document.getElementById('timer');
         const timerContainer = document.getElementById('timer-container');
@@ -314,7 +367,14 @@
             formSubmitted = true;
             const btnHtml = submitBtn.innerHTML;
             submitBtn.disabled = true;
-            submitBtn.innerHTML = '<i class="ph ph-spinner spin"></i> Submitting...';
+            let submittingText = 'Submitting...';
+            if (typeof _i18n !== 'undefined') {
+                const lang = '{{ current_language|default:"ru" }}';
+                if (_i18n[lang] && _i18n[lang]['wt_submitting']) {
+                    submittingText = _i18n[lang]['wt_submitting'];
+                }
+            }
+            submitBtn.innerHTML = `<i class="ph ph-spinner spin"></i> ${submittingText}`;
         });
 
         // Intercept internal link clicks
@@ -322,14 +382,22 @@
             if (link.getAttribute('target') !== '_blank' && link.href && !link.href.includes('javascript:')) {
                 link.addEventListener('click', async (e) => {
                     e.preventDefault();
-                    if (typeof DuoModal !== 'undefined' && await DuoModal.confirm("Ваши ответы не сохранятся, если вы покинете страницу. Вы уверены?")) {
+                    let leaveWarning = "Your answers will be lost if you leave. Are you sure?";
+                    if (typeof _i18n !== 'undefined') {
+                        const lang = '{{ current_language|default:"ru" }}';
+                        if (_i18n[lang] && _i18n[lang]['wt_leave_warning']) {
+                            leaveWarning = _i18n[lang]['wt_leave_warning'];
+                        }
+                    }
+                    if (typeof DuoModal !== 'undefined' && await DuoModal.confirm(leaveWarning)) {
                         window.location.href = link.href;
-                    } else if (typeof DuoModal === 'undefined' && confirm("Your answers will be lost if you leave. Are you sure?")) {
+                    } else if (typeof DuoModal === 'undefined' && confirm(leaveWarning)) {
                         window.location.href = link.href;
                     }
                 });
             }
         });
     });
+    }
 </script>
 {% endblock %}

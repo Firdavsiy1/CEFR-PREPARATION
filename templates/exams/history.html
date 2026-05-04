@@ -25,6 +25,82 @@
     </div>
 
     {% if show_categories %}
+
+    {# ------------------------------------------------------------------ #}
+    {# Skill Radar Chart — only shown when the user has attempt data       #}
+    {# Data is embedded safely via json_script to prevent XSS.            #}
+    {# ------------------------------------------------------------------ #}
+    {{ radar_data|json_script:"radar-data" }}
+
+    {% if has_radar_data %}
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-10 animate-slide-up">
+
+        <!-- Radar Chart Card -->
+        <div class="card-duo p-6">
+            <h3 class="text-lg font-black text-white mb-4 flex items-center gap-2">
+                <i class="ph-fill ph-chart-polar text-duo-purple"></i>
+                <span data-i18n="hist_skill_profile">Профиль навыков</span>
+            </h3>
+            <div class="relative h-72">
+                <canvas id="radarChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Skill Score Breakdown -->
+        <div class="card-duo p-6 flex flex-col justify-center">
+            <h3 class="text-lg font-black text-white mb-5 flex items-center gap-2">
+                <i class="ph-fill ph-list-numbers text-duo-gold"></i>
+                <span data-i18n="hist_skill_breakdown">Детали по навыкам</span>
+            </h3>
+            <div class="space-y-3" id="radar-breakdown"></div>
+        </div>
+    </div>
+    {% endif %}
+
+    {# ------------------------------------------------------------------ #}
+    {# Recommendation Engine                                               #}
+    {# ------------------------------------------------------------------ #}
+    {% if recommendations %}
+    <div class="mb-10 animate-slide-up">
+        <div class="flex items-center gap-3 mb-5">
+            <div class="w-10 h-10 rounded-xl bg-duo-gold/15 border-2 border-duo-gold/30 flex items-center justify-center flex-shrink-0">
+                <i class="ph-fill ph-lightning text-duo-gold text-lg"></i>
+            </div>
+            <div>
+                <span class="block text-[10px] font-extrabold text-duo-text-muted uppercase tracking-widest" data-i18n="hist_rec_subtitle">Персональные рекомендации</span>
+                <h3 class="text-lg font-black text-white">
+                    <span data-i18n="hist_rec_focus">Сфокусируйся на</span>
+                    <span class="text-duo-gold ml-1">{{ recommendations.skill }}</span>
+                </h3>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+            {% for test in recommendations.tests %}
+            <a href="{% url 'exams:test_tutorial' test.id %}"
+               class="card-duo p-4 flex flex-col gap-3 group !no-underline hover:border-duo-gold/50 transition-colors duration-200"
+               style="animation-delay: {{ forloop.counter0 }}50ms">
+
+                <!-- Test type badge -->
+                <div class="flex items-center justify-between">
+                    <span class="badge-duo bg-duo-gold/10 text-duo-gold border border-duo-gold/30 text-[9px] uppercase tracking-widest font-extrabold">
+                        {{ test.get_test_type_display }}
+                    </span>
+                    <i class="ph-bold ph-arrow-right text-duo-text-muted group-hover:text-duo-gold transition-colors duration-200"></i>
+                </div>
+
+                <h4 class="text-sm font-black text-white group-hover:text-duo-gold transition-colors duration-200 leading-snug">{{ test.name }}</h4>
+
+                <div class="mt-auto pt-3 border-t border-duo-border flex items-center gap-1.5 text-[10px] font-bold text-duo-text-muted uppercase tracking-widest">
+                    <i class="ph-fill ph-headphones text-xs"></i>
+                    <span data-i18n="hist_rec_start">Начать тест</span>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
     <!-- Category Selection -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 animate-slide-up">
         {% for cat in categories %}
@@ -108,7 +184,7 @@
             </div>
             <div>
                 <span class="block text-[10px] font-extrabold text-duo-text-muted uppercase tracking-widest mb-0.5" data-i18n="hist_total_att">Всего попыток</span>
-                <span class="block text-xl font-black text-white">{{ attempts|length }} <span class="text-xs text-duo-text-dim font-bold ml-1" data-i18n="hist_completed">завершено</span></span>
+                <span class="block text-xl font-black text-white">{{ total_attempts_count|default:attempts|length }} <span class="text-xs text-duo-text-dim font-bold ml-1" data-i18n="hist_completed">завершено</span></span>
             </div>
         </div>
     </div>
@@ -130,6 +206,8 @@
     {% endif %}
 
     {% if attempts %}
+    {# Safe JSON embedding — no |safe filter needed. #}
+    {{ chart_data|json_script:"chart-data" }}
     <h3 class="text-lg font-black text-white mb-4 flex items-center gap-2">
         <i class="ph-fill ph-chart-line text-duo-blue"></i>
         <span data-i18n="hist_overview">Обзор прогресса</span>
@@ -214,6 +292,27 @@
         </div>
         {% endfor %}
     </div>
+
+    {% if page_obj.has_other_pages %}
+    <div class="flex justify-center items-center gap-3 mt-10">
+        {% if page_obj.has_previous %}
+        <a href="?page={{ page_obj.previous_page_number }}" class="btn-duo-outline text-sm !py-2 !px-5">
+            <i class="ph-bold ph-arrow-left"></i>
+            <span>Назад</span>
+        </a>
+        {% endif %}
+        <span class="text-sm font-bold text-duo-text-dim">
+            {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}
+        </span>
+        {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}" class="btn-duo-outline text-sm !py-2 !px-5">
+            <span>Вперёд</span>
+            <i class="ph-bold ph-arrow-right"></i>
+        </a>
+        {% endif %}
+    </div>
+    {% endif %}
+
     {% else %}
     <!-- Empty state -->
     <div class="card-duo p-14 text-center max-w-lg mx-auto animate-fade-in">
@@ -236,11 +335,117 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 document.addEventListener("DOMContentLoaded", function() {
+
+    // ------------------------------------------------------------------
+    // Radar Chart — Skill Profile (category picker page)
+    // ------------------------------------------------------------------
+    const radarEl = document.getElementById('radar-data');
+    if (radarEl) {
+        const radarPayload = JSON.parse(radarEl.textContent);
+        const hasData = radarPayload.data.some(v => v > 0);
+
+        if (hasData) {
+            // Populate skill breakdown list
+            const breakdownEl = document.getElementById('radar-breakdown');
+            if (breakdownEl) {
+                radarPayload.labels.forEach(function(label, i) {
+                    const score = radarPayload.data[i];
+                    const colorClass = score >= 70 ? '#58CC02'
+                                     : score >= 50 ? '#FFC800'
+                                     : score > 0  ? '#FF4B4B'
+                                     : '#56717A';
+                    breakdownEl.insertAdjacentHTML('beforeend',
+                        `<div class="flex items-center gap-3">
+                            <span class="text-xs font-extrabold text-duo-text-dim uppercase tracking-wider w-14 flex-shrink-0">${label}</span>
+                            <div class="flex-1 h-2 rounded-full bg-duo-surface-2 overflow-hidden">
+                                <div class="h-full rounded-full transition-all duration-700"
+                                     style="width:${score}%; background-color:${colorClass}"></div>
+                            </div>
+                            <span class="text-xs font-black w-10 text-right" style="color:${colorClass}">${score > 0 ? score + '%' : '—'}</span>
+                        </div>`
+                    );
+                });
+            }
+
+            const radarCtx = document.getElementById('radarChart');
+            if (radarCtx) {
+                new Chart(radarCtx, {
+                    type: 'radar',
+                    data: {
+                        labels: radarPayload.labels,
+                        datasets: [{
+                            label: 'Skill %',
+                            data: radarPayload.data,
+                            backgroundColor: 'rgba(88, 204, 2, 0.12)',
+                            borderColor: '#58CC02',
+                            borderWidth: 2.5,
+                            pointBackgroundColor: '#FFC800',
+                            pointBorderColor: '#131F24',
+                            pointBorderWidth: 2,
+                            pointRadius: 5,
+                            pointHoverRadius: 7,
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                backgroundColor: '#1A2F35',
+                                titleColor: '#8BA5AE',
+                                bodyColor: '#FFFFFF',
+                                borderColor: '#2B4D56',
+                                borderWidth: 2,
+                                padding: 12,
+                                cornerRadius: 12,
+                                displayColors: false,
+                                titleFont: { family: 'Nunito', weight: '700' },
+                                bodyFont: { family: 'Nunito', weight: '800', size: 14 },
+                                callbacks: {
+                                    label: function(ctx) {
+                                        return ctx.raw > 0 ? ctx.raw + '%' : 'No data';
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            r: {
+                                min: 0,
+                                max: 100,
+                                ticks: {
+                                    stepSize: 20,
+                                    color: '#56717A',
+                                    backdropColor: 'transparent',
+                                    font: { family: 'Nunito', size: 10, weight: '700' },
+                                    callback: function(v) { return v + '%'; }
+                                },
+                                grid: { color: 'rgba(43, 77, 86, 0.5)' },
+                                angleLines: { color: 'rgba(43, 77, 86, 0.5)' },
+                                pointLabels: {
+                                    color: '#8BA5AE',
+                                    font: { family: 'Nunito', size: 12, weight: '800' }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // Line Chart — Progress over time (category-specific page)
+    // ------------------------------------------------------------------
     const ctx = document.getElementById('progressChart');
     if (!ctx) return;
 
-    const labels = JSON.parse('{{ chart_labels_json|safe }}');
-    const dataNum = JSON.parse('{{ chart_data_json|safe }}');
+    // Data is read from a json_script tag — no |safe filter, no XSS risk.
+    const chartRaw = document.getElementById('chart-data');
+    if (!chartRaw) return;
+    const chartPayload = JSON.parse(chartRaw.textContent);
+    const labels = chartPayload.labels;
+    const dataNum = chartPayload.scores;
 
     new Chart(ctx, {
         type: 'line',

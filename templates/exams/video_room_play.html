@@ -1,0 +1,549 @@
+{% extends "base.html" %}
+
+{% block title %}Playing — {{ room.room_code }}{% endblock %}
+
+{% block extra_head %}
+<style>
+    body {
+        background:
+            radial-gradient(650px 300px at 10% -10%, rgba(28, 176, 246, 0.22), transparent 65%),
+            radial-gradient(700px 360px at 90% 105%, rgba(88, 204, 2, 0.14), transparent 70%),
+            #131F24;
+        touch-action: manipulation;
+        overflow: hidden;
+    }
+
+    body::after {
+        content: '';
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        z-index: 0;
+        background:
+            linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+        background-size: 24px 24px;
+        mask-image: radial-gradient(circle at center, black 22%, transparent 95%);
+    }
+
+    @keyframes waitingPulse {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.02); }
+    }
+
+    @keyframes answerBeat {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-2px); }
+    }
+
+    @keyframes scoreBump {
+        0% { transform: scale(1); }
+        40% { transform: scale(1.14); }
+        100% { transform: scale(1); }
+    }
+
+    @keyframes iconBounce {
+        0% { transform: scale(0.8); opacity: 0; }
+        60% { transform: scale(1.06); opacity: 1; }
+        100% { transform: scale(1); opacity: 1; }
+    }
+    
+    .screen {
+        display: none;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+        width: 100vw;
+        position: fixed;
+        top: 0; left: 0; right: 0; bottom: 0;
+        z-index: 100;
+        transition: opacity 0.2s ease;
+        box-sizing: border-box;
+        padding: 16px 16px calc(88px + env(safe-area-inset-bottom));
+    }
+    .screen.active {
+        display: flex;
+        animation: screenPop 0.22s ease-out;
+    }
+
+    @keyframes screenPop {
+        from {
+            opacity: 0;
+            transform: scale(0.985);
+        }
+        to {
+            opacity: 1;
+            transform: scale(1);
+        }
+    }
+
+    /* Screen: Waiting */
+    #screen-waiting {
+        background:
+            radial-gradient(300px 160px at 50% 20%, rgba(255, 255, 255, 0.22), transparent 75%),
+            linear-gradient(160deg, #1CB0F6, #1899D6);
+        color: white;
+        text-align: center;
+        padding: 20px;
+        animation: waitingPulse 2.6s ease-in-out infinite;
+    }
+
+    #screen-waiting h1,
+    #screen-waiting h2,
+    #screen-answered h1 {
+        text-shadow: 0 2px 0 rgba(0, 0, 0, 0.15);
+    }
+
+    .loader {
+        border: 4px solid rgba(255, 255, 255, 0.3);
+        border-radius: 50%;
+        border-top: 4px solid white;
+        width: 50px;
+        height: 50px;
+        animation: spin 1s linear infinite;
+        margin: 0 auto 20px auto;
+        box-shadow: 0 0 20px rgba(255, 255, 255, 0.2);
+    }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+    /* Screen: Question */
+    #screen-question {
+        background: linear-gradient(165deg, #172b31, #0f1b20);
+        justify-content: center;
+        padding-top: 14px;
+    }
+
+    .quiz-stage {
+        width: min(780px, 86vw);
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        border-radius: 20px;
+        padding: 12px;
+        box-shadow: 0 18px 36px rgba(0, 0, 0, 0.24);
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .question-card {
+        width: 100%;
+        background: rgba(255, 255, 255, 0.08);
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        border-radius: 14px;
+        padding: 11px 14px;
+        color: #ffffff;
+        font-size: clamp(1.08rem, 1.45vw, 1.3rem);
+        line-height: 1.32;
+        font-weight: 800;
+        text-align: center;
+        box-shadow: 0 8px 18px rgba(0, 0, 0, 0.16);
+    }
+
+    .answers-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        grid-template-rows: repeat(4, minmax(78px, 1fr));
+        gap: 10px;
+        width: 100%;
+        padding: 0;
+        box-sizing: border-box;
+    }
+
+    .answer-btn {
+        border-radius: 14px;
+        border: none;
+        box-shadow: inset 0 -6px 0 rgba(0,0,0,0.18), 0 7px 16px rgba(0,0,0,0.16);
+        cursor: pointer;
+        transition: transform 0.1s, filter 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: flex-start;
+        border: 2px solid rgba(255, 255, 255, 0.28);
+        flex-direction: row;
+        gap: 10px;
+        padding: 10px 14px;
+        min-height: 78px;
+    }
+    .answer-btn:hover {
+        filter: brightness(1.07);
+        transform: translateY(-2px);
+        animation: answerBeat 0.8s ease-in-out infinite;
+    }
+
+    .answer-btn:active {
+        transform: translateY(8px);
+        box-shadow: inset 0 0 0 rgba(0,0,0,0), 0 0 0 rgba(0,0,0,0);
+    }
+
+    .answer-btn.disabled {
+        opacity: 0.5;
+        pointer-events: none;
+    }
+    
+    .bg-red { background: #FF4B4B; }
+    .bg-blue { background: #1CB0F6; }
+    .bg-yellow { background: #FFC800; }
+    .bg-green { background: #58CC02; }
+    
+    .shape {
+        width: 30px; height: 30px;
+        background: white;
+        filter: drop-shadow(0 3px 0 rgba(0, 0, 0, 0.18));
+        flex-shrink: 0;
+    }
+
+    .answer-label {
+        color: #ffffff;
+        font-weight: 900;
+        font-size: clamp(0.94rem, 1.05vw, 1.06rem);
+        text-align: left;
+        line-height: 1.24;
+        text-shadow: 0 1px 0 rgba(0, 0, 0, 0.2);
+        max-width: 100%;
+        white-space: normal;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        text-wrap: balance;
+    }
+
+    .bg-yellow .answer-label {
+        color: #2f2f2f;
+        text-shadow: none;
+    }
+    .shape-triangle { clip-path: polygon(50% 0%, 0% 100%, 100% 100%); }
+    .shape-diamond { clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%); }
+    .shape-circle { border-radius: 50%; }
+    .shape-square { border-radius: 8px; }
+
+    /* Screen: Answered Waiting */
+    #screen-answered {
+        background:
+            radial-gradient(280px 150px at 50% 20%, rgba(255, 255, 255, 0.2), transparent 75%),
+            linear-gradient(160deg, #CE82FF, #9f57db);
+        color: white;
+        text-align: center;
+        padding: 20px;
+        animation: waitingPulse 2.2s ease-in-out infinite;
+    }
+
+    /* Screen: Results */
+    #screen-results.correct {
+        background: linear-gradient(165deg, #58CC02, #46A302);
+    }
+    #screen-results.wrong {
+        background: linear-gradient(165deg, #FF4B4B, #df3d3d);
+    }
+    .result-icon {
+        font-size: 80px;
+        color: white;
+        margin-bottom: 20px;
+        text-shadow: 0 3px 0 rgba(0, 0, 0, 0.15);
+        animation: iconBounce 0.35s ease-out;
+    }
+
+    .points-tag {
+        background: rgba(0,0,0,0.2);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        padding: 10px 20px;
+        border-radius: 20px;
+        font-weight: 900;
+        font-size: 1.5rem;
+        margin-top: 20px;
+        color: white;
+        box-shadow: inset 0 -3px 0 rgba(255, 255, 255, 0.12);
+    }
+
+    .bottom-bar {
+        position: fixed;
+        bottom: 0; left: 0; right: 0;
+        background: rgba(255, 255, 255, 0.96);
+        padding: 13px 18px calc(13px + env(safe-area-inset-bottom));
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-weight: 800;
+        color: #1a2f35;
+        z-index: 200;
+        border-top: 1px solid rgba(26, 47, 53, 0.08);
+        box-shadow: 0 -12px 28px rgba(0,0,0,0.12);
+    }
+
+    .player-name {
+        font-size: 0.95rem;
+        letter-spacing: 0.2px;
+    }
+
+    .player-score {
+        background: #58CC02;
+        color: #fff;
+        padding: 6px 12px;
+        border-radius: 999px;
+        border-bottom: 3px solid #46A302;
+        min-width: 62px;
+        text-align: center;
+        box-shadow: 0 6px 16px rgba(88, 204, 2, 0.35);
+        transition: transform 0.2s ease;
+    }
+
+    .player-score.bump {
+        animation: scoreBump 0.35s ease-out;
+    }
+
+    @media (max-width: 640px) {
+        .screen {
+            padding: 12px 12px calc(86px + env(safe-area-inset-bottom));
+        }
+
+        .quiz-stage {
+            width: min(100%, 520px);
+            border-radius: 16px;
+            padding: 10px;
+            gap: 8px;
+        }
+
+        .question-card {
+            padding: 10px;
+            border-radius: 12px;
+            font-size: clamp(1rem, 4.2vw, 1.12rem);
+        }
+
+        .shape {
+            width: 38px;
+            height: 38px;
+        }
+
+        .answers-grid {
+            gap: 8px;
+            grid-template-rows: repeat(4, minmax(72px, 1fr));
+        }
+
+        .answer-btn {
+            min-height: 72px;
+            gap: 6px;
+            padding: 8px;
+        }
+
+        .answer-label {
+            -webkit-line-clamp: 2;
+            font-size: 0.84rem;
+        }
+
+        .result-icon {
+            font-size: 64px;
+        }
+
+        .points-tag {
+            font-size: 1.25rem;
+        }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        #screen-waiting,
+        #screen-answered,
+        .answer-btn:hover,
+        .result-icon,
+        .player-score.bump {
+            animation: none;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- 1. Waiting Screen -->
+<div id="screen-waiting" class="screen active">
+    <div class="loader"></div>
+    <h1 class="text-3xl font-black mb-2">You're in!</h1>
+    <h2 class="text-xl font-bold opacity-90">Look at the main screen</h2>
+</div>
+
+<!-- 2. Question Screen -->
+<div id="screen-question" class="screen">
+    <div class="quiz-stage">
+        <div class="question-card" id="question-text">Вопрос появится здесь</div>
+
+        <div class="answers-grid">
+            <button class="answer-btn bg-red" onclick="submitAnswer(0)">
+                <div class="shape shape-triangle"></div>
+                <div class="answer-label" id="opt-label-0">Option 1</div>
+            </button>
+            <button class="answer-btn bg-blue" onclick="submitAnswer(1)">
+                <div class="shape shape-diamond"></div>
+                <div class="answer-label" id="opt-label-1">Option 2</div>
+            </button>
+            <button class="answer-btn bg-yellow" onclick="submitAnswer(2)">
+                <div class="shape shape-circle"></div>
+                <div class="answer-label" id="opt-label-2">Option 3</div>
+            </button>
+            <button class="answer-btn bg-green" onclick="submitAnswer(3)">
+                <div class="shape shape-square"></div>
+                <div class="answer-label" id="opt-label-3">Option 4</div>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- 3. Answered Screen -->
+<div id="screen-answered" class="screen">
+    <div class="loader"></div>
+    <h1 class="text-3xl font-black mb-2">Waiting for others...</h1>
+</div>
+
+<!-- 4. Results Screen -->
+<div id="screen-results" class="screen">
+    <i class="ph-fill ph-check-circle result-icon" id="res-icon"></i>
+    <h1 class="text-4xl font-black text-white" id="res-title">Correct!</h1>
+    <div class="points-tag" id="res-points">+1000</div>
+</div>
+
+<div class="bottom-bar">
+    <div class="player-name">{{ participant.nickname }}</div>
+    <div id="score-display" class="player-score">{{ participant.score }}</div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    const ROOM_CODE = "{{ room.room_code }}";
+    const STATE_URL = `/api/video-room/${ROOM_CODE}/state/`;
+    const ANSWER_URL = `/api/video-room/${ROOM_CODE}/answer/`;
+    const ENDED_URL = "{% url 'exams:video_room_ended' room.room_code %}";
+    const CSRF_TOKEN = '{{ csrf_token }}';
+
+    let currentStatus = 'waiting';
+    let myScore = {{ participant.score }};
+    let currentQuestionId = null;
+
+    function setAnswerButtonsDisabled(disabled) {
+        document.querySelectorAll('.answer-btn').forEach((btn) => {
+            btn.classList.toggle('disabled', disabled);
+        });
+    }
+
+    function populateQuestion(question) {
+        if (!question) return;
+
+        currentQuestionId = question.id;
+        document.getElementById('question-text').textContent = question.text || 'Выберите правильный вариант';
+
+        const options = Array.isArray(question.options) ? question.options : [];
+        for (let i = 0; i < 4; i++) {
+            const label = document.getElementById(`opt-label-${i}`);
+            if (label) {
+                label.textContent = options[i] || `Option ${i + 1}`;
+            }
+        }
+
+        setAnswerButtonsDisabled(false);
+    }
+
+    function switchScreen(id) {
+        document.querySelectorAll('.screen').forEach(el => el.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+    }
+
+    async function pollState() {
+        try {
+            const res = await fetch(STATE_URL);
+            const data = await res.json();
+            
+            if (data.error) {
+                if (data.error === 'Not joined') window.location.href = '/exams/video-room/join/';
+                return;
+            }
+
+            // Check if the host has ended the session
+            if (data.session_ended) {
+                window.location.href = ENDED_URL;
+                return;
+            }
+
+            if (data.status !== currentStatus) {
+                currentStatus = data.status;
+                
+                if (currentStatus === 'waiting' || currentStatus === 'playing') {
+                    switchScreen('screen-waiting');
+                    document.getElementById('screen-waiting').querySelector('h2').textContent = 'Look at the main screen';
+                    currentQuestionId = null;
+                }
+                else if (currentStatus === 'question') {
+                    if (data.question) {
+                        if (data.question.id !== currentQuestionId) {
+                            populateQuestion(data.question);
+                        }
+
+                        if (data.question.answered) {
+                            setAnswerButtonsDisabled(true);
+                            switchScreen('screen-answered');
+                        } else {
+                            switchScreen('screen-question');
+                        }
+                    }
+                }
+                else if (currentStatus === 'results') {
+                    if (data.results) {
+                        showResults(data.results);
+                    } else {
+                        switchScreen('screen-waiting');
+                    }
+                }
+            }
+        } catch (e) {
+            console.error(e);
+        }
+        
+        setTimeout(pollState, 1500);
+    }
+
+    async function submitAnswer(index) {
+        setAnswerButtonsDisabled(true);
+        switchScreen('screen-answered');
+        
+        try {
+            await fetch(ANSWER_URL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': CSRF_TOKEN
+                },
+                body: JSON.stringify({ selected_index: index })
+            });
+        } catch (e) {
+            console.error(e);
+            setAnswerButtonsDisabled(false);
+            switchScreen('screen-question'); // revert if failed
+        }
+    }
+
+    function showResults(results) {
+        const screen = document.getElementById('screen-results');
+        const icon = document.getElementById('res-icon');
+        const title = document.getElementById('res-title');
+        const points = document.getElementById('res-points');
+        
+        screen.className = 'screen active ' + (results.is_correct ? 'correct' : 'wrong');
+        icon.className = 'result-icon ph-fill ' + (results.is_correct ? 'ph-check-circle' : 'ph-x-circle');
+        title.textContent = results.is_correct ? 'Correct!' : 'Incorrect';
+        points.textContent = `+${results.points}`;
+        
+        if (results.is_correct) {
+            myScore += results.points;
+            const scoreDisplay = document.getElementById('score-display');
+            scoreDisplay.textContent = myScore;
+            scoreDisplay.classList.remove('bump');
+            void scoreDisplay.offsetWidth;
+            scoreDisplay.classList.add('bump');
+        }
+        
+        switchScreen('screen-results');
+    }
+
+    // Start polling
+    pollState();
+</script>
+{% endblock %}

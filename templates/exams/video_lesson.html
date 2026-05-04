@@ -1,0 +1,707 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ lesson.title }} — CEFR Prep{% endblock %}
+
+{% block extra_head %}
+<style>
+    /* ===== VIDEO PLAYER CONTAINER ===== */
+    .video-container {
+        position: relative;
+        width: 100%;
+        max-width: 960px;
+        margin: 0 auto;
+        aspect-ratio: 16 / 9;
+        border-radius: 20px;
+        overflow: hidden;
+        background: #000;
+        box-shadow: 0 8px 40px rgba(0, 0, 0, 0.4);
+        border: 2px solid rgba(255, 255, 255, 0.08);
+    }
+    .video-container iframe {
+        width: 100%;
+        height: 100%;
+        border: 0;
+    }
+
+    /* ===== SCORE BAR ===== */
+    .score-bar {
+        background: #1A2F35;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 16px;
+        padding: 16px 24px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        flex-wrap: wrap;
+    }
+    .score-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-weight: 700;
+        font-size: 0.85rem;
+    }
+    .score-item .value {
+        font-weight: 900;
+        font-size: 1.1rem;
+    }
+
+    /* ===== QUIZ TIMELINE ===== */
+    .timeline-bar {
+        background: #1A2F35;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 16px;
+        padding: 20px 24px;
+    }
+    .timeline-dots {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+    .timeline-dot {
+        width: 36px;
+        height: 36px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.75rem;
+        font-weight: 800;
+        border: 2px solid #2B4D56;
+        background: #233E46;
+        color: #8BA5AE;
+        transition: all 0.2s ease;
+        cursor: pointer;
+    }
+    .timeline-dot.answered-correct {
+        background: rgba(88, 204, 2, 0.15);
+        border-color: #58CC02;
+        color: #58CC02;
+    }
+    .timeline-dot.answered-wrong {
+        background: rgba(255, 75, 75, 0.15);
+        border-color: #FF4B4B;
+        color: #FF4B4B;
+    }
+    .timeline-dot.active {
+        background: rgba(28, 176, 246, 0.15);
+        border-color: #1CB0F6;
+        color: #1CB0F6;
+        animation: pulse 1.5s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+        0%, 100% { box-shadow: 0 0 0 0 rgba(28, 176, 246, 0.3); }
+        50% { box-shadow: 0 0 0 6px rgba(28, 176, 246, 0); }
+    }
+
+    /* ===== QUIZ MODAL OVERLAY ===== */
+    .quiz-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 200;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 16px;
+        background: radial-gradient(circle at top, rgba(88, 204, 2, 0.05), transparent 40%), rgba(5, 10, 22, 0.85);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+    .quiz-overlay.visible {
+        display: flex;
+        opacity: 1;
+    }
+
+    .quiz-modal {
+        background: linear-gradient(160deg, rgba(26, 47, 53, 0.98), rgba(19, 31, 36, 0.99));
+        border: 2px solid rgba(255, 255, 255, 0.1);
+        border-radius: 28px;
+        max-width: 560px;
+        width: 100%;
+        padding: 36px;
+        box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+        transform: scale(0.9) translateY(20px);
+        transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .quiz-overlay.visible .quiz-modal {
+        transform: scale(1) translateY(0);
+    }
+
+    .quiz-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 24px;
+    }
+    .quiz-header .icon-circle {
+        width: 48px;
+        height: 48px;
+        border-radius: 16px;
+        background: rgba(28, 176, 246, 0.12);
+        border: 2px solid rgba(28, 176, 246, 0.25);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+    .quiz-header .meta {
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: #8BA5AE;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+
+    .quiz-question {
+        font-size: 1.05rem;
+        font-weight: 800;
+        color: #FFFFFF;
+        line-height: 1.5;
+        margin-bottom: 24px;
+    }
+
+    /* ===== ANSWER OPTIONS ===== */
+    .quiz-options {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        margin-bottom: 24px;
+    }
+    .quiz-option {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        padding: 14px 18px;
+        background: rgba(255, 255, 255, 0.04);
+        border: 2px solid rgba(255, 255, 255, 0.1);
+        border-radius: 16px;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        font-weight: 700;
+        font-size: 0.9rem;
+        color: rgba(255, 255, 255, 0.85);
+    }
+    .quiz-option:hover:not(.disabled) {
+        border-color: rgba(28, 176, 246, 0.4);
+        background: rgba(28, 176, 246, 0.06);
+    }
+    .quiz-option .option-label {
+        width: 32px;
+        height: 32px;
+        border-radius: 10px;
+        background: rgba(255, 255, 255, 0.06);
+        border: 2px solid rgba(255, 255, 255, 0.12);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 900;
+        font-size: 0.8rem;
+        color: #8BA5AE;
+        flex-shrink: 0;
+        transition: all 0.15s ease;
+    }
+    .quiz-option.selected {
+        border-color: #1CB0F6;
+        background: rgba(28, 176, 246, 0.08);
+    }
+    .quiz-option.selected .option-label {
+        background: #1CB0F6;
+        border-color: #1CB0F6;
+        color: #FFFFFF;
+    }
+    .quiz-option.correct {
+        border-color: #58CC02 !important;
+        background: rgba(88, 204, 2, 0.08) !important;
+    }
+    .quiz-option.correct .option-label {
+        background: #58CC02 !important;
+        border-color: #58CC02 !important;
+        color: #FFFFFF !important;
+    }
+    .quiz-option.wrong {
+        border-color: #FF4B4B !important;
+        background: rgba(255, 75, 75, 0.08) !important;
+    }
+    .quiz-option.wrong .option-label {
+        background: #FF4B4B !important;
+        border-color: #FF4B4B !important;
+        color: #FFFFFF !important;
+    }
+    .quiz-option.disabled {
+        pointer-events: none;
+        opacity: 0.6;
+    }
+    .quiz-option.correct.disabled,
+    .quiz-option.wrong.disabled {
+        opacity: 1;
+    }
+
+    /* ===== EXPLANATION BOX ===== */
+    .explanation-box {
+        display: none;
+        background: rgba(88, 204, 2, 0.06);
+        border: 1px solid rgba(88, 204, 2, 0.2);
+        border-radius: 16px;
+        padding: 16px 20px;
+        margin-bottom: 20px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: rgba(255, 255, 255, 0.75);
+        line-height: 1.6;
+    }
+    .explanation-box.visible {
+        display: block;
+        animation: fadeIn 0.3s ease;
+    }
+    .explanation-box.wrong-box {
+        background: rgba(255, 75, 75, 0.06);
+        border-color: rgba(255, 75, 75, 0.2);
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(8px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ===== LESSON INFO ===== */
+    .lesson-info {
+        background: #1A2F35;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 16px;
+        padding: 20px 24px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+
+    <!-- Top Actions -->
+    <div class="flex items-center justify-between mb-6">
+        <a href="{% url 'exams:video_lessons' %}" class="inline-flex items-center gap-2 text-duo-text-dim hover:text-white font-bold text-sm transition-colors" id="btn-back-to-list">
+            <i class="ph-fill ph-arrow-left"></i>
+            Back to Video Lessons
+        </a>
+        <a href="{% url 'exams:video_room_host' lesson.id %}" class="btn-duo-blue btn-sm">
+            <i class="ph-fill ph-users-three"></i>
+            Host Collective Session
+        </a>
+    </div>
+
+    <!-- Score Bar -->
+    <div class="score-bar mb-6 animate-slide-up" id="score-bar">
+        <div class="flex items-center gap-5 flex-wrap">
+            <div class="score-item text-duo-green">
+                <i class="ph-fill ph-check-circle text-xl"></i>
+                <span>Correct:</span>
+                <span class="value" id="score-correct">0</span>
+            </div>
+            <div class="score-item text-duo-red">
+                <i class="ph-fill ph-x-circle text-xl"></i>
+                <span>Wrong:</span>
+                <span class="value" id="score-wrong">0</span>
+            </div>
+            <div class="score-item text-duo-blue">
+                <i class="ph-fill ph-question text-xl"></i>
+                <span>Remaining:</span>
+                <span class="value" id="score-remaining">{{ quiz_count }}</span>
+            </div>
+        </div>
+        <div class="badge-duo" style="background: rgba(28, 176, 246, 0.12); color: #1CB0F6;">
+            <i class="ph-fill ph-graduation-cap"></i>
+            {{ lesson.cefr_level }}
+        </div>
+    </div>
+
+    <!-- Video Player -->
+    <div class="video-container mb-6 animate-slide-up" style="animation-delay: 100ms" id="video-player-container">
+        <div id="yt-player"></div>
+    </div>
+
+    <!-- Quiz Timeline -->
+    <div class="timeline-bar mb-6 animate-slide-up" style="animation-delay: 200ms">
+        <div class="flex items-center gap-3 mb-3">
+            <i class="ph-fill ph-timer text-duo-gold"></i>
+            <span class="text-sm font-bold text-duo-text-dim">Quiz Timeline</span>
+        </div>
+        <div class="timeline-dots" id="timeline-dots">
+            <!-- Filled by JS -->
+        </div>
+    </div>
+
+    <!-- Lesson Info -->
+    <div class="lesson-info animate-slide-up" style="animation-delay: 300ms">
+        <h2 class="text-lg font-black text-white mb-2">{{ lesson.title }}</h2>
+        <div class="flex items-center gap-4 text-xs text-duo-text-muted font-semibold">
+            <span><i class="ph ph-calendar"></i> {{ lesson.created_at|date:"M d, Y" }}</span>
+            <span><i class="ph ph-question"></i> {{ quiz_count }} question{{ quiz_count|pluralize:"s" }}</span>
+            {% if lesson.created_by %}
+            <span><i class="ph ph-user"></i> {{ lesson.created_by.first_name|default:lesson.created_by.username }}</span>
+            {% endif %}
+        </div>
+    </div>
+
+</div>
+
+<!-- Quiz Modal Overlay -->
+<div class="quiz-overlay" id="quiz-overlay">
+    <div class="quiz-modal" id="quiz-modal">
+        <div class="quiz-header">
+            <div class="icon-circle">
+                <i class="ph-fill ph-headphones text-xl text-duo-blue"></i>
+            </div>
+            <div>
+                <div class="meta">Listening Comprehension</div>
+                <div class="text-white font-black text-sm" id="quiz-progress">Question 1 / {{ quiz_count }}</div>
+            </div>
+        </div>
+
+        <div class="quiz-question" id="quiz-question-text">
+            <!-- Question text filled by JS -->
+        </div>
+
+        <div class="quiz-options" id="quiz-options">
+            <!-- Options filled by JS -->
+        </div>
+
+        <div class="explanation-box" id="quiz-explanation">
+            <!-- Explanation filled by JS -->
+        </div>
+
+        <div class="flex gap-3" id="quiz-actions">
+            <button class="btn-duo-green w-full" id="btn-check-answer" disabled>
+                <i class="ph-fill ph-check-fat"></i>
+                Check Answer
+            </button>
+            <button class="btn-duo-blue w-full" id="btn-continue" style="display: none;">
+                <i class="ph-fill ph-play"></i>
+                Continue
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<!-- Quiz data from Django -->
+<script>
+    const QUIZ_DATA = {{ quiz_json|safe }};
+    const YOUTUBE_ID = "{{ lesson.youtube_id }}";
+</script>
+
+<!-- YouTube IFrame Player API -->
+<script src="https://www.youtube.com/iframe_api"></script>
+
+<script>
+(function() {
+    'use strict';
+
+    // ===== STATE =====
+    let player = null;
+    let quizzes = QUIZ_DATA.slice();   // copy
+    let answeredSet = new Set();        // set of quiz IDs already answered
+    let currentQuizIndex = -1;         // index of currently displayed quiz
+    let scoreCorrect = 0;
+    let scoreWrong = 0;
+    let selectedOptionIndex = null;
+    let checkInterval = null;
+
+    // ===== DOM REFS =====
+    const overlay      = document.getElementById('quiz-overlay');
+    const questionText = document.getElementById('quiz-question-text');
+    const optionsEl    = document.getElementById('quiz-options');
+    const explanationEl = document.getElementById('quiz-explanation');
+    const progressEl   = document.getElementById('quiz-progress');
+    const btnCheck     = document.getElementById('btn-check-answer');
+    const btnContinue  = document.getElementById('btn-continue');
+    const scoreCorrectEl = document.getElementById('score-correct');
+    const scoreWrongEl   = document.getElementById('score-wrong');
+    const scoreRemainEl  = document.getElementById('score-remaining');
+    const timelineDotsEl = document.getElementById('timeline-dots');
+
+    // ===== INIT TIMELINE DOTS =====
+    function initTimeline() {
+        timelineDotsEl.innerHTML = '';
+        quizzes.forEach((q, i) => {
+            const dot = document.createElement('div');
+            dot.className = 'timeline-dot';
+            dot.textContent = i + 1;
+            dot.title = `${formatTime(q.trigger_time_seconds)} — ${q.question_text.substring(0, 50)}...`;
+            dot.dataset.index = i;
+            dot.addEventListener('click', () => {
+                if (player && typeof player.seekTo === 'function') {
+                    // Cap the trigger time to slightly before the end of the video, in case AI hallucinated out-of-bounds
+                    const duration = player.getDuration() || 999999;
+                    const effectiveTrigger = Math.min(q.trigger_time_seconds, duration - 2);
+                    
+                    // Seek to 5 seconds before the trigger time
+                    const seekTime = Math.max(0, effectiveTrigger - 5);
+                    player.seekTo(seekTime, true);
+                    player.playVideo();
+                }
+            });
+            timelineDotsEl.appendChild(dot);
+        });
+    }
+
+    function formatTime(seconds) {
+        const m = Math.floor(seconds / 60);
+        const s = Math.floor(seconds % 60);
+        return `${m}:${s.toString().padStart(2, '0')}`;
+    }
+
+    function updateTimeline(quizIndex, correct) {
+        const dots = timelineDotsEl.querySelectorAll('.timeline-dot');
+        if (dots[quizIndex]) {
+            dots[quizIndex].classList.remove('active');
+            dots[quizIndex].classList.add(correct ? 'answered-correct' : 'answered-wrong');
+            dots[quizIndex].innerHTML = correct
+                ? '<i class="ph-fill ph-check"></i>'
+                : '<i class="ph-fill ph-x"></i>';
+        }
+    }
+
+    function highlightActive(quizIndex) {
+        const dots = timelineDotsEl.querySelectorAll('.timeline-dot');
+        dots.forEach(d => d.classList.remove('active'));
+        if (dots[quizIndex]) {
+            dots[quizIndex].classList.add('active');
+        }
+    }
+
+    // ===== YOUTUBE PLAYER =====
+    window.onYouTubeIframeAPIReady = function() {
+        player = new YT.Player('yt-player', {
+            videoId: YOUTUBE_ID,
+            playerVars: {
+                autoplay: 0,
+                modestbranding: 1,
+                rel: 0,
+                cc_load_policy: 1,  // Show captions
+            },
+            events: {
+                onReady: onPlayerReady,
+                onStateChange: onPlayerStateChange,
+            },
+        });
+    };
+
+    function onPlayerReady(event) {
+        initTimeline();
+        console.log('[VideoQuiz] Player ready. Quiz questions:', quizzes.length);
+    }
+
+    function onPlayerStateChange(event) {
+        if (event.data === YT.PlayerState.PLAYING) {
+            startTimeCheck();
+        } else {
+            stopTimeCheck();
+        }
+    }
+
+    // ===== TIME TRACKING =====
+    function startTimeCheck() {
+        if (checkInterval) return;
+        checkInterval = setInterval(checkForQuiz, 500);
+    }
+
+    function stopTimeCheck() {
+        if (checkInterval) {
+            clearInterval(checkInterval);
+            checkInterval = null;
+        }
+    }
+
+    function checkForQuiz() {
+        if (!player || typeof player.getCurrentTime !== 'function') return;
+
+        const currentTime = player.getCurrentTime();
+        const duration = player.getDuration() || 999999;
+
+        for (let i = 0; i < quizzes.length; i++) {
+            const q = quizzes[i];
+            if (answeredSet.has(q.id)) continue;
+
+            // Cap trigger time so it doesn't exceed the end of the video
+            const effectiveTrigger = Math.min(q.trigger_time_seconds, duration - 2);
+
+            // Trigger when we pass the trigger time (within a 3-second window for stability)
+            if (currentTime >= effectiveTrigger && currentTime < effectiveTrigger + 3) {
+                player.pauseVideo();
+                showQuiz(i);
+                return;
+            }
+        }
+    }
+
+    // ===== SHOW QUIZ =====
+    function showQuiz(index) {
+        currentQuizIndex = index;
+        selectedOptionIndex = null;
+        const q = quizzes[index];
+
+        // Update progress
+        const answeredCount = answeredSet.size;
+        progressEl.textContent = `Question ${answeredCount + 1} / ${quizzes.length}`;
+
+        // Set question text
+        questionText.textContent = q.question_text;
+
+        // Highlight in timeline
+        highlightActive(index);
+
+        // Build options
+        optionsEl.innerHTML = '';
+        const labels = ['A', 'B', 'C', 'D'];
+        q.options.forEach((opt, i) => {
+            const optEl = document.createElement('div');
+            optEl.className = 'quiz-option';
+            optEl.innerHTML = `
+                <div class="option-label">${labels[i]}</div>
+                <span>${opt}</span>
+            `;
+            optEl.addEventListener('click', () => selectOption(i));
+            optionsEl.appendChild(optEl);
+        });
+
+        // Reset UI
+        explanationEl.classList.remove('visible', 'wrong-box');
+        explanationEl.style.display = 'none';
+        btnCheck.style.display = '';
+        btnCheck.disabled = true;
+        btnContinue.style.display = 'none';
+
+        // Show overlay
+        overlay.classList.add('visible');
+    }
+
+    // ===== SELECT OPTION =====
+    function selectOption(index) {
+        selectedOptionIndex = index;
+        btnCheck.disabled = false;
+
+        // Update visual selection
+        const options = optionsEl.querySelectorAll('.quiz-option');
+        options.forEach((el, i) => {
+            el.classList.toggle('selected', i === index);
+        });
+    }
+
+    // ===== CHECK ANSWER =====
+    btnCheck.addEventListener('click', function() {
+        if (selectedOptionIndex === null || currentQuizIndex === -1) return;
+
+        const q = quizzes[currentQuizIndex];
+        const isCorrect = selectedOptionIndex === q.correct_option_index;
+
+        // Mark as answered
+        answeredSet.add(q.id);
+
+        // Update scores
+        if (isCorrect) {
+            scoreCorrect++;
+        } else {
+            scoreWrong++;
+        }
+        scoreCorrectEl.textContent = scoreCorrect;
+        scoreWrongEl.textContent = scoreWrong;
+        scoreRemainEl.textContent = quizzes.length - answeredSet.size;
+
+        // Update timeline
+        updateTimeline(currentQuizIndex, isCorrect);
+
+        // Show correct/wrong on options
+        const options = optionsEl.querySelectorAll('.quiz-option');
+        options.forEach((el, i) => {
+            el.classList.add('disabled');
+            if (i === q.correct_option_index) {
+                el.classList.add('correct');
+            }
+            if (i === selectedOptionIndex && !isCorrect) {
+                el.classList.add('wrong');
+            }
+        });
+
+        // Show explanation
+        if (q.explanation) {
+            explanationEl.innerHTML = `
+                <div class="flex items-center gap-2 mb-2">
+                    <i class="ph-fill ${isCorrect ? 'ph-check-circle text-duo-green' : 'ph-x-circle text-duo-red'}"></i>
+                    <span class="font-black text-sm ${isCorrect ? 'text-duo-green' : 'text-duo-red'}">
+                        ${isCorrect ? 'Correct!' : 'Incorrect'}
+                    </span>
+                </div>
+                <p>${q.explanation}</p>
+            `;
+            explanationEl.classList.toggle('wrong-box', !isCorrect);
+            explanationEl.style.display = '';
+            explanationEl.classList.add('visible');
+        }
+
+        // Swap buttons
+        btnCheck.style.display = 'none';
+        btnContinue.style.display = '';
+    });
+
+    // ===== CONTINUE =====
+    btnContinue.addEventListener('click', function() {
+        overlay.classList.remove('visible');
+        currentQuizIndex = -1;
+
+        // Resume video after a small delay
+        setTimeout(() => {
+            if (player && typeof player.playVideo === 'function') {
+                player.playVideo();
+            }
+        }, 300);
+
+        // Check if all quizzes are done
+        if (answeredSet.size === quizzes.length) {
+            setTimeout(showFinalScore, 500);
+        }
+    });
+
+    // ===== FINAL SCORE =====
+    function showFinalScore() {
+        const pct = Math.round((scoreCorrect / quizzes.length) * 100);
+        let emoji = '🎉';
+        let message = 'Amazing job!';
+        if (pct < 50) { emoji = '📚'; message = 'Keep practicing!'; }
+        else if (pct < 80) { emoji = '👍'; message = 'Good effort!'; }
+
+        DuoModal.alert(
+            `${emoji} ${message} You scored ${scoreCorrect}/${quizzes.length} (${pct}%)`
+        );
+    }
+
+    // ===== KEYBOARD SHORTCUTS =====
+    document.addEventListener('keydown', function(e) {
+        if (!overlay.classList.contains('visible')) return;
+
+        // Number keys 1-4 to select options
+        if (['1', '2', '3', '4'].includes(e.key)) {
+            const idx = parseInt(e.key) - 1;
+            if (idx < quizzes[currentQuizIndex]?.options.length) {
+                selectOption(idx);
+            }
+        }
+
+        // Enter to check/continue
+        if (e.key === 'Enter') {
+            if (btnContinue.style.display !== 'none') {
+                btnContinue.click();
+            } else if (!btnCheck.disabled) {
+                btnCheck.click();
+            }
+        }
+    });
+
+})();
+</script>
+{% endblock %}

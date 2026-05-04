@@ -1,0 +1,1001 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Host: {{ lesson.title }} — CEFR Prep{% endblock %}
+
+{% block extra_head %}
+<style>
+    body {
+        background:
+            radial-gradient(1100px 600px at 10% -15%, rgba(28, 176, 246, 0.18), transparent 65%),
+            radial-gradient(1000px 560px at 85% -20%, rgba(88, 204, 2, 0.14), transparent 70%),
+            #131F24;
+    }
+
+    body::after {
+        content: '';
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        z-index: 0;
+        background:
+            linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+        background-size: 26px 26px;
+        mask-image: radial-gradient(circle at center, black 35%, transparent 100%);
+    }
+
+    body::before {
+        content: '';
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        z-index: 0;
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent 30%);
+        opacity: 0.7;
+    }
+
+    @keyframes pinPulse {
+        0%, 100% {
+            transform: scale(1);
+            box-shadow: 0 14px 34px rgba(28, 176, 246, 0.35), inset 0 -6px 0 rgba(24, 153, 214, 0.9);
+        }
+        50% {
+            transform: scale(1.018);
+            box-shadow: 0 18px 42px rgba(28, 176, 246, 0.45), inset 0 -6px 0 rgba(24, 153, 214, 0.9);
+        }
+    }
+
+    @keyframes lobbyGlow {
+        0%, 100% { text-shadow: 0 0 0 rgba(28, 176, 246, 0); }
+        50% { text-shadow: 0 0 16px rgba(28, 176, 246, 0.4); }
+    }
+
+    @keyframes panelPop {
+        0% { opacity: 0; transform: translateY(10px) scale(0.985); }
+        100% { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    .video-container {
+        position: relative;
+        width: 100%;
+        max-width: 1120px;
+        margin: 0 auto;
+        aspect-ratio: 16 / 9;
+        border-radius: 24px;
+        overflow: hidden;
+        background: #081015;
+        box-shadow: 0 24px 60px rgba(5, 10, 12, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.04);
+        border: 2px solid rgba(255, 255, 255, 0.14);
+    }
+
+    .video-container::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        z-index: 55;
+        border-radius: 22px;
+        box-shadow: inset 0 0 0 1px rgba(28, 176, 246, 0.35);
+        opacity: 0.45;
+    }
+
+    .video-container iframe {
+        width: 100%;
+        height: 100%;
+        border: 0;
+    }
+
+    #yt-player {
+        width: 100%;
+        height: 100%;
+    }
+
+    .host-stage {
+        min-height: calc(100vh - 90px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 72px 18px 18px;
+        box-sizing: border-box;
+    }
+
+    /* LOBBY OVERLAY */
+    .lobby-overlay {
+        position: absolute;
+        inset: 0;
+        background:
+            radial-gradient(500px 220px at 50% 12%, rgba(28, 176, 246, 0.22), transparent 75%),
+            linear-gradient(145deg, rgba(11, 19, 22, 0.96), rgba(15, 27, 31, 0.96));
+        z-index: 50;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        backdrop-filter: blur(8px);
+        padding: 24px;
+    }
+
+    .lobby-overlay::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 44%;
+        pointer-events: none;
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.05), transparent);
+    }
+
+    .lobby-title {
+        color: #ffffff;
+        font-weight: 900;
+        text-align: center;
+        letter-spacing: 0.9px;
+        margin-bottom: 16px;
+        text-transform: uppercase;
+        animation: lobbyGlow 3s ease-in-out infinite;
+    }
+
+    .pin-box {
+        background: linear-gradient(180deg, #2bc1ff 0%, #1CB0F6 100%);
+        color: #ffffff;
+        font-size: 5rem;
+        font-weight: 900;
+        padding: 20px 64px;
+        border-radius: 20px;
+        letter-spacing: 10px;
+        text-shadow: 0 3px 0 rgba(24, 153, 214, 0.6);
+        box-shadow: 0 14px 34px rgba(28, 176, 246, 0.35), inset 0 -6px 0 rgba(24, 153, 214, 0.9);
+        margin-bottom: 20px;
+        border: 2px solid rgba(255, 255, 255, 0.28);
+        animation: pinPulse 2.6s ease-in-out infinite;
+    }
+
+    .lobby-controls {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+
+    .lobby-players {
+        color: #ffffff;
+        font-weight: 900;
+        font-size: 1.15rem;
+        background: rgba(255, 255, 255, 0.08);
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        border-radius: 14px;
+        padding: 10px 16px;
+        box-shadow: inset 0 -3px 0 rgba(255, 255, 255, 0.09);
+    }
+
+    .participants-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 14px;
+        max-width: 80%;
+        justify-content: center;
+        margin-top: 24px;
+        max-height: 250px;
+        overflow-y: auto;
+    }
+    .participant-badge {
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        padding: 10px 14px;
+        border-radius: 16px;
+        color: white;
+        box-shadow: inset 0 -2px 0 rgba(255, 255, 255, 0.08), 0 6px 14px rgba(0, 0, 0, 0.16);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-width: 190px;
+        max-width: 240px;
+    }
+
+    .participant-badge.is-new {
+        animation: panelPop 0.22s ease-out;
+    }
+
+    .participant-avatar {
+        width: 42px;
+        height: 42px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #2B4D56, #1A2F35);
+        border: 2px solid rgba(255, 255, 255, 0.28);
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+
+    .participant-avatar img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+    }
+
+    .participant-avatar i {
+        color: #ffffff;
+        font-size: 1.1rem;
+        line-height: 1;
+    }
+
+    .participant-meta {
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+    }
+
+    .participant-name {
+        font-weight: 900;
+        font-size: 0.96rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .participant-score {
+        font-weight: 800;
+        font-size: 0.82rem;
+        color: rgba(255, 255, 255, 0.86);
+    }
+
+    /* HOST QUIZ MODAL */
+    .host-quiz-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 200;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        background: rgba(11, 19, 22, 0.95);
+        backdrop-filter: blur(16px);
+    }
+    .host-quiz-overlay.visible {
+        display: flex;
+    }
+
+    .host-quiz-overlay.visible .question-panel {
+        animation: panelPop 0.24s ease-out;
+    }
+
+    .question-panel {
+        background:
+            linear-gradient(180deg, rgba(30, 54, 60, 0.96), rgba(22, 39, 44, 0.98));
+        border: 2px solid rgba(255, 255, 255, 0.14);
+        border-radius: 28px;
+        max-width: 800px;
+        width: 100%;
+        padding: 40px;
+        text-align: center;
+        box-shadow: 0 26px 70px rgba(0, 0, 0, 0.45), 0 0 0 3px rgba(28, 176, 246, 0.12);
+    }
+
+    .host-question {
+        font-size: 2rem;
+        font-weight: 900;
+        color: white;
+        margin-bottom: 16px;
+        line-height: 1.4;
+    }
+
+    .host-options-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+        margin-bottom: 30px;
+    }
+
+    .host-device-note {
+        color: rgba(255, 255, 255, 0.9);
+        font-size: 1.05rem;
+        font-weight: 800;
+        margin-bottom: 24px;
+    }
+
+    .host-scoreboard {
+        display: none;
+        margin-bottom: 24px;
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.07));
+        border: 1px solid rgba(255, 255, 255, 0.22);
+        border-radius: 14px;
+        padding: 14px;
+        text-align: left;
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14), 0 12px 28px rgba(0, 0, 0, 0.2);
+    }
+
+    .host-scoreboard-title {
+        color: #ffffff;
+        font-size: 1.1rem;
+        font-weight: 900;
+        margin-bottom: 12px;
+        letter-spacing: 0.3px;
+    }
+
+    .host-scoreboard-table {
+        width: 100%;
+        border-collapse: collapse;
+        color: #ffffff;
+        font-size: 0.98rem;
+        overflow: hidden;
+        border-radius: 10px;
+    }
+
+    .host-scoreboard-table th,
+    .host-scoreboard-table td {
+        padding: 10px 12px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .host-scoreboard-table th {
+        color: rgba(255, 255, 255, 0.8);
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.6px;
+        font-size: 0.75rem;
+    }
+
+    .host-scoreboard-table td:last-child,
+    .host-scoreboard-table th:last-child {
+        text-align: right;
+    }
+
+    .host-scoreboard-table tbody tr {
+        background: rgba(255, 255, 255, 0.02);
+        transition: background 0.2s ease;
+    }
+
+    .host-scoreboard-table tbody tr:hover {
+        background: rgba(255, 255, 255, 0.06);
+    }
+
+    .host-scoreboard-table tbody tr.top-1 {
+        background: linear-gradient(90deg, rgba(255, 200, 0, 0.28), rgba(255, 200, 0, 0.08));
+    }
+
+    .host-scoreboard-table tbody tr.top-2 {
+        background: linear-gradient(90deg, rgba(203, 213, 225, 0.26), rgba(203, 213, 225, 0.08));
+    }
+
+    .host-scoreboard-table tbody tr.top-3 {
+        background: linear-gradient(90deg, rgba(251, 146, 60, 0.24), rgba(251, 146, 60, 0.08));
+    }
+
+    .rank-chip {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 34px;
+        height: 24px;
+        border-radius: 999px;
+        font-size: 0.78rem;
+        font-weight: 900;
+        color: #ffffff;
+        background: rgba(255, 255, 255, 0.14);
+        border: 1px solid rgba(255, 255, 255, 0.22);
+    }
+
+    .rank-chip.top-1 {
+        background: #FFC800;
+        border-color: #E5B400;
+        color: #3c3100;
+    }
+
+    .rank-chip.top-2 {
+        background: #CBD5E1;
+        border-color: #94A3B8;
+        color: #1E293B;
+    }
+
+    .rank-chip.top-3 {
+        background: #FB923C;
+        border-color: #EA580C;
+        color: #341408;
+    }
+
+    .student-name-cell {
+        font-weight: 800;
+    }
+
+    .student-score-cell {
+        font-weight: 900;
+        color: #d9f99d;
+    }
+
+    .host-opt {
+        padding: 20px;
+        border-radius: 16px;
+        color: white;
+        font-weight: 800;
+        font-size: 1.2rem;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        text-align: left;
+        border: 2px solid rgba(255, 255, 255, 0.2);
+        box-shadow: inset 0 -6px 0 rgba(0, 0, 0, 0.2);
+        transition: transform 0.12s ease, filter 0.2s ease;
+    }
+    .bg-red { background: #FF4B4B; }
+    .bg-blue { background: #1CB0F6; }
+    .bg-yellow { background: #FFC800; color: #333;}
+    .bg-green { background: #58CC02; }
+
+    .shape-icon {
+        width: 30px; height: 30px;
+        background: white;
+        flex-shrink: 0;
+    }
+    .bg-yellow .shape-icon { background: #333; }
+
+    .shape-triangle { clip-path: polygon(50% 0%, 0% 100%, 100% 100%); }
+    .shape-diamond { clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%); }
+    .shape-circle { border-radius: 50%; }
+    .shape-square { border-radius: 8px; }
+
+    /* Results */
+    .host-opt.faded { opacity: 0.3; }
+    .host-opt.correct {
+        box-shadow: 0 0 0 4px white, inset 0 -6px 0 rgba(0, 0, 0, 0.2), 0 0 24px rgba(255, 255, 255, 0.35);
+    }
+
+    .top-bar {
+        position: fixed;
+        top: 20px; left: 20px; right: 20px;
+        display: flex;
+        justify-content: space-between;
+        z-index: 250;
+        align-items: center;
+        padding: 4px;
+    }
+    .mini-pin {
+        background: rgba(255, 255, 255, 0.94);
+        color: #0b1316;
+        padding: 10px 16px;
+        border-radius: 14px;
+        font-weight: 900;
+        font-size: 1.05rem;
+        letter-spacing: 0.6px;
+        border: 1px solid rgba(12, 18, 21, 0.12);
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+    }
+
+    .answers-count {
+        background: rgba(255,255,255,0.1);
+        color: white;
+        padding: 10px 20px;
+        border-radius: 20px;
+        font-weight: 900;
+        font-size: 1.5rem;
+        margin-bottom: 20px;
+        display: inline-block;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+    }
+
+    /* Explanation */
+    .host-explanation {
+        display: none;
+        background: rgba(255,255,255,0.12);
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        padding: 20px;
+        border-radius: 16px;
+        color: white;
+        font-weight: 600;
+        margin-bottom: 20px;
+        text-align: left;
+    }
+
+    @media (max-width: 900px) {
+        .host-stage {
+            min-height: calc(100vh - 78px);
+            padding: 64px 12px 12px;
+        }
+
+        .pin-box {
+            font-size: 3.6rem;
+            letter-spacing: 6px;
+            padding: 16px 40px;
+        }
+
+        .question-panel {
+            padding: 24px;
+        }
+    }
+
+    @media (max-width: 640px) {
+        .host-stage {
+            min-height: calc(100vh - 70px);
+            padding: 58px 8px 8px;
+        }
+
+        .top-bar {
+            top: 14px;
+            left: 12px;
+            right: 12px;
+        }
+
+        .mini-pin {
+            font-size: 0.95rem;
+            padding: 8px 12px;
+        }
+
+        .pin-box {
+            font-size: 2.6rem;
+            padding: 14px 22px;
+            letter-spacing: 4px;
+            border-radius: 16px;
+        }
+
+        .participants-list {
+            max-width: 95%;
+            margin-top: 18px;
+        }
+
+        .participant-badge {
+            min-width: 165px;
+            max-width: 200px;
+            padding: 8px 10px;
+            gap: 8px;
+        }
+
+        .participant-avatar {
+            width: 36px;
+            height: 36px;
+        }
+
+        .host-options-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .pin-box,
+        .lobby-title,
+        .participant-badge,
+        .host-quiz-overlay.visible .question-panel {
+            animation: none;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Top Bar (always visible) -->
+<div class="top-bar">
+    <div class="mini-pin">PIN: {{ room.room_code }}</div>
+    <form method="post" action="{% url 'exams:video_room_end' room.room_code %}">
+        {% csrf_token %}
+        <button type="submit" class="btn-duo-red">End Session</button>
+    </form>
+</div>
+
+<div class="host-stage">
+    <div class="video-container" id="video-player-container">
+        <!-- Lobby Overlay -->
+        <div class="lobby-overlay" id="lobby-overlay">
+            <h2 class="lobby-title text-2xl">Join at /video-room/join/ with Game PIN:</h2>
+            <div class="pin-box">{{ room.room_code }}</div>
+            
+            <div class="lobby-controls">
+                <div class="lobby-players"><span id="p-count">0</span> Players</div>
+                <button class="btn-duo-green" id="btn-start-video">Start Session</button>
+            </div>
+
+            <div class="participants-list" id="participants-list">
+                <!-- Badges populated by JS -->
+            </div>
+        </div>
+
+        <div id="yt-player"></div>
+    </div>
+</div>
+
+<!-- Question Overlay -->
+<div class="host-quiz-overlay" id="quiz-overlay">
+    <div class="question-panel">
+        <h2 class="host-question" id="q-text">Вопрос отправлен участникам</h2>
+
+        <div class="host-device-note" id="host-device-note">Проверьте свои девайсы. Вопрос отображается у участников.</div>
+        
+        <div class="host-options-grid" id="q-options" style="display: none;"></div>
+
+        <div class="answers-count">
+            <span id="answers-received">0</span> / <span id="total-p">0</span> Answers
+        </div>
+
+        <div class="host-scoreboard" id="host-scoreboard">
+            <div class="host-scoreboard-title">Таблица студентов и баллы</div>
+            <table class="host-scoreboard-table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Студент</th>
+                        <th>Баллы</th>
+                    </tr>
+                </thead>
+                <tbody id="host-scoreboard-body"></tbody>
+            </table>
+        </div>
+
+        <div class="host-explanation" id="q-explanation"></div>
+
+        <div class="flex justify-center gap-4">
+            <button class="btn-duo-blue" id="btn-show-results">Show Results</button>
+            <button class="btn-duo-green" id="btn-continue" style="display: none;">Continue Video</button>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="https://www.youtube.com/iframe_api"></script>
+<script>
+    const ROOM_CODE = "{{ room.room_code }}";
+    const QUIZ_DATA = {{ quiz_json|safe }};
+    const INITIAL_ROOM_STATUS = "{{ initial_room_status }}";
+    const INITIAL_CURRENT_QUESTION_ID = {% if initial_current_question_id %}{{ initial_current_question_id }}{% else %}null{% endif %};
+    const INITIAL_ASKED_QUESTION_IDS = {{ asked_question_ids_json|safe }};
+    const YOUTUBE_ID = "{{ lesson.youtube_id }}";
+    const SET_STATE_URL = `/api/video-room/${ROOM_CODE}/host/set-state/`;
+    const HOST_STATE_URL = `/api/video-room/${ROOM_CODE}/host/state/`;
+    const CSRF_TOKEN = '{{ csrf_token }}';
+
+    let player = null;
+    let checkInterval = null;
+    let pollInterval = null;
+    let currentQuizIndex = -1;
+    let participants = [];
+    let answeredSet = new Set(INITIAL_ASKED_QUESTION_IDS || []);
+    let currentTotalP = 0;
+    let resultsRevealedForQuestion = null;
+    let usingFallbackIframe = false;
+    let shouldAutoPlayOnReady = false;
+
+    function buildParticipantBadgeContent(participant) {
+        const safeName = participant.nickname || 'Player';
+        const safeScore = Number(participant.score || 0);
+
+        if (participant.avatar_custom_url) {
+            return `
+                <div class="participant-avatar">
+                    <img src="${participant.avatar_custom_url}" alt="${safeName}">
+                </div>
+                <div class="participant-meta">
+                    <div class="participant-name">${safeName}</div>
+                    <div class="participant-score">Score: ${safeScore}</div>
+                </div>
+            `;
+        }
+
+        const avatarIcon = participant.avatar_icon || 'ph-user';
+        const avatarGradient = participant.avatar_gradient || 'linear-gradient(135deg, #2B4D56, #1A2F35)';
+
+        return `
+            <div class="participant-avatar" style="background: ${avatarGradient};">
+                <i class="ph-fill ${avatarIcon}"></i>
+            </div>
+            <div class="participant-meta">
+                <div class="participant-name">${safeName}</div>
+                <div class="participant-score">Score: ${safeScore}</div>
+            </div>
+        `;
+    }
+
+    function syncParticipantsList(participantsData) {
+        const list = document.getElementById('participants-list');
+        const existingBadges = new Map();
+
+        Array.from(list.children).forEach((el) => {
+            const pid = el.dataset.participantId;
+            if (pid) existingBadges.set(pid, el);
+        });
+
+        participantsData.forEach((p) => {
+            const pid = String(p.id);
+            const html = buildParticipantBadgeContent(p);
+            const existing = existingBadges.get(pid);
+
+            if (existing) {
+                if (existing.dataset.renderHash !== html) {
+                    existing.innerHTML = html;
+                    existing.dataset.renderHash = html;
+                }
+                existingBadges.delete(pid);
+                return;
+            }
+
+            const badge = document.createElement('div');
+            badge.className = 'participant-badge is-new';
+            badge.dataset.participantId = pid;
+            badge.innerHTML = html;
+            badge.dataset.renderHash = html;
+            list.appendChild(badge);
+
+            badge.addEventListener('animationend', () => {
+                badge.classList.remove('is-new');
+            }, { once: true });
+        });
+
+        // Remove users that are no longer in the room.
+        existingBadges.forEach((el) => el.remove());
+    }
+
+    function renderScoreboard(participantsData) {
+        const tbody = document.getElementById('host-scoreboard-body');
+        tbody.innerHTML = '';
+
+        if (!participantsData || participantsData.length === 0) {
+            const tr = document.createElement('tr');
+            const td = document.createElement('td');
+            td.colSpan = 3;
+            td.textContent = 'Пока нет участников';
+            td.style.textAlign = 'center';
+            td.style.opacity = '0.8';
+            tr.appendChild(td);
+            tbody.appendChild(tr);
+            return;
+        }
+
+        participantsData.forEach((p, idx) => {
+            const tr = document.createElement('tr');
+            const rankPos = idx + 1;
+
+            if (rankPos <= 3) {
+                tr.classList.add(`top-${rankPos}`);
+            }
+
+            const rank = document.createElement('td');
+            const rankChip = document.createElement('span');
+            rankChip.className = 'rank-chip';
+            if (rankPos <= 3) {
+                rankChip.classList.add(`top-${rankPos}`);
+                rankChip.textContent = `TOP ${rankPos}`;
+            } else {
+                rankChip.textContent = `#${rankPos}`;
+            }
+            rank.appendChild(rankChip);
+            tr.appendChild(rank);
+
+            const name = document.createElement('td');
+            name.className = 'student-name-cell';
+            name.textContent = p.nickname;
+            tr.appendChild(name);
+
+            const score = document.createElement('td');
+            score.className = 'student-score-cell';
+            score.textContent = String(p.score);
+            tr.appendChild(score);
+
+            tbody.appendChild(tr);
+        });
+    }
+
+    function initYouTubePlayer() {
+        if (player || !window.YT || !window.YT.Player) return;
+
+        player = new YT.Player('yt-player', {
+            videoId: YOUTUBE_ID,
+            playerVars: { autoplay: 0, modestbranding: 1, rel: 0, cc_load_policy: 1 },
+            events: {
+                onReady: () => {
+                    console.log('Player ready');
+                    if (shouldAutoPlayOnReady && player && player.playVideo) {
+                        player.playVideo();
+                    }
+                },
+                onStateChange: onPlayerStateChange
+            }
+        });
+    }
+
+    function findQuizIndexByQuestionId(questionId) {
+        if (!questionId) return -1;
+        return QUIZ_DATA.findIndex((q) => q.id === questionId);
+    }
+
+    function applyInitialRoomState() {
+        const lobby = document.getElementById('lobby-overlay');
+
+        if (INITIAL_ROOM_STATUS === 'waiting') {
+            lobby.style.display = '';
+            return;
+        }
+
+        // Session already in progress; keep lobby hidden after refresh.
+        lobby.style.display = 'none';
+
+        if (INITIAL_ROOM_STATUS === 'playing') {
+            shouldAutoPlayOnReady = true;
+            return;
+        }
+
+        const idx = findQuizIndexByQuestionId(INITIAL_CURRENT_QUESTION_ID);
+        if (idx === -1) return;
+
+        showQuestion(idx, true);
+
+        if (INITIAL_ROOM_STATUS === 'results') {
+            revealResults(true);
+        }
+    }
+
+    function mountFallbackIframe(autoplay = false) {
+        if (usingFallbackIframe || player) return;
+        usingFallbackIframe = true;
+
+        const wrap = document.getElementById('yt-player');
+        const ap = autoplay ? '1' : '0';
+        wrap.innerHTML = `<iframe src="https://www.youtube.com/embed/${YOUTUBE_ID}?autoplay=${ap}&rel=0&modestbranding=1&cc_load_policy=1" title="YouTube video player" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>`;
+    }
+
+    // Player Init
+    window.onYouTubeIframeAPIReady = function() {
+        initYouTubePlayer();
+    };
+
+    // Safety net if callback is missed.
+    setTimeout(() => {
+        if (player) return;
+        if (window.YT && window.YT.Player) {
+            initYouTubePlayer();
+            return;
+        }
+        mountFallbackIframe(shouldAutoPlayOnReady);
+    }, 3500);
+
+    function onPlayerStateChange(event) {
+        if (event.data === YT.PlayerState.PLAYING) {
+            if (!checkInterval) checkInterval = setInterval(checkForQuiz, 500);
+            pushState('playing');
+        } else {
+            if (checkInterval) { clearInterval(checkInterval); checkInterval = null; }
+            if (event.data === YT.PlayerState.PAUSED && currentQuizIndex === -1) {
+                // Not pushing waiting state to not disrupt if pausing manually
+            }
+        }
+    }
+
+    function checkForQuiz() {
+        if (!player || typeof player.getCurrentTime !== 'function') return;
+        const currentTime = player.getCurrentTime();
+        
+        for (let i = 0; i < QUIZ_DATA.length; i++) {
+            const q = QUIZ_DATA[i];
+            if (answeredSet.has(q.id)) continue;
+            
+            if (currentTime >= q.trigger_time_seconds && currentTime < q.trigger_time_seconds + 3) {
+                player.pauseVideo();
+                showQuestion(i);
+                return;
+            }
+        }
+    }
+
+    async function pushState(status, questionId = null) {
+        await fetch(SET_STATE_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN },
+            body: JSON.stringify({ status: status, question_id: questionId })
+        });
+    }
+
+    // Polling
+    async function pollHostState() {
+        try {
+            const res = await fetch(HOST_STATE_URL);
+            const data = await res.json();
+            if (!data.error) {
+                const lobby = document.getElementById('lobby-overlay');
+                lobby.style.display = data.status === 'waiting' ? '' : 'none';
+
+                // Update lobby
+                document.getElementById('p-count').textContent = data.total_participants;
+                currentTotalP = data.total_participants;
+                document.getElementById('total-p').textContent = currentTotalP;
+                
+                syncParticipantsList(data.participants);
+
+                renderScoreboard(data.participants);
+
+                // Update answers count if question active
+                document.getElementById('answers-received').textContent = data.answers_count;
+
+                if (
+                    data.status === 'question' &&
+                    currentQuizIndex !== -1 &&
+                    data.total_participants > 0 &&
+                    data.answers_count >= data.total_participants
+                ) {
+                    revealResults();
+                }
+            }
+        } catch(e) {}
+        pollInterval = setTimeout(pollHostState, 1500);
+    }
+
+    // Lobby Actions
+    document.getElementById('btn-start-video').addEventListener('click', () => {
+        document.getElementById('lobby-overlay').style.display = 'none';
+        pushState('playing');
+        if (player && player.playVideo) {
+            player.playVideo();
+        } else {
+            mountFallbackIframe(true);
+        }
+    });
+
+    // Quiz Display
+
+    function showQuestion(index, skipPush = false) {
+        currentQuizIndex = index;
+        const q = QUIZ_DATA[index];
+        answeredSet.add(q.id);
+        resultsRevealedForQuestion = null;
+
+        document.getElementById('q-text').textContent = 'Вопрос отправлен участникам';
+        document.getElementById('host-device-note').textContent = 'Проверьте свои девайсы: студенты отвечают на своих устройствах.';
+
+        document.getElementById('btn-show-results').style.display = '';
+        document.getElementById('btn-continue').style.display = 'none';
+        document.getElementById('q-explanation').style.display = 'none';
+        document.getElementById('host-scoreboard').style.display = 'none';
+        
+        document.getElementById('quiz-overlay').classList.add('visible');
+        
+        if (!skipPush) {
+            pushState('question', q.id);
+        }
+    }
+
+    function revealResults(skipPush = false) {
+        const q = QUIZ_DATA[currentQuizIndex];
+        if (!q || resultsRevealedForQuestion === q.id) return;
+        resultsRevealedForQuestion = q.id;
+
+        document.getElementById('q-text').textContent = 'Результаты ответов';
+        document.getElementById('host-device-note').textContent = 'Ниже таблица студентов и их баллы.';
+        document.getElementById('host-scoreboard').style.display = 'block';
+
+        if (q.explanation) {
+            const exp = document.getElementById('q-explanation');
+            exp.textContent = q.explanation;
+            exp.style.display = 'block';
+        }
+
+        document.getElementById('btn-show-results').style.display = 'none';
+        document.getElementById('btn-continue').style.display = '';
+
+        if (!skipPush) {
+            pushState('results', q.id);
+        }
+    }
+
+    document.getElementById('btn-show-results').addEventListener('click', () => {
+        revealResults();
+    });
+
+    document.getElementById('btn-continue').addEventListener('click', () => {
+        document.getElementById('quiz-overlay').classList.remove('visible');
+        currentQuizIndex = -1;
+        pushState('playing');
+        
+        setTimeout(() => {
+            if (player && player.playVideo) {
+                player.playVideo();
+            } else {
+                mountFallbackIframe(true);
+            }
+        }, 300);
+    });
+
+    applyInitialRoomState();
+    pollHostState();
+</script>
+{% endblock %}

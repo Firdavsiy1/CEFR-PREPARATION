@@ -1,0 +1,331 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Пользователи — Mentor Panel{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-duo-bg py-8 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-6xl mx-auto">
+
+        {% include "exams/mentor/_workspace_header.html" %}
+
+        <!-- Users Table -->
+        <div class="animate-slide-up" style="animation-delay: 0.15s;">
+            <div class="card-duo overflow-hidden !p-0">
+                <!-- Table Header -->
+                <div class="px-6 py-4 border-b-2 border-duo-border flex items-center justify-between gap-4 flex-wrap">
+                    <h2 class="text-base font-black text-white flex items-center gap-2">
+                        <i class="ph-fill ph-users-three text-duo-blue"></i>
+                        Все пользователи
+                        <span class="ml-1 badge-duo bg-duo-surface-2 text-duo-text-muted border border-duo-border text-xs font-bold">{{ user_rows|length }}</span>
+                    </h2>
+                    <div class="relative">
+                        <i class="ph-fill ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-duo-text-muted text-sm"></i>
+                        <input type="text" id="user-search"
+                               placeholder="Поиск..."
+                               class="text-sm bg-duo-surface border-2 border-duo-border rounded-xl pl-9 pr-3 py-2
+                                      text-white placeholder-duo-text-muted focus:outline-none focus:border-duo-blue
+                                      transition-all w-48 font-semibold">
+                    </div>
+                </div>
+
+                <!-- Role filter tabs -->
+                <div class="px-6 py-3 border-b-2 border-duo-border bg-duo-surface/30 flex gap-2 overflow-x-auto hide-scrollbar" id="role-filter-bar">
+                    <button class="role-filter badge-duo bg-duo-surface text-white border-2 border-white/20 whitespace-nowrap cursor-pointer transition-all" data-role="all">Все</button>
+                    <button class="role-filter badge-duo bg-duo-surface-2 text-duo-text-muted border-2 border-duo-border whitespace-nowrap cursor-pointer transition-all" data-role="superuser">
+                        <i class="ph-fill ph-crown mr-1.5 text-duo-red"></i>Админ
+                    </button>
+                    <button class="role-filter badge-duo bg-duo-surface-2 text-duo-text-muted border-2 border-duo-border whitespace-nowrap cursor-pointer transition-all" data-role="mentor">
+                        <i class="ph-fill ph-chalkboard-teacher mr-1.5 text-duo-purple"></i>Ментор
+                    </button>
+                    <button class="role-filter badge-duo bg-duo-surface-2 text-duo-text-muted border-2 border-duo-border whitespace-nowrap cursor-pointer transition-all" data-role="student">
+                        <i class="ph-fill ph-student mr-1.5 text-duo-green"></i>Студент
+                    </button>
+                </div>
+
+                <!-- Table -->
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm" id="users-table">
+                        <thead>
+                            <tr class="border-b border-duo-border bg-duo-surface/20">
+                                <th class="px-6 py-3 text-left text-xs font-black uppercase tracking-widest text-duo-text-muted">Пользователь</th>
+                                <th class="px-6 py-3 text-left text-xs font-black uppercase tracking-widest text-duo-text-muted hidden sm:table-cell">Email</th>
+                                <th class="px-6 py-3 text-left text-xs font-black uppercase tracking-widest text-duo-text-muted hidden md:table-cell">Дата регистрации</th>
+                                <th class="px-6 py-3 text-left text-xs font-black uppercase tracking-widest text-duo-text-muted">Роль</th>
+                                <th class="px-6 py-3 text-right text-xs font-black uppercase tracking-widest text-duo-text-muted">Действия</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-duo-border" id="users-tbody">
+                            {% for row in user_rows %}
+                            <tr class="user-row hover:bg-duo-surface/20 transition-colors"
+                                data-role="{{ row.role }}"
+                                data-username="{{ row.obj.username|lower }}"
+                                data-email="{{ row.obj.email|lower }}"
+                                data-user-id="{{ row.obj.pk }}">
+                                <td class="px-6 py-4">
+                                    <div class="flex items-center gap-3">
+                                        <!-- Avatar -->
+                                        <div class="w-9 h-9 rounded-full flex-shrink-0 overflow-hidden flex items-center justify-center"
+                                             style="background: {{ row.avatar_gradient }};">
+                                            {% if row.custom_avatar %}
+                                                <img src="{{ row.custom_avatar.url }}" class="w-full h-full object-cover" alt="{{ row.obj.username }}">
+                                            {% else %}
+                                                <i class="ph-fill {{ row.avatar_icon }} text-white text-base"></i>
+                                            {% endif %}
+                                        </div>
+                                        <div>
+                                            <p class="font-black text-white text-sm">
+                                                {{ row.obj.username }}
+                                                {% if row.is_self %}<span class="ml-1 text-[10px] font-black uppercase tracking-widest text-duo-green">(вы)</span>{% endif %}
+                                            </p>
+                                            <p class="text-xs text-duo-text-muted sm:hidden">{{ row.obj.email|default:"—" }}</p>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4 text-duo-text-dim text-sm hidden sm:table-cell">
+                                    {{ row.obj.email|default:"—" }}
+                                </td>
+                                <td class="px-6 py-4 text-duo-text-muted text-xs hidden md:table-cell">
+                                    {{ row.obj.date_joined|date:"d M Y" }}
+                                </td>
+                                <td class="px-6 py-4">
+                                    {% if row.role == 'superuser' %}
+                                    <span class="badge-duo bg-duo-red/15 text-duo-red border border-duo-red/30 flex items-center gap-1.5 w-fit">
+                                        <i class="ph-fill ph-crown text-xs"></i>Админ
+                                    </span>
+                                    {% else %}
+                                    <select class="role-select text-xs font-black rounded-xl border-2 px-3 py-1.5 bg-duo-surface transition-all cursor-pointer focus:outline-none
+                                        {% if row.role == 'mentor' %}border-duo-purple/40 text-duo-purple
+                                        {% else %}border-duo-border text-duo-text-muted{% endif %}"
+                                        data-user-id="{{ row.obj.pk }}"
+                                        data-original-role="{{ row.role }}"
+                                        data-set-role-url="{% url 'exams:api_user_set_role' row.obj.pk %}"
+                                        {% if row.is_self %}disabled title="Нельзя изменить свою роль"{% endif %}>
+                                        <option value="student" {% if row.role == 'student' %}selected{% endif %}>Студент</option>
+                                        <option value="mentor" {% if row.role == 'mentor' %}selected{% endif %}>Ментор</option>
+                                    </select>
+                                    {% endif %}
+                                </td>
+                                <td class="px-6 py-4 text-right">
+                                    {% if not row.is_self and row.role != 'superuser' %}
+                                    <button class="delete-user-btn w-8 h-8 rounded-xl flex items-center justify-center ml-auto
+                                                   bg-duo-red/10 border-2 border-duo-red/20 text-duo-red
+                                                   hover:bg-duo-red/20 hover:border-duo-red/40 transition-all"
+                                            data-user-id="{{ row.obj.pk }}"
+                                            data-username="{{ row.obj.username }}"
+                                            data-delete-url="{% url 'exams:api_user_delete' row.obj.pk %}"
+                                            title="Удалить пользователя">
+                                        <i class="ph-bold ph-trash text-sm"></i>
+                                    </button>
+                                    {% else %}
+                                    <span class="w-8 h-8 flex items-center justify-center ml-auto text-duo-text-muted/30">
+                                        <i class="ph-bold ph-lock text-sm"></i>
+                                    </span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="5" class="px-6 py-12 text-center text-duo-text-muted font-semibold">
+                                    <i class="ph-fill ph-users text-3xl block mb-2 opacity-30"></i>
+                                    Пользователей нет
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    <div id="no-results" class="hidden px-6 py-12 text-center text-duo-text-muted font-semibold">
+                        <i class="ph-fill ph-magnifying-glass text-3xl block mb-2 opacity-30"></i>
+                        Ничего не найдено
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- Delete confirmation modal -->
+<div id="delete-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 items-center justify-center hidden">
+    <div class="card-duo max-w-sm w-full mx-4 p-6 animate-slide-up">
+        <div class="flex items-center gap-3 mb-4">
+            <div class="w-12 h-12 rounded-2xl bg-duo-red/15 border-2 border-duo-red/30 flex items-center justify-center">
+                <i class="ph-fill ph-warning text-duo-red text-xl"></i>
+            </div>
+            <div>
+                <h3 class="font-black text-white text-base">Удалить пользователя</h3>
+                <p class="text-xs text-duo-text-muted">Это действие необратимо</p>
+            </div>
+        </div>
+        <p class="text-sm text-duo-text-dim mb-6">
+            Вы уверены, что хотите удалить <strong id="modal-username" class="text-white"></strong>? Все данные будут удалены безвозвратно.
+        </p>
+        <div class="flex gap-3">
+            <button id="modal-cancel" type="button"
+                    class="flex-1 rounded-2xl border-2 border-duo-border bg-duo-surface text-white text-sm font-black py-2.5 hover:border-white/20 transition-all">
+                Отмена
+            </button>
+            <button id="modal-confirm" type="button"
+                    class="flex-1 rounded-2xl border-2 border-duo-red/40 bg-duo-red/15 text-duo-red text-sm font-black py-2.5 hover:bg-duo-red/25 transition-all">
+                <i class="ph-bold ph-trash mr-1.5"></i>Удалить
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+(function () {
+    'use strict';
+
+    function getCsrf() {
+        const m = document.cookie.match(/csrftoken=([^;]+)/);
+        return m ? m[1] : '';
+    }
+
+    function postJSON(url, body) {
+        return fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrf(),
+            },
+            body: body != null ? JSON.stringify(body) : undefined,
+        });
+    }
+
+    // ── Filters ──────────────────────────────────────────────────────────────
+    let activeRole = 'all';
+    let searchQuery = '';
+
+    function applyFilters() {
+        let visible = 0;
+        document.querySelectorAll('#users-tbody .user-row').forEach(function (row) {
+            const roleMatch = activeRole === 'all' || row.dataset.role === activeRole;
+            const searchMatch = !searchQuery
+                || (row.dataset.username || '').includes(searchQuery)
+                || (row.dataset.email || '').includes(searchQuery);
+            const show = roleMatch && searchMatch;
+            row.style.display = show ? '' : 'none';
+            if (show) visible++;
+        });
+        const noRes = document.getElementById('no-results');
+        if (noRes) noRes.classList.toggle('hidden', visible > 0);
+    }
+
+    // ── Search ───────────────────────────────────────────────────────────────
+    const searchInput = document.getElementById('user-search');
+    if (searchInput) {
+        searchInput.addEventListener('input', function () {
+            searchQuery = this.value.toLowerCase().trim();
+            applyFilters();
+        });
+    }
+
+    // ── Role filter pills ────────────────────────────────────────────────────
+    document.querySelectorAll('#role-filter-bar .role-filter').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            activeRole = this.dataset.role;
+            document.querySelectorAll('#role-filter-bar .role-filter').forEach(function (b) {
+                b.classList.remove('bg-duo-surface', 'text-white', 'border-white/20');
+                b.classList.add('bg-duo-surface-2', 'text-duo-text-muted', 'border-duo-border');
+            });
+            this.classList.remove('bg-duo-surface-2', 'text-duo-text-muted', 'border-duo-border');
+            this.classList.add('bg-duo-surface', 'text-white', 'border-white/20');
+            applyFilters();
+        });
+    });
+
+    // ── Role change selects ──────────────────────────────────────────────────
+    document.querySelectorAll('.role-select').forEach(function (sel) {
+        sel.addEventListener('change', async function () {
+            const url = this.dataset.setRoleUrl;
+            const newRole = this.value;
+            const originalRole = this.dataset.originalRole;
+            this.disabled = true;
+            try {
+                const resp = await postJSON(url, { role: newRole });
+                const data = await resp.json();
+                if (!resp.ok || data.error) {
+                    alert(data.error || 'Ошибка при изменении роли');
+                    this.value = originalRole;
+                } else {
+                    this.dataset.originalRole = newRole;
+                    const row = this.closest('tr');
+                    if (row) row.dataset.role = newRole;
+                    updateSelectStyle(this, newRole);
+                    applyFilters();
+                }
+            } catch (e) {
+                alert('Ошибка сети');
+                this.value = originalRole;
+            }
+            this.disabled = false;
+        });
+    });
+
+    function updateSelectStyle(sel, role) {
+        sel.classList.remove('border-duo-purple/40', 'text-duo-purple', 'border-duo-border', 'text-duo-text-muted');
+        if (role === 'mentor') {
+            sel.classList.add('border-duo-purple/40', 'text-duo-purple');
+        } else {
+            sel.classList.add('border-duo-border', 'text-duo-text-muted');
+        }
+    }
+
+    // ── Delete modal ─────────────────────────────────────────────────────────
+    const modal = document.getElementById('delete-modal');
+    const modalUsername = document.getElementById('modal-username');
+    const modalConfirm = document.getElementById('modal-confirm');
+    const modalCancel = document.getElementById('modal-cancel');
+    let pendingUrl = null;
+    let pendingRow = null;
+
+    function openModal(username, deleteUrl, row) {
+        modalUsername.textContent = username;
+        pendingUrl = deleteUrl;
+        pendingRow = row;
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+    }
+
+    function closeModal() {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+        pendingUrl = null;
+        pendingRow = null;
+    }
+
+    document.querySelectorAll('.delete-user-btn').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            openModal(this.dataset.username, this.dataset.deleteUrl, this.closest('tr'));
+        });
+    });
+
+    modalCancel.addEventListener('click', closeModal);
+    modal.addEventListener('click', function (e) { if (e.target === modal) closeModal(); });
+
+    modalConfirm.addEventListener('click', async function () {
+        if (!pendingUrl) return;
+        this.disabled = true;
+        try {
+            const resp = await postJSON(pendingUrl, null);
+            const data = await resp.json();
+            if (!resp.ok || data.error) {
+                alert(data.error || 'Ошибка при удалении');
+            } else {
+                if (pendingRow) pendingRow.remove();
+                closeModal();
+                applyFilters();
+            }
+        } catch (e) {
+            alert('Ошибка сети');
+        }
+        this.disabled = false;
+    });
+
+})();
+</script>
+{% endblock %}
+

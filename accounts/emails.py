@@ -127,3 +127,46 @@ def send_password_reset_email(email, code):
     except Exception as e:
         logger.error(f"Failed to send password reset code to {email}: {e}")
         return False
+
+def send_streak_goal_email(user, streak_days):
+    """
+    Send a beautiful HTML congratulatory email when the user hits their streak goal.
+    """
+    if not user.email:
+        return
+
+    display_name = user.first_name or user.username
+
+    try:
+        from django.contrib.sites.models import Site
+        current_site = Site.objects.get_current()
+        protocol = 'https' if not settings.DEBUG else 'http'
+        dashboard_url = f"{protocol}://{current_site.domain}/"
+    except Exception:
+        dashboard_url = "http://127.0.0.1:8000/"
+
+    context = {
+        'display_name': display_name,
+        'streak_days': streak_days,
+        'dashboard_url': dashboard_url,
+        'year': datetime.now().year,
+    }
+
+    subject = f"🔥 Congratulations, {display_name}! You hit a {streak_days}-day streak!"
+
+    try:
+        html_content = render_to_string('emails/streak_goal.html', context)
+        text_content = strip_tags(html_content)
+
+        email = EmailMultiAlternatives(
+            subject=subject,
+            body=text_content,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            to=[user.email],
+        )
+        email.attach_alternative(html_content, "text/html")
+        email.send(fail_silently=True)
+
+        logger.info(f"Streak goal email sent to {user.email}")
+    except Exception as e:
+        logger.error(f"Failed to send streak goal email to {user.email}: {e}")

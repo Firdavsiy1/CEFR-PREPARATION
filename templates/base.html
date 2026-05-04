@@ -6,6 +6,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="CEFR English Exam Preparation — Practice, learn, and level up your English skills.">
     <title>{% block title %}CEFR Prep{% endblock %}</title>
+    <link rel="icon" type="image/png" sizes="64x64" href="{% static 'logo.png' %}">
+    <link rel="icon" type="image/x-icon" href="{% static 'favicon.ico' %}">
+    <link rel="shortcut icon" href="{% static 'favicon.ico' %}">
 
     <!-- Tailwind CSS via CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -136,6 +139,35 @@
             border-bottom-width: 2px;
             transform: translateY(2px);
             filter: brightness(0.95);
+        }
+
+        .btn-duo {
+            background: #CE82FF;
+            color: #FFFFFF;
+            font-weight: 800;
+            border: none;
+            border-bottom: 4px solid #A855F7;
+            border-radius: 16px;
+            padding: 13px 28px;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            cursor: pointer;
+            transition: all 0.1s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            text-decoration: none;
+        }
+        .btn-duo:hover {
+            filter: brightness(1.08);
+            transform: translateY(-1px);
+            border-bottom-width: 5px;
+        }
+        .btn-duo:active {
+            border-bottom-width: 2px;
+            transform: translateY(2px);
         }
 
         .btn-duo-blue {
@@ -378,66 +410,150 @@
 <body class="min-h-screen flex flex-col text-white antialiased relative">
 
     <!-- Navbar -->
+    {% if not hide_navbar %}
     <nav class="sticky top-0 z-50 bg-[#131F24]/95 backdrop-blur-md border-b-2 border-duo-border">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex items-center justify-between h-16">
-                <!-- Logo -->
-                <a href="{% url 'exams:dashboard' %}" class="flex items-center gap-2.5 group" id="nav-logo">
-                    <div class="w-10 h-10 rounded-2xl flex items-center justify-center bg-duo-green shadow-[0_3px_0_#46A302] group-hover:shadow-[0_2px_0_#46A302] group-hover:translate-y-[1px] transition-all duration-100">
-                        <i class="ph-fill ph-graduation-cap text-white text-xl"></i>
-                    </div>
-                    <span class="text-lg font-black text-white tracking-tight">CEFR<span class="text-duo-green">Prep</span></span>
-                </a>
-
-                <!-- User info -->
-                {% if user.is_authenticated %}
-                <div class="flex items-center gap-1">
-                    <a href="{% url 'exams:dashboard' %}" class="nav-link-duo" id="nav-dashboard">
-                        <i class="ph-fill ph-house text-lg"></i>
-                        <span class="hidden sm:inline" data-i18n="nav_home">Главная</span>
-                    </a>
-                    <a href="{% url 'exams:history' %}" class="nav-link-duo" id="nav-history">
-                        <i class="ph-fill ph-trophy text-lg"></i>
-                        <span class="hidden sm:inline" data-i18n="nav_progress">Прогресс</span>
-                    </a>
-                    {% if user.is_superuser or user_is_mentor %}
-                    <a href="{% url 'exams:mentor_dashboard' %}" class="nav-link-duo" style="color: #CE82FF;" id="nav-mentor-panel">
-                        <i class="ph-fill ph-crown text-lg"></i>
-                        <span class="hidden sm:inline" data-i18n="nav_mentor">Ментор</span>
-                    </a>
-                    {% endif %}
-
-                    <div class="w-px h-6 bg-duo-border mx-1"></div>
-
-                    <!-- User badge (clickable → profile) -->
-                    <a href="{% url 'accounts:profile' %}" class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-duo-surface border border-duo-border hover:border-duo-green/40 transition-all duration-200 group" id="nav-user-badge">
-                        <div id="nav-avatar-bg" class="w-7 h-7 rounded-full flex items-center justify-center transition-transform duration-200 group-hover:scale-110 overflow-hidden"
-                             style="background: {% if user_profile %}{{ user_profile.avatar_gradient }}{% else %}linear-gradient(135deg, #58CC02, #46A302){% endif %};">
-                            {% if user_profile.avatar == 'custom' and user_profile.custom_avatar %}
-                                <img src="{{ user_profile.custom_avatar.url }}" class="w-full h-full object-cover">
-                            {% else %}
-                                <i id="nav-avatar-icon" class="ph-fill {% if user_profile %}{{ user_profile.avatar_icon }}{% else %}ph-bird{% endif %} text-white text-sm"></i>
-                            {% endif %}
+        <div class="w-full px-4 sm:px-6 lg:px-8">
+            <div class="grid grid-cols-[1fr_auto_1fr] items-center h-16 w-full gap-2 sm:gap-4">
+                <!-- Left: Logo -->
+                <div class="flex justify-start items-center min-w-0">
+                    <a href="{% url 'exams:dashboard' %}" class="flex items-center gap-2.5 group" id="nav-logo">
+                        <div class="flex-shrink-0 w-10 h-10 rounded-2xl overflow-hidden shadow-[0_3px_0_#46A302] group-hover:shadow-[0_2px_0_#46A302] group-hover:translate-y-[1px] transition-all duration-100 bg-duo-green">
+                            <img src="{% static 'logo.png' %}" alt="CEFR Prep" class="w-full h-full object-cover">
                         </div>
-                        <span class="text-sm font-bold text-white hidden sm:inline">{% if user.first_name %}{{ user.first_name }}{% if user.last_name %} {{ user.last_name }}{% endif %}{% else %}{{ user.username }}{% endif %}</span>
+                        <span class="text-lg font-black text-white tracking-tight hidden sm:inline">CEFR<span class="text-duo-green">Prep</span></span>
                     </a>
+                </div>
 
-                    <form action="{% url 'accounts:logout' %}" method="post" class="inline ml-1">
-                        {% csrf_token %}
-                        <button type="submit" class="nav-link-duo hover:!text-duo-red hover:!bg-duo-red/10" title="Выйти">
-                            <i class="ph-fill ph-sign-out text-lg"></i>
-                        </button>
-                    </form>
+                <!-- Middle: Nav Links (Centered) -->
+                {% if user.is_authenticated %}
+                <div class="hidden lg:flex justify-center items-center">
+                    <div class="flex items-center gap-0.5 xl:gap-1">
+                        <a href="{% url 'exams:dashboard' %}" class="nav-link-duo" id="nav-dashboard">
+                            <i class="ph-fill ph-house text-lg"></i>
+                            <span class="hidden xl:inline" data-i18n="nav_home">Главная</span>
+                        </a>
+                        <a href="{% url 'exams:history' %}" class="nav-link-duo" id="nav-history">
+                            <i class="ph-fill ph-trophy text-lg"></i>
+                            <span class="hidden xl:inline" data-i18n="nav_progress">Прогресс</span>
+                        </a>
+                        <a href="{% url 'exams:ai_chat' %}" class="nav-link-duo" id="nav-ai-chat">
+                            <i class="ph-fill ph-robot text-lg"></i>
+                            <span class="hidden xl:inline" data-i18n="nav_ai">AI</span>
+                        </a>
+                        <a href="{% url 'exams:dictionary' %}" class="nav-link-duo" id="nav-dictionary">
+                            <i class="ph-fill ph-book-bookmark text-lg"></i>
+                            <span class="hidden xl:inline" data-i18n="nav_dictionary">Словарь</span>
+                        </a>
+                        <a href="{% url 'exams:arcade' %}" class="nav-link-duo" id="nav-arcade">
+                            <i class="ph-fill ph-game-controller text-lg"></i>
+                            <span class="hidden xl:inline" data-i18n="nav_arcade">Аркады</span>
+                        </a>
+                        {% if user_role == 'student' %}
+                        <a href="{% url 'exams:my_classroom' %}" class="nav-link-duo" style="color: #1CB0F6;" id="nav-my-classroom">
+                            <i class="ph-fill ph-chalkboard text-lg"></i>
+                            <span class="hidden xl:inline" data-i18n="nav_my_class">Мой класс</span>
+                        </a>
+                        {% endif %}
+                        {% if user.is_superuser or user_is_mentor %}
+                        <a href="{% url 'exams:classroom_list' %}" class="nav-link-duo" style="color: #1CB0F6;" id="nav-classrooms">
+                            <i class="ph-fill ph-chalkboard-teacher text-lg"></i>
+                            <span class="hidden xl:inline" data-i18n="nav_classrooms">Классы</span>
+                        </a>
+                        {% if user_is_sysmentor %}
+                        <a href="{% url 'exams:mentor_dashboard' %}" class="nav-link-duo" style="color: #CE82FF;" id="nav-mentor-panel">
+                            <i class="ph-fill ph-crown text-lg"></i>
+                            <span class="hidden xl:inline" data-i18n="nav_mentor">Ментор</span>
+                        </a>
+                        {% endif %}
+                        {% endif %}
+                    </div>
                 </div>
                 {% else %}
-                <div class="flex items-center gap-3">
-                    <a href="{% url 'accounts:login' %}" class="btn-duo-outline text-sm !py-2 !px-5" data-i18n="nav_login">Войти</a>
-                    <a href="{% url 'accounts:register' %}" class="btn-duo-green text-sm !py-2 !px-5" data-i18n="nav_register">Начать</a>
-                </div>
+                <div></div>
                 {% endif %}
+
+                <!-- Right: User info / Actions -->
+                <div class="flex justify-end items-center gap-2 sm:gap-4 min-w-0">
+                    {% if user.is_authenticated %}
+                    <div class="flex items-center gap-1">
+                        <div class="w-px h-6 bg-duo-border mx-1 hidden sm:block"></div>
+
+                        <!-- Notifications -->
+                        <div class="relative group" id="notifications-container">
+                            <button class="relative flex items-center justify-center w-10 h-10 rounded-xl bg-duo-surface border border-duo-border transition-all duration-200 hover:border-duo-blue/40 text-duo-text-dim hover:text-duo-blue" id="nav-notifications-btn">
+                                <i class="ph-fill ph-bell text-lg"></i>
+                                <!-- Unread dot -->
+                                <span id="notifications-unread-dot" class="absolute top-2 right-2.5 w-2 h-2 rounded-full bg-duo-red hidden border border-duo-surface"></span>
+                            </button>
+                            <div class="absolute top-full right-0 mt-3 w-80 rounded-2xl bg-[#1A1E24] border border-white/10 shadow-[0_16px_40px_rgba(0,0,0,0.6)] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-[100] transform translate-y-2 group-hover:translate-y-0" id="notifications-dropdown">
+                                <div class="flex items-center justify-between p-4 border-b border-white/5">
+                                    <h3 class="text-sm font-black text-white">Уведомления</h3>
+                                    <button onclick="markAllNotificationsRead()" class="text-[10px] font-black uppercase tracking-widest text-duo-blue hover:text-white transition-colors">Прочитано</button>
+                                </div>
+                                <div class="max-h-[360px] overflow-y-auto" id="notifications-list">
+                                    <div class="p-6 text-center text-duo-text-muted text-xs font-semibold">Загрузка...</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Streak Badge -->
+                        <div class="relative group" id="streak-container">
+                            <a href="#" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-duo-surface border border-duo-border transition-all duration-200 {% if user_profile.streak_days > 0 %}hover:border-duo-gold/40 text-duo-gold{% else %}hover:border-duo-text-dim/40 text-duo-text-dim{% endif %}">
+                                <i class="ph-fill ph-fire text-lg {% if user_profile.streak_days > 0 %}text-duo-gold animate-pulse{% else %}text-duo-text-dim{% endif %}"></i>
+                                <span class="font-bold text-sm {% if user_profile.streak_days > 0 %}text-duo-gold{% else %}text-duo-text-dim{% endif %}">{{ user_profile.streak_days|default:"0" }}</span>
+                            </a>
+                            <div class="absolute top-full right-0 mt-3 w-72 p-4 rounded-2xl bg-duo-surface border border-duo-border shadow-[0_10px_40px_rgba(0,0,0,0.5)] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-[100] transform translate-y-2 group-hover:translate-y-0" id="streak-calendar-dropdown">
+                                <div class="text-white font-bold text-sm mb-3 flex items-center justify-between">
+                                    <span id="streak-calendar-month"></span>
+                                    <i class="ph-fill ph-fire text-duo-gold animate-pulse"></i>
+                                </div>
+                                <div class="grid grid-cols-7 gap-1 text-center text-[10px] font-black text-duo-text-muted mb-2 uppercase tracking-wider">
+                                    <div>Пн</div><div>Вт</div><div>Ср</div><div>Чт</div><div>Пт</div><div>Сб</div><div>Вс</div>
+                                </div>
+                                <div id="streak-calendar-grid" class="grid grid-cols-7 gap-1 text-sm"></div>
+                            </div>
+                        </div>
+
+                        <div class="w-px h-6 bg-duo-border mx-1 hidden sm:block"></div>
+
+                        <!-- User badge -->
+                        <a href="{% url 'accounts:profile' %}" class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-duo-surface border border-duo-border hover:border-duo-green/40 transition-all duration-200 group max-w-[200px]" id="nav-user-badge">
+                            <div id="nav-avatar-bg" class="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center transition-transform duration-200 group-hover:scale-110 overflow-hidden"
+                                 style="background: {% if user_profile %}{{ user_profile.avatar_gradient }}{% else %}linear-gradient(135deg, #58CC02, #46A302){% endif %};">
+                                {% if user_profile.avatar == 'custom' and user_profile.custom_avatar %}
+                                    <img src="{{ user_profile.custom_avatar.url }}" class="w-full h-full object-cover">
+                                {% else %}
+                                    <i id="nav-avatar-icon" class="ph-fill {% if user_profile %}{{ user_profile.avatar_icon }}{% else %}ph-bird{% endif %} text-white text-sm"></i>
+                                {% endif %}
+                            </div>
+                            <span class="text-sm font-bold text-white hidden xl:inline truncate">{% if user.first_name %}{{ user.first_name }}{% if user.last_name %} {{ user.last_name }}{% endif %}{% else %}{{ user.username }}{% endif %}</span>
+                        </a>
+                        <a href="{% url 'accounts:logout' %}" class="nav-link-duo ml-1 hover:!text-duo-red hover:!bg-duo-red/10 flex-shrink-0" title="Выйти">
+                            <i class="ph-fill ph-sign-out text-lg"></i>
+                        </a>
+                    </div>
+                    {% else %}
+                    <div class="flex items-center gap-3">
+                        <div class="relative group" id="lang-switcher">
+                            <button class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-duo-surface border border-duo-border hover:border-duo-text-dim/40 transition-all text-duo-text-dim hover:text-white text-sm font-bold">
+                                <i class="ph-bold ph-globe text-lg"></i>
+                                <span id="current-lang-display" class="uppercase"></span>
+                            </button>
+                            <div class="absolute top-full right-0 mt-2 w-32 p-2 rounded-2xl bg-duo-surface border border-duo-border shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-[100]">
+                                <button class="w-full text-left px-3 py-2 rounded-xl text-sm font-bold text-duo-text-dim hover:bg-duo-border/50 hover:text-white transition-colors flex items-center justify-between" onclick="switchNavbarLanguage('en')">English</button>
+                                <button class="w-full text-left px-3 py-2 rounded-xl text-sm font-bold text-duo-text-dim hover:bg-duo-border/50 hover:text-white transition-colors flex items-center justify-between" onclick="switchNavbarLanguage('ru')">Русский</button>
+                                <button class="w-full text-left px-3 py-2 rounded-xl text-sm font-bold text-duo-text-dim hover:bg-duo-border/50 hover:text-white transition-colors flex items-center justify-between" onclick="switchNavbarLanguage('uz')">O'zbek</button>
+                            </div>
+                        </div>
+                        <a href="{% url 'accounts:login' %}" class="btn-duo-outline text-sm !py-2 !px-5" data-i18n="nav_login">Войти</a>
+                        <a href="{% url 'accounts:register' %}" class="btn-duo-green text-sm !py-2 !px-5" data-i18n="nav_register">Начать</a>
+                    </div>
+                    {% endif %}
+                </div>
             </div>
         </div>
     </nav>
+    {% endif %}
 
     <!-- Messages -->
     {% if messages %}
@@ -459,16 +575,17 @@
     {% endif %}
 
     <!-- Main content -->
-    <main class="relative z-10 py-8 flex-1">
+    <main class="{% block main_class %}relative z-10 py-8 flex-1{% endblock %}">
         {% block content %}{% endblock %}
     </main>
 
     <!-- Footer -->
+    {% if not hide_footer %}
     <footer class="mt-16 py-8 border-t-2 border-duo-border bg-[#0F1A1E]">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
             <div class="flex items-center gap-2.5">
-                <div class="w-8 h-8 rounded-xl flex items-center justify-center bg-duo-green shadow-[0_2px_0_#46A302]">
-                    <i class="ph-fill ph-graduation-cap text-white text-sm"></i>
+                <div class="w-8 h-8 rounded-xl overflow-hidden bg-duo-green shadow-[0_2px_0_#46A302]">
+                    <img src="{% static 'logo.png' %}" alt="CEFR Prep" class="w-full h-full object-cover">
                 </div>
                 <span class="font-black text-white text-sm">CEFR<span class="text-duo-green">Prep</span></span>
             </div>
@@ -477,6 +594,7 @@
             </p>
         </div>
     </footer>
+    {% endif %}
 
     <script>
         const DuoModal = {
@@ -487,51 +605,61 @@
 
                     const overlay = document.createElement('div');
                     overlay.id = 'duo-modal-overlay';
-                    overlay.className = 'fixed inset-0 z-[100] bg-[#131F24]/80 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in transition-opacity duration-200';
+                    overlay.className = 'fixed inset-0 z-[100] flex items-center justify-center p-4 transition-opacity duration-200';
+                    overlay.style.background = 'rgba(19, 31, 36, 0.85)';
+                    overlay.style.backdropFilter = 'blur(12px)';
+                    overlay.style.webkitBackdropFilter = 'blur(12px)';
                     
                     const card = document.createElement('div');
-                    card.className = 'w-full max-w-sm bg-[#1A2F35] border-2 border-[#2B4D56] rounded-3xl p-7 shadow-2xl transform transition-transform duration-200 flex flex-col items-center text-center';
+                    card.className = 'w-full max-w-sm !rounded-[24px] p-7 shadow-2xl transform transition-transform duration-200 flex flex-col items-center text-center card-duo';
 
-                    let iconClass = 'ph-info text-duo-blue';
-                    let iconBg = 'bg-duo-blue/15 border-duo-blue/30';
+                    let iconClass = 'ph-info';
+                    let iconColor = 'text-duo-blue';
+                    let iconBg = 'bg-duo-blue/15';
+                    let iconBorder = 'border-duo-blue/30';
                     
                     if (type === 'confirm') {
-                        iconClass = 'ph-warning text-duo-gold';
-                        iconBg = 'bg-duo-gold/15 border-duo-gold/30';
+                        iconClass = 'ph-warning';
+                        iconColor = 'text-duo-red';
+                        iconBg = 'bg-duo-red/15';
+                        iconBorder = 'border-duo-red/30';
                     }
                     if (type === 'prompt') {
-                        iconClass = 'ph-pencil-simple text-duo-green';
-                        iconBg = 'bg-duo-green/15 border-duo-green/30';
+                        iconClass = 'ph-pencil-simple';
+                        iconColor = 'text-duo-green';
+                        iconBg = 'bg-duo-green/15';
+                        iconBorder = 'border-duo-green/30';
                     }
 
-                    const iconHtml = `<div class="w-20 h-20 rounded-2xl flex items-center justify-center mb-5 border-2 ${iconBg} shadow-inner">
-                        <i class="ph-fill ${iconClass} text-4xl"></i>
+                    const iconHtml = `<div class="w-20 h-20 rounded-2xl flex items-center justify-center mb-5 border-2 ${iconBg} ${iconBorder}">
+                        <i class="ph-fill ${iconClass} text-4xl ${iconColor}"></i>
                     </div>`;
 
-                    const textHtml = `<p class="text-white font-black text-lg mb-6 leading-tight">${text}</p>`;
+                    const textHtml = `<p class="font-black text-lg mb-6 leading-tight text-white">${text}</p>`;
                     
                     let inputHtml = '';
                     if (type === 'prompt') {
-                        inputHtml = `<input type="text" id="duo-modal-input" class="input-duo mb-6 w-full text-center !px-4" value="${defaultValue}" autocomplete="off">`;
+                        inputHtml = `<input type="text" id="duo-modal-input" class="input-duo mb-6 text-center !px-4" value="${defaultValue}" autocomplete="off">`;
                     }
 
                     const buttonsContainer = document.createElement('div');
                     buttonsContainer.className = 'flex gap-3 w-full mt-2';
 
                     const btnCancel = document.createElement('button');
-                    btnCancel.className = 'btn-duo-outline flex-1 py-3.5 text-xs font-black uppercase tracking-widest';
+                    btnCancel.className = 'flex-1 btn-duo-outline';
                     btnCancel.textContent = 'Отмена';
 
                     const btnOk = document.createElement('button');
-                    btnOk.className = 'btn-duo-green flex-1 py-3.5 text-xs font-black uppercase tracking-widest';
-                    btnOk.textContent = 'ОК';
                     
                     if (type === 'confirm') {
-                        btnOk.className = 'btn-duo-red flex-1 py-3.5 text-xs font-black uppercase tracking-widest';
+                        btnOk.className = 'flex-1 btn-duo-red';
                         btnOk.textContent = 'Удалить';
-                    }
-                    if (type === 'alert') {
-                        btnOk.className = 'btn-duo-blue flex-1 py-3.5 text-xs font-black uppercase tracking-widest';
+                    } else if (type === 'alert') {
+                        btnOk.className = 'flex-1 btn-duo-blue';
+                        btnOk.textContent = 'ОК';
+                    } else {
+                        btnOk.className = 'flex-1 btn-duo-green';
+                        btnOk.textContent = 'ОК';
                     }
 
                     if (type !== 'alert') {
@@ -544,9 +672,14 @@
                     overlay.appendChild(card);
                     document.body.appendChild(overlay);
 
+                    requestAnimationFrame(() => {
+                        overlay.style.opacity = '1';
+                        card.style.transform = 'scale(1) translateY(0)';
+                    });
+
                     const close = (result) => {
                         overlay.style.opacity = '0';
-                        card.style.transform = 'scale(0.95)';
+                        card.style.transform = 'scale(0.96) translateY(8px)';
                         setTimeout(() => overlay.remove(), 200);
                         resolve(result);
                     };
@@ -574,16 +707,299 @@
 
     </script>
 
+    <!-- Global double-click → Dictionary tooltip -->
+    {% if user.is_authenticated %}
+    <script>
+    window.DICT_LOOKUP_URL = '{% url "exams:api_dictionary_lookup" %}';
+    window.DICT_CSRF = '{{ csrf_token }}';
+    </script>
+    <script>
+    (function() {
+        let tooltip = null;
+        const DICT_LOOKUP_URL = window.DICT_LOOKUP_URL;
+        const DICT_CSRF = window.DICT_CSRF;
+
+        function removeDictTooltip() {
+            if (tooltip) { tooltip.remove(); tooltip = null; }
+        }
+
+        document.addEventListener('dblclick', function(e) {
+            // Don't trigger on inputs, textareas, or contenteditable
+            const tag = e.target.tagName;
+            if (['INPUT', 'TEXTAREA', 'SELECT'].includes(tag)) return;
+            if (e.target.isContentEditable) return;
+            // Don't trigger inside the dictionary page search or modal
+            if (e.target.closest('#dict-search-input, #dict-modal-overlay')) return;
+            // Don't trigger inside highlightable test areas — the highlight tooltip handles it
+            if (e.target.closest('.passage-content, .passage-text, .post-card p, .highlightable-text')) return;
+
+            const sel = window.getSelection();
+            const word = sel.toString().trim();
+
+            // Only single English words (letters, hyphens, apostrophes)
+            if (!word || word.length > 40 || !/^[a-zA-Z'-]+$/.test(word)) return;
+
+            removeDictTooltip();
+
+            // Get position near the selected text
+            const range = sel.getRangeAt(0);
+            const rect = range.getBoundingClientRect();
+
+            tooltip = document.createElement('div');
+            tooltip.className = 'fixed z-[300] animate-fade-in';
+            tooltip.style.left = `${Math.min(rect.left + rect.width / 2, window.innerWidth - 100)}px`;
+            tooltip.style.top = `${rect.top - 48}px`;
+            tooltip.style.transform = 'translateX(-50%)';
+            tooltip.innerHTML = `
+                <button class="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-duo-blue text-white font-black text-xs uppercase tracking-wider shadow-xl border-b-[3px] border-[#1899D6] hover:brightness-110 transition-all cursor-pointer whitespace-nowrap"
+                        id="dict-tooltip-btn">
+                    <i class="ph-fill ph-book-bookmark"></i>
+                    <span data-i18n="dict_add_tooltip">В словарь</span>
+                </button>
+            `;
+            document.body.appendChild(tooltip);
+
+            // Apply i18n
+            const lang = localStorage.getItem('cefr_language') || '{{ current_language|default:"ru" }}';
+            if (typeof applyGlobalTranslations === 'function') {
+                applyGlobalTranslations(lang);
+            }
+
+            tooltip.querySelector('#dict-tooltip-btn').addEventListener('click', async function() {
+                this.innerHTML = '<svg class="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>';
+                try {
+                    const resp = await fetch(DICT_LOOKUP_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': DICT_CSRF },
+                        body: JSON.stringify({ word: word.toLowerCase(), source: 'dblclick' }),
+                    });
+                    const data = await resp.json();
+                    if (data.status === 'ok') {
+                        const msgKey = data.created ? 'dict_added_success' : 'dict_already_added';
+                        const fallback = data.created ? 'Добавлено в словарь! ✓' : 'Уже в словаре ✓';
+                        this.innerHTML = `<i class="ph-fill ph-check-circle"></i> ${data.created ? '✓' : '✓'}`;
+                        this.classList.remove('bg-duo-blue', 'border-[#1899D6]');
+                        this.classList.add('bg-duo-green', 'border-[#46A302]');
+                        // Show global toast
+                        const toast = document.createElement('div');
+                        toast.className = 'fixed bottom-6 left-1/2 -translate-x-1/2 z-[400] bg-duo-surface border-2 border-duo-green/30 text-duo-green font-black text-sm px-6 py-3 rounded-2xl shadow-xl animate-slide-up';
+                        const tlang = localStorage.getItem('cefr_language') || 'ru';
+                        toast.textContent = (_i18n && _i18n[tlang] && _i18n[tlang][msgKey]) || fallback;
+                        document.body.appendChild(toast);
+                        setTimeout(() => { toast.style.opacity = '0'; toast.style.transition = 'opacity 0.3s'; setTimeout(() => toast.remove(), 300); }, 2500);
+                    }
+                } catch(err) { console.error(err); }
+                setTimeout(removeDictTooltip, 1500);
+            });
+        });
+
+        // Remove tooltip when clicking elsewhere or scrolling
+        document.addEventListener('click', function(e) {
+            if (tooltip && !tooltip.contains(e.target)) removeDictTooltip();
+        });
+        document.addEventListener('scroll', removeDictTooltip, true);
+    })();
+    </script>
+    {% endif %}
+
     <!-- Global i18n translation system -->
-    <script src="{% static 'js/i18n.js' %}?v=3"></script>
+    <script src="{% static 'js/i18n.js' %}?v=4"></script>
     <script>
         // Auto-apply on page load
         (function() {
-            const lang = '{{ current_language|default:"ru" }}';
+            const lang = localStorage.getItem('cefr_language') || '{{ current_language|default:"en" }}';
+            localStorage.setItem('cefr_language', lang);
+            
+            // Update lang display
+            const display = document.getElementById('current-lang-display');
+            if (display) display.textContent = lang;
+
             if (lang && typeof applyGlobalTranslations === 'function') {
                 applyGlobalTranslations(lang);
             }
         })();
+
+        async function switchNavbarLanguage(lang) {
+            localStorage.setItem('cefr_language', lang);
+            try {
+                // Also update backend preference so django_language is set
+                const formData = new FormData();
+                formData.append('language', lang);
+                await fetch("{% url 'accounts:set_language' %}", {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-CSRFToken': '{{ csrf_token }}',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+            } catch (e) {
+                console.error("Failed to sync language to backend", e);
+            }
+            window.location.reload();
+        }
+    </script>
+
+    <!-- Streak Calendar Generation -->
+    {% if user.is_authenticated and user_profile %}
+    {{ user_profile.active_days_history|json_script:"active-days-data" }}
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            const calendarGrid = document.getElementById('streak-calendar-grid');
+            if (!calendarGrid) return;
+            
+            const activeDaysRaw = document.getElementById('active-days-data');
+            let activeDays = [];
+            if (activeDaysRaw) {
+                try {
+                    activeDays = JSON.parse(activeDaysRaw.textContent);
+                } catch (e) {
+                    console.error("Error parsing streak active days:", e);
+                }
+            }
+            
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = now.getMonth(); // 0-11
+            
+            // Set month title
+            const monthNames = ["Январь", "Февраль", "Март", "Апрель", "Май", "Июнь", "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"];
+            document.getElementById('streak-calendar-month').innerText = `${monthNames[month]} ${year}`;
+            
+            const firstDay = new Date(year, month, 1);
+            const lastDay = new Date(year, month + 1, 0);
+            const daysInMonth = lastDay.getDate();
+            
+            // JS getDay(): 0=Sun, 1=Mon, ... 6=Sat
+            // We want Mon=0, Tue=1, ... Sun=6
+            let firstDayOfWeek = firstDay.getDay() - 1;
+            if (firstDayOfWeek === -1) firstDayOfWeek = 6;
+            
+            let html = '';
+            
+            // Empty cells for days before the 1st
+            for (let i = 0; i < firstDayOfWeek; i++) {
+                html += `<div class="w-8 h-8"></div>`;
+            }
+            
+            // Format today's date in YYYY-MM-DD local time
+            const localDate = new Date(now.getTime() - (now.getTimezoneOffset() * 60000));
+            const todayStr = localDate.toISOString().split('T')[0];
+            
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dateObj = new Date(year, month, day);
+                dateObj.setMinutes(dateObj.getMinutes() - dateObj.getTimezoneOffset());
+                const dateStr = dateObj.toISOString().split('T')[0];
+                
+                const isActive = activeDays.includes(dateStr);
+                const isToday = (dateStr === todayStr);
+                
+                let classes = 'w-8 h-8 flex items-center justify-center rounded-full font-bold transition-all mx-auto';
+                
+                if (isActive) {
+                    classes += ' bg-duo-gold/20 text-duo-gold border border-duo-gold/40 shadow-[0_0_10px_rgba(255,200,0,0.15)]';
+                } else if (isToday) {
+                    classes += ' bg-duo-border/80 text-white border-2 border-duo-text-muted';
+                } else {
+                    classes += ' text-duo-text-dim hover:bg-duo-border/50 hover:text-white cursor-default';
+                }
+                html += `<div class="${classes}">${day}</div>`;
+            }
+            
+            calendarGrid.innerHTML = html;
+        });
+    </script>
+    {% endif %}
+
+    <script>
+        {% if user.is_authenticated %}
+        // Fetch Notifications
+        function fetchNotifications() {
+            fetch("{% url 'exams:api_notifications_list' %}")
+                .then(res => res.json())
+                .then(data => {
+                    const dot = document.getElementById('notifications-unread-dot');
+                    if (data.unread_count > 0) {
+                        dot.classList.remove('hidden');
+                    } else {
+                        dot.classList.add('hidden');
+                    }
+                    
+                    const list = document.getElementById('notifications-list');
+                    if (data.notifications.length === 0) {
+                        list.innerHTML = '<div class="p-6 text-center text-duo-text-muted text-xs font-semibold">Нет новых уведомлений</div>';
+                        return;
+                    }
+                    
+                    list.innerHTML = data.notifications.map(n => {
+                        let icon = 'ph-bell';
+                        let color = 'text-white';
+                        let bg = 'bg-white/10';
+                        
+                        if (n.type === 'assignment') { icon = 'ph-exam'; color = 'text-duo-green'; bg = 'bg-duo-green/15'; }
+                        else if (n.type === 'announcement') { icon = 'ph-megaphone'; color = 'text-duo-gold'; bg = 'bg-duo-gold/15'; }
+                        else if (n.type === 'grade') { icon = 'ph-star'; color = 'text-duo-purple'; bg = 'bg-duo-purple/15'; }
+                        else if (n.type === 'deadline') { icon = 'ph-clock-countdown'; color = 'text-duo-red'; bg = 'bg-duo-red/15'; }
+                        
+                        const date = new Date(n.created_at);
+                        const dateStr = date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+                        
+                        const wrapperClass = `flex gap-3 p-4 border-b border-white/5 transition-colors cursor-pointer hover:bg-white/5 ${n.is_read ? 'opacity-60' : 'bg-duo-blue/5'}`;
+                        
+                        return `
+                            <div class="${wrapperClass}" onclick="handleNotificationClick(${n.id}, '${n.url || ''}')">
+                                <div class="w-8 h-8 rounded-full ${bg} flex items-center justify-center shrink-0 border border-white/5">
+                                    <i class="ph-fill ${icon} ${color} text-sm"></i>
+                                </div>
+                                <div class="min-w-0 flex-1">
+                                    <p class="text-[13px] font-bold text-white mb-0.5 leading-tight">${escapeHtml(n.title)}</p>
+                                    ${n.body ? `<p class="text-[11px] font-semibold text-duo-text-dim mb-1 line-clamp-2">${escapeHtml(n.body)}</p>` : ''}
+                                    <p class="text-[9px] font-black uppercase tracking-widest text-duo-text-muted">${dateStr}</p>
+                                </div>
+                                ${!n.is_read ? '<div class="w-1.5 h-1.5 rounded-full bg-duo-blue mt-1.5 shrink-0"></div>' : ''}
+                            </div>
+                        `;
+                    }).join('');
+                })
+                .catch(err => console.error('Failed to fetch notifications:', err));
+        }
+
+        function escapeHtml(unsafe) {
+            return (unsafe || '').replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+        }
+
+        function handleNotificationClick(id, url) {
+            fetch("{% url 'exams:api_notifications_mark_read' %}", {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}',
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `id=${id}`
+            }).then(() => {
+                if (url && url !== 'None') {
+                    window.location.href = url;
+                } else {
+                    fetchNotifications();
+                }
+            });
+        }
+
+        function markAllNotificationsRead() {
+            fetch("{% url 'exams:api_notifications_mark_read' %}", {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}',
+                }
+            }).then(() => {
+                fetchNotifications();
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', fetchNotifications);
+        // Poll every 2 minutes
+        setInterval(fetchNotifications, 120000);
+        {% endif %}
     </script>
 
     {% block extra_scripts %}{% endblock %}

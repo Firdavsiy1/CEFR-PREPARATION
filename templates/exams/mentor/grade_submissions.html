@@ -1,0 +1,366 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Оценка — {{ attempt.user.get_full_name|default:attempt.user.username }} — CEFR Prep{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+
+    {% if test_type == 'writing' %}
+    {% include "exams/mentor/_workspace_header.html" with title="Оценка Writing" subtitle=attempt.test.name icon="ph-fill ph-pencil-line" accent="gold" page_group="classrooms" %}
+    {% else %}
+    {% include "exams/mentor/_workspace_header.html" with title="Оценка Speaking" subtitle=attempt.test.name icon="ph-fill ph-microphone" accent="blue" page_group="classrooms" %}
+    {% endif %}
+
+    <!-- Student info banner -->
+    <div class="card-duo p-5 mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div class="flex items-center gap-4">
+            <div class="w-12 h-12 rounded-2xl flex items-center justify-center bg-duo-blue/15 border border-duo-blue/25 flex-shrink-0">
+                <i class="ph-fill ph-user text-duo-blue text-xl"></i>
+            </div>
+            <div>
+                <p class="text-xs font-black text-duo-text-dim uppercase tracking-widest mb-0.5">Ученик</p>
+                <p class="text-lg font-black text-white">
+                    {{ attempt.user.get_full_name|default:attempt.user.username }}
+                    <span class="text-duo-text-muted font-semibold text-sm">(@{{ attempt.user.username }})</span>
+                </p>
+                <p class="text-xs text-duo-text-muted font-semibold">{{ attempt.completed_at|date:"d F Y, H:i" }}</p>
+            </div>
+        </div>
+        <a href="javascript:history.back()" class="btn-duo-outline text-xs !py-2 !px-4">
+            <i class="ph-bold ph-arrow-left"></i> Назад
+        </a>
+    </div>
+
+    <!-- Save all notification -->
+    <div id="save-banner" class="hidden mb-4 p-3 rounded-2xl bg-duo-green/15 border border-duo-green/30 text-duo-green text-sm font-bold flex items-center gap-2">
+        <i class="ph-fill ph-check-circle"></i> Оценки сохранены
+    </div>
+    <div id="error-banner" class="hidden mb-4 p-3 rounded-2xl bg-duo-red/15 border border-duo-red/30 text-duo-red text-sm font-bold flex items-center gap-2">
+        <i class="ph-fill ph-x-circle"></i> Ошибка при сохранении
+    </div>
+
+    {% if test_type == 'writing' %}
+    <!-- ================================================================
+         WRITING GRADING
+    ================================================================ -->
+    <div class="space-y-6">
+        {% for sub in submissions %}
+        <div class="card-duo overflow-hidden" id="wsub-{{ sub.id }}">
+            <div class="bg-duo-surface-2/50 px-6 py-4 border-b-2 border-duo-border flex items-center justify-between gap-4 flex-wrap">
+                <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-xl flex items-center justify-center font-black text-white text-xs
+                        {% if sub.task.task_type == 'essay' %}bg-duo-gold text-[#3C3100]{% elif sub.task.task_type == 'formal' %}bg-duo-blue{% else %}bg-duo-green{% endif %}">
+                        {% if sub.task.task_type == 'informal' %}1.1{% elif sub.task.task_type == 'formal' %}1.2{% else %}2{% endif %}
+                    </div>
+                    <div>
+                        <h3 class="font-black text-white text-base">
+                            {% if sub.task.task_type == 'informal' %}Task 1.1 — Informal{% elif sub.task.task_type == 'formal' %}Task 1.2 — Formal{% else %}Task 2 — Essay{% endif %}
+                        </h3>
+                        <p class="text-xs text-duo-text-muted font-semibold">{{ sub.word_count }} слов · лимит {{ sub.task.min_words }}–{{ sub.task.max_words }}</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-3">
+                    {% if sub.is_graded %}
+                    <span class="badge-duo bg-duo-green/10 text-duo-green border border-duo-green/25 text-xs">AI: {{ sub.estimated_level }}</span>
+                    {% else %}
+                    <span class="badge-duo bg-duo-gold/10 text-duo-gold border border-duo-gold/25 text-xs">AI: в обработке</span>
+                    {% endif %}
+                    {% if sub.mentor_score is not None %}
+                    <span class="badge-duo bg-duo-purple/10 text-duo-purple border border-duo-purple/25 text-xs font-black">
+                        <i class="ph-fill ph-chalkboard-teacher"></i> {{ sub.mentor_score }}/100
+                    </span>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="p-6 space-y-5">
+                <!-- Task prompt -->
+                {% if sub.task.prompt %}
+                <div class="bg-duo-surface-2/30 border border-duo-border rounded-2xl p-4">
+                    <p class="text-[10px] font-extrabold text-duo-text-muted uppercase tracking-widest mb-2">Задание</p>
+                    <p class="text-sm text-duo-text-dim font-semibold leading-relaxed whitespace-pre-wrap">{{ sub.task.prompt }}</p>
+                </div>
+                {% endif %}
+
+                <!-- Student's text -->
+                <div>
+                    <p class="text-[10px] font-extrabold text-duo-text-muted uppercase tracking-widest mb-2">Ответ ученика</p>
+                    <div class="text-white text-sm leading-relaxed bg-[rgba(255,255,255,0.02)] border border-white/5 p-4 rounded-2xl whitespace-pre-wrap max-h-72 overflow-y-auto">{{ sub.submitted_text }}</div>
+                </div>
+
+                <!-- AI feedback (collapsed) -->
+                {% if sub.is_graded and sub.feedback_text %}
+                <details class="group bg-duo-blue/5 border border-duo-blue/20 rounded-2xl overflow-hidden">
+                    <summary class="flex items-center gap-2 p-4 cursor-pointer list-none">
+                        <i class="ph-fill ph-robot text-duo-blue"></i>
+                        <span class="text-xs font-extrabold text-duo-blue uppercase tracking-widest">AI Feedback</span>
+                        <i class="ph-bold ph-caret-down text-duo-text-muted ml-auto transition-transform duration-200 group-open:rotate-180"></i>
+                    </summary>
+                    <div class="px-4 pb-4 border-t border-duo-blue/15">
+                        <p class="text-sm text-duo-text-dim font-semibold leading-relaxed mt-3 whitespace-pre-wrap">{{ sub.feedback_text }}</p>
+                    </div>
+                </details>
+                {% endif %}
+
+                <!-- Mentor grading -->
+                <div class="bg-duo-purple/5 border-2 border-duo-purple/20 rounded-2xl p-5">
+                    <div class="flex items-center gap-2 mb-4">
+                        <i class="ph-fill ph-chalkboard-teacher text-duo-purple text-lg"></i>
+                        <h4 class="text-sm font-extrabold text-white uppercase tracking-wide">Оценка ментора</h4>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-[10px] font-extrabold text-duo-text-muted uppercase tracking-widest mb-1.5">Балл (0–100)</label>
+                            <input type="number" min="0" max="100" step="1"
+                                   id="ws-score-{{ sub.id }}"
+                                   value="{{ sub.mentor_score|default:'' }}"
+                                   placeholder="—"
+                                   class="input-duo w-full text-center font-black text-xl !py-3">
+                        </div>
+                        <div class="sm:col-span-2">
+                            <label class="block text-[10px] font-extrabold text-duo-text-muted uppercase tracking-widest mb-1.5">Комментарий ментора</label>
+                            <textarea id="ws-feedback-{{ sub.id }}"
+                                      rows="3"
+                                      placeholder="Напишите ваш комментарий..."
+                                      class="input-duo w-full resize-none text-sm">{{ sub.mentor_feedback }}</textarea>
+                        </div>
+                    </div>
+                    <div class="mt-3 flex items-center gap-3">
+                        <button onclick="saveWritingGrade({{ sub.id }})"
+                                class="btn-duo-purple text-xs !py-2 !px-5" id="ws-btn-{{ sub.id }}">
+                            <i class="ph-fill ph-floppy-disk"></i> Сохранить оценку
+                        </button>
+                        <span class="hidden text-xs font-bold text-duo-green flex items-center gap-1" id="ws-saved-{{ sub.id }}">
+                            <i class="ph-fill ph-check-circle"></i> Сохранено
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="card-duo p-8 text-center">
+            <i class="ph-fill ph-pencil-line text-4xl text-duo-text-muted mb-3 block opacity-30"></i>
+            <p class="text-duo-text-muted font-bold">Нет работ для проверки.</p>
+        </div>
+        {% endfor %}
+    </div>
+
+    {% else %}
+    <!-- ================================================================
+         SPEAKING GRADING
+    ================================================================ -->
+    {% regroup submissions by question.part as speaking_parts %}
+    <div class="space-y-6">
+        {% for part_entry in speaking_parts %}
+        <div class="card-duo overflow-hidden">
+            <div class="bg-duo-surface-2/50 px-6 py-4 border-b-2 border-duo-border flex items-center gap-3">
+                <div class="w-9 h-9 rounded-xl bg-duo-purple/15 border border-duo-purple/30 flex items-center justify-center font-black text-duo-purple text-sm">
+                    {{ part_entry.grouper.part_number }}
+                </div>
+                <h3 class="font-black text-white">Часть {{ part_entry.grouper.part_number }}</h3>
+                {% if part_entry.grouper.instructions %}
+                <p class="text-xs text-duo-text-muted font-semibold ml-2 truncate max-w-xs">{{ part_entry.grouper.instructions }}</p>
+                {% endif %}
+            </div>
+            <div class="divide-y-2 divide-duo-border/30">
+                {% for sub in part_entry.list %}
+                <div class="p-5 space-y-4" id="ssub-{{ sub.id }}">
+                    <!-- Question -->
+                    <div class="flex items-start gap-3">
+                        <div class="w-7 h-7 rounded-lg bg-duo-purple/15 border border-duo-purple/30 flex items-center justify-center flex-shrink-0">
+                            <span class="text-xs font-black text-duo-purple">{{ sub.question.question_number }}</span>
+                        </div>
+                        <p class="text-sm font-bold text-white leading-snug">{{ sub.question.question_text }}</p>
+                    </div>
+
+                    <!-- Student audio recording -->
+                    {% if sub.audio_file %}
+                    <div class="audio-player-container">
+                        <div class="flex items-center gap-4 bg-duo-surface-2/20 p-3 rounded-2xl border border-duo-border shadow-inner">
+                            <button type="button" class="result-play-btn w-12 h-12 rounded-xl bg-duo-purple shadow-[0_4px_0_#9333EA] flex items-center justify-center flex-shrink-0 hover:translate-y-[-2px] hover:shadow-[0_6px_0_#9333EA] active:translate-y-[4px] active:shadow-none transition-all outline-none">
+                                <i class="ph-fill ph-play text-white text-xl result-play-icon"></i>
+                            </button>
+                            <div class="flex-1 flex flex-col justify-center cursor-pointer relative group result-progress-container hover:brightness-110 transition-all">
+                                <div class="flex justify-between items-center text-[10px] font-black text-duo-text-dim mb-1.5 px-0.5 uppercase tracking-wide">
+                                    <span class="result-current-time">0:00</span>
+                                    <div class="flex items-center gap-1.5 text-duo-purple">
+                                        <i class="ph-fill ph-waveform"></i>
+                                        <span>Запись ученика</span>
+                                    </div>
+                                    <span class="result-duration">0:00</span>
+                                </div>
+                                <div class="h-3 bg-[#1A2F35] rounded-full overflow-hidden border border-[#2B4D56] relative group-hover:border-duo-purple/50 transition-colors">
+                                    <div class="result-progress-bar h-full bg-duo-purple absolute top-0 left-0 rounded-full transition-all duration-100 ease-linear shadow-[0_0_10px_rgba(168,85,247,0.5)]" style="width: 0%;"></div>
+                                </div>
+                            </div>
+                            <audio class="result-part-audio" preload="metadata">
+                                <source src="{{ sub.audio_file.url }}" type="audio/mpeg">
+                            </audio>
+                        </div>
+                    </div>
+                    {% if sub.duration_seconds %}
+                    <p class="text-[10px] text-duo-text-muted font-semibold">Длительность: {{ sub.duration_seconds|floatformat:1 }}с</p>
+                    {% endif %}
+                    {% else %}
+                    <p class="text-xs text-duo-text-muted font-semibold italic">Запись не загружена</p>
+                    {% endif %}
+
+                    <!-- AI evaluation -->
+                    {% if sub.is_evaluated %}
+                    <details class="group bg-duo-blue/5 border border-duo-blue/20 rounded-2xl overflow-hidden">
+                        <summary class="flex items-center gap-2 p-4 cursor-pointer list-none">
+                            <i class="ph-fill ph-robot text-duo-blue"></i>
+                            <span class="text-xs font-extrabold text-duo-blue uppercase tracking-widest">AI Feedback</span>
+                            <span class="badge-duo bg-duo-gold/15 text-duo-gold border border-duo-gold/25 text-xs ml-2">{{ sub.score|floatformat:1 }}/{{ sub.question.part.points_per_question }}</span>
+                            {% if sub.estimated_level %}<span class="badge-duo bg-duo-purple/15 text-duo-purple border border-duo-purple/25 text-xs">{{ sub.estimated_level }}</span>{% endif %}
+                            <i class="ph-bold ph-caret-down text-duo-text-muted ml-auto transition-transform duration-200 group-open:rotate-180"></i>
+                        </summary>
+                        <div class="px-4 pb-4 border-t border-duo-blue/15">
+                            {% if sub.transcript %}
+                            <p class="text-xs text-duo-text-muted font-semibold italic mt-3 mb-2">Транскрипт: {{ sub.transcript }}</p>
+                            {% endif %}
+                            <p class="text-sm text-duo-text-dim font-semibold leading-relaxed whitespace-pre-wrap">{{ sub.feedback_text }}</p>
+                        </div>
+                    </details>
+                    {% else %}
+                    <p class="text-xs text-duo-gold font-semibold flex items-center gap-1">
+                        <i class="ph-bold ph-spinner animate-spin"></i> AI оценка в процессе...
+                    </p>
+                    {% endif %}
+
+                    <!-- Mentor grading -->
+                    <div class="bg-duo-purple/5 border-2 border-duo-purple/20 rounded-2xl p-4">
+                        <div class="flex items-center gap-2 mb-3">
+                            <i class="ph-fill ph-chalkboard-teacher text-duo-purple"></i>
+                            <h4 class="text-xs font-extrabold text-white uppercase tracking-wide">Оценка ментора</h4>
+                            {% if sub.mentor_score is not None %}
+                            <span class="badge-duo bg-duo-purple/15 text-duo-purple border border-duo-purple/25 text-xs">{{ sub.mentor_score }}/10</span>
+                            {% endif %}
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            <div>
+                                <label class="block text-[10px] font-extrabold text-duo-text-muted uppercase tracking-widest mb-1">Балл (0–10)</label>
+                                <input type="number" min="0" max="10" step="0.5"
+                                       id="ss-score-{{ sub.id }}"
+                                       value="{{ sub.mentor_score|default:'' }}"
+                                       placeholder="—"
+                                       class="input-duo w-full text-center font-black text-lg !py-2.5">
+                            </div>
+                            <div class="sm:col-span-2">
+                                <label class="block text-[10px] font-extrabold text-duo-text-muted uppercase tracking-widest mb-1">Комментарий</label>
+                                <textarea id="ss-feedback-{{ sub.id }}"
+                                          rows="2"
+                                          placeholder="Ваш комментарий..."
+                                          class="input-duo w-full resize-none text-sm">{{ sub.mentor_feedback }}</textarea>
+                            </div>
+                        </div>
+                        <div class="mt-2.5 flex items-center gap-3">
+                            <button onclick="saveSpeakingGrade({{ sub.id }})"
+                                    class="btn-duo-purple text-xs !py-1.5 !px-4" id="ss-btn-{{ sub.id }}">
+                                <i class="ph-fill ph-floppy-disk"></i> Сохранить
+                            </button>
+                            <span class="hidden text-xs font-bold text-duo-green flex items-center gap-1" id="ss-saved-{{ sub.id }}">
+                                <i class="ph-fill ph-check-circle"></i> Сохранено
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% empty %}
+        <div class="card-duo p-8 text-center">
+            <i class="ph-fill ph-microphone text-4xl text-duo-text-muted mb-3 block opacity-30"></i>
+            <p class="text-duo-text-muted font-bold">Нет записей для проверки.</p>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    const CSRF = document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '';
+
+    // ── Custom audio player init ──────────────────────────────────────────────
+    document.addEventListener('DOMContentLoaded', () => {
+        const fmt = t => isNaN(t) ? '0:00' : `${Math.floor(t/60)}:${String(Math.floor(t%60)).padStart(2,'0')}`;
+        document.querySelectorAll('.audio-player-container').forEach(cont => {
+            const audio = cont.querySelector('.result-part-audio');
+            const playBtn = cont.querySelector('.result-play-btn');
+            const playIcon = cont.querySelector('.result-play-icon');
+            const progCont = cont.querySelector('.result-progress-container');
+            const progBar = cont.querySelector('.result-progress-bar');
+            const curTime = cont.querySelector('.result-current-time');
+            const durEl = cont.querySelector('.result-duration');
+            if (!audio || !playBtn) return;
+            audio.addEventListener('loadedmetadata', () => { if (durEl) durEl.textContent = fmt(audio.duration); });
+            const sync = () => {
+                if (audio.paused) { playIcon.classList.remove('ph-pause'); playIcon.classList.add('ph-play'); }
+                else { playIcon.classList.remove('ph-play'); playIcon.classList.add('ph-pause'); }
+            };
+            playBtn.addEventListener('click', () => {
+                document.querySelectorAll('.result-part-audio').forEach(a => { if (a !== audio && !a.paused) a.pause(); });
+                audio.paused ? audio.play() : audio.pause();
+            });
+            audio.addEventListener('play', sync);
+            audio.addEventListener('pause', sync);
+            audio.addEventListener('ended', sync);
+            audio.addEventListener('timeupdate', () => {
+                if (curTime) curTime.textContent = fmt(audio.currentTime);
+                if (audio.duration && progBar) progBar.style.width = `${(audio.currentTime / audio.duration) * 100}%`;
+            });
+            if (progCont) {
+                progCont.addEventListener('click', e => {
+                    const r = progCont.getBoundingClientRect();
+                    const ratio = Math.min(1, Math.max(0, (e.clientX - r.left) / r.width));
+                    if (audio.duration) audio.currentTime = ratio * audio.duration;
+                });
+            }
+        });
+    });
+
+    // ── Grading helpers ───────────────────────────────────────────────────────
+    async function postGrade(url, score, feedback, btnId, savedId) {
+        const btn = document.getElementById(btnId);
+        const saved = document.getElementById(savedId);
+        if (btn) { btn.disabled = true; btn.innerHTML = '<i class="ph-fill ph-spinner animate-spin text-xs"></i> Сохранение...'; }
+        try {
+            const r = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+                body: JSON.stringify({ mentor_score: score === '' ? null : parseFloat(score), mentor_feedback: feedback }),
+            });
+            const d = await r.json();
+            if (r.ok && d.success) {
+                if (saved) { saved.classList.remove('hidden'); setTimeout(() => saved.classList.add('hidden'), 3000); }
+                document.getElementById('save-banner')?.classList.remove('hidden');
+                setTimeout(() => document.getElementById('save-banner')?.classList.add('hidden'), 3000);
+            } else {
+                document.getElementById('error-banner')?.classList.remove('hidden');
+                setTimeout(() => document.getElementById('error-banner')?.classList.add('hidden'), 4000);
+            }
+        } catch {
+            document.getElementById('error-banner')?.classList.remove('hidden');
+            setTimeout(() => document.getElementById('error-banner')?.classList.add('hidden'), 4000);
+        } finally {
+            if (btn) { btn.disabled = false; btn.innerHTML = '<i class="ph-fill ph-floppy-disk"></i> Сохранить{% if test_type == "speaking" %}</i>{% else %} оценку</i>{% endif %}'; }
+        }
+    }
+
+    function saveWritingGrade(subId) {
+        const score = document.getElementById(`ws-score-${subId}`)?.value;
+        const feedback = document.getElementById(`ws-feedback-${subId}`)?.value || '';
+        postGrade(`/api/mentor/grade/writing/${subId}/`, score, feedback, `ws-btn-${subId}`, `ws-saved-${subId}`);
+    }
+
+    function saveSpeakingGrade(subId) {
+        const score = document.getElementById(`ss-score-${subId}`)?.value;
+        const feedback = document.getElementById(`ss-feedback-${subId}`)?.value || '';
+        postGrade(`/api/mentor/grade/speaking/${subId}/`, score, feedback, `ss-btn-${subId}`, `ss-saved-${subId}`);
+    }
+</script>
+{% endblock %}

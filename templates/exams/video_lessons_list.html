@@ -1,0 +1,549 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Video Lessons — CEFR Prep{% endblock %}
+
+{% block extra_head %}
+<style>
+    .video-card {
+        background: #1A2F35;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 20px;
+        overflow: hidden;
+        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        cursor: pointer;
+        text-decoration: none;
+        display: flex;
+        flex-direction: column;
+    }
+    .video-card:hover {
+        border-color: rgba(255, 75, 75, 0.3);
+        transform: translateY(-4px);
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 75, 75, 0.15);
+    }
+    .video-card .thumb-wrapper {
+        position: relative;
+        width: 100%;
+        aspect-ratio: 16 / 9;
+        overflow: hidden;
+        background: #0F1A1E;
+    }
+    .video-card .thumb-wrapper img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transition: transform 0.3s ease;
+    }
+    .video-card:hover .thumb-wrapper img {
+        transform: scale(1.05);
+    }
+    .thumb-overlay {
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(to top, rgba(0,0,0,0.6) 0%, transparent 50%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        transition: opacity 0.25s ease;
+    }
+    .video-card:hover .thumb-overlay {
+        opacity: 1;
+    }
+    .play-icon {
+        width: 56px;
+        height: 56px;
+        border-radius: 50%;
+        background: rgba(255, 75, 75, 0.9);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 4px 20px rgba(255, 75, 75, 0.4);
+    }
+    .cefr-badge {
+        position: absolute;
+        top: 12px;
+        right: 12px;
+        background: rgba(0, 0, 0, 0.6);
+        backdrop-filter: blur(8px);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        padding: 4px 10px;
+        border-radius: 8px;
+        font-size: 0.7rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+    .quiz-badge {
+        position: absolute;
+        bottom: 12px;
+        left: 12px;
+        background: rgba(255, 75, 75, 0.15);
+        border: 1px solid rgba(255, 75, 75, 0.3);
+        color: #FF4B4B;
+        padding: 4px 10px;
+        border-radius: 8px;
+        font-size: 0.7rem;
+        font-weight: 800;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+    .topic-tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 5px;
+        margin-top: 8px;
+    }
+    .topic-tag {
+        background: rgba(88, 204, 2, 0.1);
+        border: 1px solid rgba(88, 204, 2, 0.25);
+        color: #58CC02;
+        padding: 2px 8px;
+        border-radius: 6px;
+        font-size: 0.68rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    /* Form styling */
+    .add-video-form {
+        background: linear-gradient(135deg, #1A2F35, #233E46);
+        border: 2px solid rgba(255, 75, 75, 0.15);
+        border-radius: 24px;
+        padding: 32px;
+        position: relative;
+    }
+    .add-video-form:focus-within {
+        border-color: rgba(255, 75, 75, 0.3);
+        box-shadow: 0 0 0 4px rgba(255, 75, 75, 0.08);
+    }
+
+    /* Empty state */
+    .empty-state {
+        text-align: center;
+        padding: 80px 24px;
+    }
+    .empty-state .icon-circle {
+        width: 80px;
+        height: 80px;
+        border-radius: 24px;
+        background: rgba(255, 75, 75, 0.1);
+        border: 2px solid rgba(255, 75, 75, 0.2);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 20px;
+    }
+
+    /* Loading spinner */
+    .submit-btn .spinner {
+        display: none;
+        will-change: transform;
+        animation: spin 0.8s linear infinite;
+    }
+    .submit-btn.loading .spinner { display: inline-block; }
+    .submit-btn.loading .btn-text { display: none; }
+    .submit-btn.loading {
+        pointer-events: none;
+        opacity: 0.85;
+    }
+    @keyframes spin {
+        from { transform: rotate(0deg); }
+        to   { transform: rotate(360deg); }
+    }
+
+    /* Progress bar */
+    #video-progress-bar-wrap {
+        position: fixed;
+        top: 0; left: 0; right: 0;
+        z-index: 9999;
+        height: 4px;
+        background: rgba(255,255,255,0.08);
+        display: none;
+    }
+    #video-progress-bar-wrap.active { display: block; }
+    #video-progress-bar {
+        height: 100%;
+        width: 0%;
+        background: linear-gradient(90deg, #FF4B4B, #ff8c8c);
+        border-radius: 2px;
+        transition: width 0.4s ease;
+        box-shadow: 0 0 8px rgba(255,75,75,0.6);
+    }
+    #video-progress-label {
+        position: fixed;
+        top: 10px; left: 50%;
+        transform: translateX(-50%);
+        background: rgba(26,47,53,0.95);
+        border: 1px solid rgba(255,75,75,0.3);
+        color: #fff;
+        font-size: 0.78rem;
+        font-weight: 800;
+        padding: 6px 18px;
+        border-radius: 20px;
+        z-index: 9999;
+        display: none;
+        white-space: nowrap;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+    }
+    #video-progress-label.active { display: block; }
+
+    /* Magic Effects */
+    .magic-glow {
+        position: absolute;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background: conic-gradient(from 0deg, transparent 0%, rgba(255, 75, 75, 0.1) 25%, transparent 50%, rgba(255, 75, 75, 0.1) 75%, transparent 100%);
+        animation: rotateGlow 10s linear infinite;
+        z-index: 0;
+        pointer-events: none;
+    }
+    
+    @keyframes rotateGlow {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+    }
+
+    @keyframes shimmer {
+        100% { transform: translateX(100%); }
+    }
+    
+    .add-video-form::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        border-radius: 24px;
+        box-shadow: inset 0 0 40px rgba(255, 75, 75, 0.05);
+        pointer-events: none;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+
+    <!-- Header -->
+    <div class="mb-8 animate-fade-in flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div class="flex items-center gap-3">
+            <div class="w-12 h-12 rounded-2xl bg-duo-red/10 border-2 border-duo-red/20 flex items-center justify-center">
+                <i class="ph-fill ph-youtube-logo text-2xl text-duo-red"></i>
+            </div>
+            <div>
+                <h1 class="text-2xl font-black text-white">Video Lessons</h1>
+                <p class="text-sm text-duo-text-dim font-semibold">Learn English through YouTube videos with AI quizzes</p>
+            </div>
+        </div>
+        <div>
+            <a href="{% url 'exams:video_room_join' %}" class="btn-duo-blue flex items-center gap-2">
+                <i class="ph-fill ph-users-three text-lg"></i> Join Session
+            </a>
+        </div>
+    </div>
+
+    <!-- Add New Video Form -->
+    <form method="post" class="add-video-form mb-10 relative overflow-hidden" id="add-video-form">
+        <div class="magic-glow"></div>
+        {% csrf_token %}
+        <div class="relative z-10">
+            <label class="block text-xs font-bold text-duo-text-dim uppercase tracking-wider mb-2">
+                <i class="ph-fill ph-magic-wand text-duo-red mr-1"></i> AI Video Analysis
+            </label>
+            
+            <div class="flex flex-col md:flex-row gap-4 mb-3">
+                <!-- YouTube URL -->
+                <div class="flex-grow relative">
+                    <i class="ph-fill ph-youtube-logo absolute left-4 top-1/2 -translate-y-1/2 text-duo-red text-xl"></i>
+                    <input type="url" name="youtube_url" required
+                           placeholder="Paste YouTube URL here..."
+                           class="!pl-12 !pr-4 !py-4 w-full bg-[#0F1A1E] border-2 border-[rgba(255,255,255,0.1)] focus:border-duo-red focus:ring-4 focus:ring-duo-red/20 text-white rounded-xl transition-all"
+                           id="input-youtube-url">
+                </div>
+
+                <!-- Submit -->
+                <div class="w-full md:w-auto flex-shrink-0">
+                    <button type="submit" class="btn-duo-red submit-btn w-full md:w-[180px] h-[58px] relative overflow-hidden group" id="btn-add-video">
+                        <span class="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-full group-hover:animate-shimmer"></span>
+                        <span class="btn-text flex items-center justify-center gap-2 text-lg">
+                            <i class="ph-fill ph-sparkle"></i> GENERATE
+                        </span>
+                        <svg class="spinner h-5 w-5" viewBox="0 0 24 24" fill="none">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <div class="text-xs text-duo-text-muted font-semibold flex flex-col gap-1">
+                <p>
+                    <i class="ph ph-info"></i>
+                    AI will magically detect the CEFR level, fetch subtitles, and generate a custom interactive quiz.
+                </p>
+                <p class="text-duo-red/80">
+                    <i class="ph-fill ph-warning-circle"></i>
+                    Note: The video must be at least 10 minutes long to generate enough questions.
+                </p>
+            </div>
+        </div>
+    </form>
+
+    {% if student_lessons %}
+    <div class="mb-10" id="student-lessons-container">
+        <h2 class="text-xl font-bold text-white mb-6 flex items-center gap-2">
+            <i class="ph-fill ph-user text-duo-blue"></i> Your Added Lessons
+        </h2>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {% for lesson in student_lessons %}
+            <div class="relative group animate-slide-up flex flex-col" style="animation-delay: {{ forloop.counter0 }}00ms" id="video-card-wrap-{{ lesson.id }}">
+                <a href="{% url 'exams:video_lesson_detail' lesson_id=lesson.id %}"
+                   class="video-card h-full"
+                   id="video-card-{{ lesson.id }}">
+                    <div class="thumb-wrapper">
+                        <img src="{{ lesson.thumbnail_url }}"
+                             alt="{{ lesson.title }}"
+                             loading="lazy"
+                             onerror="this.src='https://img.youtube.com/vi/default/hqdefault.jpg'">
+                        <div class="thumb-overlay">
+                            <div class="play-icon">
+                                <i class="ph-fill ph-play text-white text-xl ml-0.5"></i>
+                            </div>
+                        </div>
+                        <div class="cefr-badge text-duo-blue">{{ lesson.cefr_level }}</div>
+                        <div class="quiz-badge">
+                            <i class="ph-fill ph-question"></i>
+                            {{ lesson.quiz_count }} quiz{{ lesson.quiz_count|pluralize:"zes" }}
+                        </div>
+                    </div>
+                    <div class="p-5 flex flex-col flex-grow">
+                        <h3 class="font-bold text-white text-sm leading-snug mb-2 line-clamp-2">{{ lesson.title }}</h3>
+                        {% if lesson.topic_tags %}
+                        <div class="topic-tags mb-2">
+                            {% for tag in lesson.topic_tags %}<span class="topic-tag">{{ tag }}</span>{% endfor %}
+                        </div>
+                        {% endif %}
+                        <div class="flex items-center justify-between mt-auto">
+                            <span class="text-xs text-duo-text-muted font-semibold">
+                                <i class="ph ph-clock"></i>
+                                {{ lesson.created_at|timesince }} ago
+                            </span>
+                            {% if lesson.created_by %}
+                            <span class="text-xs text-duo-text-muted font-semibold">
+                                <i class="ph ph-user"></i>
+                                {{ lesson.created_by.first_name|default:lesson.created_by.username }}
+                            </span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </a>
+                <button onclick="deleteStudentLesson({{ lesson.id }})" 
+                        class="absolute top-3 left-3 z-10 w-9 h-9 flex items-center justify-center rounded-full bg-[#1A2F35]/80 hover:bg-duo-red border border-white/20 hover:border-duo-red text-white backdrop-blur-sm transition-all opacity-0 group-hover:opacity-100 shadow-lg"
+                        title="Delete lesson">
+                    <i class="ph-fill ph-trash text-lg"></i>
+                </button>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Video Lessons Grids -->
+    {% if admin_lessons %}
+    <div class="mb-10">
+        <h2 class="text-xl font-bold text-white mb-6 flex items-center gap-2">
+            <i class="ph-fill ph-star text-duo-red"></i> Official Lessons
+        </h2>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {% for lesson in admin_lessons %}
+            <a href="{% url 'exams:video_lesson_detail' lesson_id=lesson.id %}"
+               class="video-card h-full animate-slide-up"
+               style="animation-delay: {{ forloop.counter0 }}00ms"
+               id="video-card-{{ lesson.id }}">
+                <div class="thumb-wrapper">
+                    <img src="{{ lesson.thumbnail_url }}"
+                         alt="{{ lesson.title }}"
+                         loading="lazy"
+                         onerror="this.src='https://img.youtube.com/vi/default/hqdefault.jpg'">
+                    <div class="thumb-overlay">
+                        <div class="play-icon">
+                            <i class="ph-fill ph-play text-white text-xl ml-0.5"></i>
+                        </div>
+                    </div>
+                    <div class="cefr-badge text-duo-blue">{{ lesson.cefr_level }}</div>
+                    <div class="quiz-badge">
+                        <i class="ph-fill ph-question"></i>
+                        {{ lesson.quiz_count }} quiz{{ lesson.quiz_count|pluralize:"zes" }}
+                    </div>
+                </div>
+                <div class="p-5 flex flex-col flex-grow">
+                    <h3 class="font-bold text-white text-sm leading-snug mb-2 line-clamp-2">{{ lesson.title }}</h3>
+                    {% if lesson.topic_tags %}
+                    <div class="topic-tags mb-2">
+                        {% for tag in lesson.topic_tags %}<span class="topic-tag">{{ tag }}</span>{% endfor %}
+                    </div>
+                    {% endif %}
+                    <div class="flex items-center justify-between mt-auto">
+                        <span class="text-xs text-duo-text-muted font-semibold">
+                            <i class="ph ph-clock"></i>
+                            {{ lesson.created_at|timesince }} ago
+                        </span>
+                        {% if lesson.created_by %}
+                        <span class="text-xs text-duo-text-muted font-semibold">
+                            <i class="ph ph-user"></i>
+                            {{ lesson.created_by.first_name|default:lesson.created_by.username }}
+                        </span>
+                        {% endif %}
+                    </div>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    {% if not admin_lessons and not student_lessons %}
+    <div class="empty-state animate-fade-in">
+        <div class="icon-circle">
+            <i class="ph-fill ph-youtube-logo text-3xl text-duo-red"></i>
+        </div>
+        <h3 class="text-xl font-black text-white mb-2">No video lessons yet</h3>
+        <p class="text-duo-text-dim font-semibold text-sm max-w-md mx-auto">
+            Paste a YouTube video URL above to create your first interactive English lesson with AI-generated quizzes.
+        </p>
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<!-- Progress bar elements (outside main content so they stay fixed) -->
+<div id="video-progress-bar-wrap"><div id="video-progress-bar"></div></div>
+<div id="video-progress-label">&#9881; Generating lesson…</div>
+<script>
+(function () {
+    var bar   = document.getElementById('video-progress-bar');
+    var wrap  = document.getElementById('video-progress-bar-wrap');
+    var label = document.getElementById('video-progress-label');
+
+    document.getElementById('add-video-form').addEventListener('submit', async function (e) {
+        e.preventDefault();
+        
+        var url = document.getElementById('input-youtube-url').value.trim();
+        if (!url) return;
+
+        var btn = document.getElementById('btn-add-video');
+        btn.classList.add('loading');
+        wrap.classList.add('active');
+        label.classList.add('active');
+        bar.style.width = '2%';
+        label.textContent = 'Initializing...';
+
+        var formData = new FormData(this);
+
+        try {
+            const response = await fetch(window.location.href, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
+
+            const data = await response.json();
+            
+            if (!response.ok || data.error) {
+                throw new Error(data.error || 'Server error occurred');
+            }
+
+            const taskId = data.task_id;
+            
+            const pollInterval = setInterval(async () => {
+                try {
+                    const progressRes = await fetch(`/api/video-lesson/progress/${taskId}/`);
+                    if (!progressRes.ok) return;
+                    
+                    const progressData = await progressRes.json();
+                    
+                    if (progressData.error) {
+                        clearInterval(pollInterval);
+                        btn.classList.remove('loading');
+                        wrap.classList.remove('active');
+                        label.classList.remove('active');
+                        DuoModal.alert(progressData.error);
+                        return;
+                    }
+
+                    if (progressData.pct !== undefined) {
+                        bar.style.width = progressData.pct + '%';
+                        if (progressData.label) {
+                            label.textContent = progressData.label;
+                        }
+                    }
+
+                    if (progressData.lesson_id) {
+                        clearInterval(pollInterval);
+                        window.location.href = `/video-lesson/${progressData.lesson_id}/`;
+                    }
+                } catch (err) {
+                    console.error("Polling error:", err);
+                }
+            }, 1000);
+
+        } catch (error) {
+            btn.classList.remove('loading');
+            wrap.classList.remove('active');
+            label.classList.remove('active');
+            DuoModal.alert(error.message);
+        }
+    });
+})();
+
+async function deleteStudentLesson(lessonId) {
+    const confirmed = await DuoModal.confirm('Are you sure you want to delete this video lesson?');
+    if (!confirmed) return;
+    
+    fetch(`/api/video-lesson/${lessonId}/delete/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        }
+    })
+    .then(response => {
+        if (!response.ok) throw new Error('Network response was not ok');
+        return response.json();
+    })
+    .then(data => {
+        if (data.status === 'ok') {
+            const cardWrap = document.getElementById(`video-card-wrap-${lessonId}`);
+            if (cardWrap) {
+                cardWrap.style.transition = 'all 0.3s ease';
+                cardWrap.style.opacity = '0';
+                cardWrap.style.transform = 'scale(0.9)';
+                setTimeout(() => {
+                    cardWrap.remove();
+                    const container = document.getElementById('student-lessons-container');
+                    if (container) {
+                        const remaining = container.querySelectorAll('[id^="video-card-wrap-"]');
+                        if (remaining.length === 0) {
+                            container.style.transition = 'opacity 0.3s';
+                            container.style.opacity = '0';
+                            setTimeout(() => container.style.display = 'none', 300);
+                        }
+                    }
+                }, 300);
+            }
+        } else {
+            alert('Failed to delete lesson.');
+        }
+    })
+    .catch(err => {
+        console.error(err);
+        alert('An error occurred.');
+    });
+}
+</script>
+{% endblock %}

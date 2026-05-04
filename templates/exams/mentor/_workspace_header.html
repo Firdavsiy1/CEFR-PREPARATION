@@ -1,0 +1,86 @@
+<section class="mb-6 animate-fade-in">
+    <div class="relative overflow-hidden rounded-[28px] border border-white/10 bg-[linear-gradient(135deg,rgba(255,255,255,0.06),rgba(255,255,255,0.02))] shadow-[0_24px_80px_rgba(0,0,0,0.28)]">
+        <div class="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.08),transparent_35%)]"></div>
+        <div class="absolute -right-10 -top-14 h-40 w-40 rounded-full blur-3xl {% if accent == 'green' %}bg-duo-green/15{% elif accent == 'blue' %}bg-duo-blue/15{% elif accent == 'gold' %}bg-duo-gold/10{% elif accent == 'red' %}bg-duo-red/15{% else %}bg-duo-purple/15{% endif %}"></div>
+
+        <div class="relative p-5 sm:p-6 lg:p-7">
+            <div class="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
+                <div class="flex items-start gap-4 sm:gap-5">
+                    <div class="flex h-16 w-16 shrink-0 items-center justify-center rounded-[22px] border border-white/10 shadow-[0_12px_28px_rgba(0,0,0,0.2)] {% if accent == 'green' %}bg-duo-green text-duo-bg{% elif accent == 'blue' %}bg-duo-blue text-white{% elif accent == 'gold' %}bg-duo-gold text-[#3C3100]{% elif accent == 'red' %}bg-duo-red text-white{% else %}bg-duo-purple text-white{% endif %}">
+                        <i class="{{ icon }} text-[30px]"></i>
+                    </div>
+
+                    <div class="min-w-0">
+                        <div class="mb-3 flex flex-wrap items-center gap-2">
+                            <span class="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] font-black uppercase tracking-[0.18em] text-duo-text-dim">
+                                Mentor Workspace
+                            </span>
+                            {% if page_group == 'builder' %}
+                            <span class="rounded-full border border-duo-green/20 bg-duo-green/10 px-3 py-1 text-[11px] font-black uppercase tracking-[0.16em] text-duo-green">Builder</span>
+                            {% elif page_group == 'progress' %}
+                            <span class="rounded-full border border-duo-blue/20 bg-duo-blue/10 px-3 py-1 text-[11px] font-black uppercase tracking-[0.16em] text-duo-blue">Queue</span>
+                            {% elif page_group == 'danger' %}
+                            <span class="rounded-full border border-duo-red/20 bg-duo-red/10 px-3 py-1 text-[11px] font-black uppercase tracking-[0.16em] text-duo-red">Danger Zone</span>
+                            {% elif page_group == 'upload' %}
+                            <span class="rounded-full border border-duo-purple/20 bg-duo-purple/10 px-3 py-1 text-[11px] font-black uppercase tracking-[0.16em] text-duo-purple">Upload Hub</span>
+                            {% endif %}
+                        </div>
+
+                        <h1 class="text-2xl font-black tracking-tight text-white sm:text-3xl">{{ title }}</h1>
+                        <p class="mt-2 max-w-3xl text-sm font-semibold leading-relaxed text-duo-text-dim sm:text-[15px]">
+                            {{ subtitle }}
+                        </p>
+                    </div>
+                </div>
+
+                <div class="flex flex-wrap gap-2 xl:max-w-[420px] xl:justify-end">
+                    <a href="{% if request.user.profile.role == 'mentor' %}{% url 'exams:classroom_list' %}{% else %}{% url 'exams:mentor_dashboard' %}{% endif %}" class="rounded-2xl border border-white/10 bg-white/5 px-4 py-2.5 text-xs font-black uppercase tracking-[0.16em] text-white transition hover:border-white/20 hover:bg-white/10">
+                        Панель
+                    </a>
+                    <a href="{% url 'exams:mentor_upload' %}" class="rounded-2xl border border-duo-green/20 bg-duo-green/10 px-4 py-2.5 text-xs font-black uppercase tracking-[0.16em] text-duo-green transition hover:bg-duo-green/15">
+                        Upload Hub
+                    </a>
+                    {% if page_group == 'builder' %}
+                    <a href="#publish-panel" class="rounded-2xl border border-duo-blue/20 bg-duo-blue/10 px-4 py-2.5 text-xs font-black uppercase tracking-[0.16em] text-duo-blue transition hover:bg-duo-blue/15">
+                        Публикация
+                    </a>
+                    {% elif page_group == 'progress' %}
+                    <a href="#result-panel" class="rounded-2xl border border-duo-blue/20 bg-duo-blue/10 px-4 py-2.5 text-xs font-black uppercase tracking-[0.16em] text-duo-blue transition hover:bg-duo-blue/15">
+                        Статус
+                    </a>
+                    {% elif page_group == 'danger' %}
+                    <a href="{% url 'exams:mentor_dashboard' %}" class="rounded-2xl border border-duo-red/20 bg-duo-red/10 px-4 py-2.5 text-xs font-black uppercase tracking-[0.16em] text-duo-red transition hover:bg-duo-red/15">
+                        К списку тестов
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="mt-5 flex flex-wrap gap-2">
+                <a href="{% if request.user.profile.role == 'mentor' %}{% url 'exams:classroom_list' %}{% else %}{% url 'exams:mentor_dashboard' %}{% endif %}" class="rounded-full border px-4 py-2 text-xs font-black uppercase tracking-[0.14em] transition {% if page_group == 'dashboard' %}border-white/20 bg-white text-duo-bg{% else %}border-white/10 bg-white/5 text-duo-text-dim hover:border-white/20 hover:text-white{% endif %}">
+                    Dashboard
+                </a>
+                <a href="{% url 'exams:mentor_upload' %}" class="rounded-full border px-4 py-2 text-xs font-black uppercase tracking-[0.14em] transition {% if page_group == 'upload' %}border-duo-purple/20 bg-duo-purple text-white{% else %}border-white/10 bg-white/5 text-duo-text-dim hover:border-white/20 hover:text-white{% endif %}">
+                    Listening OCR
+                </a>
+                <a href="{% url 'exams:mentor_upload_reading' %}" class="rounded-full border px-4 py-2 text-xs font-black uppercase tracking-[0.14em] transition {% if page_group == 'upload-reading' %}border-duo-blue/20 bg-duo-blue text-white{% else %}border-white/10 bg-white/5 text-duo-text-dim hover:border-white/20 hover:text-white{% endif %}">
+                    Reading OCR
+                </a>
+                <a href="{% url 'exams:mentor_upload_writing' %}" class="rounded-full border px-4 py-2 text-xs font-black uppercase tracking-[0.14em] transition {% if page_group == 'upload-writing' %}border-duo-gold/20 bg-duo-gold text-[#3C3100]{% else %}border-white/10 bg-white/5 text-duo-text-dim hover:border-white/20 hover:text-white{% endif %}">
+                    Writing OCR
+                </a>
+                <a href="{% url 'exams:mentor_upload_speaking' %}" class="rounded-full border px-4 py-2 text-xs font-black uppercase tracking-[0.14em] transition {% if page_group == 'upload-speaking' %}border-duo-purple/20 bg-duo-purple text-white{% else %}border-white/10 bg-white/5 text-duo-text-dim hover:border-white/20 hover:text-white{% endif %}">
+                    Speaking OCR
+                </a>
+                <a href="{% url 'exams:mentor_video_lessons' %}" class="rounded-full border px-4 py-2 text-xs font-black uppercase tracking-[0.14em] transition {% if page_group == 'video-lessons' %}border-duo-red/20 bg-duo-red text-white{% else %}border-white/10 bg-white/5 text-duo-text-dim hover:border-white/20 hover:text-white{% endif %}">
+                    Video Lessons
+                </a>
+                {% if user_is_admin %}
+                <a href="{% url 'exams:mentor_users_list' %}" class="rounded-full border px-4 py-2 text-xs font-black uppercase tracking-[0.14em] transition {% if page_group == 'users' %}border-duo-blue/20 bg-duo-blue text-white{% else %}border-white/10 bg-white/5 text-duo-text-dim hover:border-white/20 hover:text-white{% endif %}">
+                    Пользователи
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</section>

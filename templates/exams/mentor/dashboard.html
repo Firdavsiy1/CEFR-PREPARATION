@@ -5,44 +5,108 @@
 
 {% block content %}
 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    {% include "exams/mentor/_workspace_header.html" with icon="ph-fill ph-crown" accent="purple" title="Панель ментора" subtitle="Загрузка, редактирование и публикация тестов." page_group="dashboard" %}
 
-    <!-- Header -->
-    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8 animate-fade-in">
-        <div class="flex items-center gap-4">
-            <div class="w-14 h-14 rounded-2xl flex items-center justify-center bg-duo-purple shadow-[0_4px_0_#A855F7] animate-bounce-in">
-                <i class="ph-fill ph-crown text-white text-2xl"></i>
+    <div class="grid gap-4 mb-8 xl:grid-cols-[1.15fr,0.85fr] animate-slide-up" style="animation-delay: 0.05s;">
+        <div class="card-duo p-5">
+            <div class="flex items-center justify-between gap-4">
+                <div>
+                    <p class="text-xs font-extrabold uppercase tracking-[0.18em] text-duo-text-muted">Быстрый старт</p>
+                    <h2 class="mt-2 text-xl font-black text-white">Создание тестов</h2>
+                </div>
+
+                <form method="POST" action="{% url 'exams:mentor_create_test' %}" class="hidden sm:flex items-center gap-2">
+                    {% csrf_token %}
+                    <select name="test_type" id="test-type-select" class="h-[44px] rounded-2xl border-2 border-duo-border bg-duo-surface px-4 text-sm font-bold text-white outline-none focus:border-duo-green cursor-pointer">
+                        <option value="listening">Listening</option>
+                        <option value="reading">Reading</option>
+                        <option value="writing">Writing</option>
+                        <option value="speaking">Speaking</option>
+                    </select>
+                    <button type="submit" class="btn-duo-outline text-sm !py-2.5 h-[44px]">
+                        <i class="ph-bold ph-plus text-lg"></i>
+                        <span data-i18n="mnt_create_test_manual">Создать черновик</span>
+                    </button>
+                </form>
             </div>
-            <div>
-                <h1 class="text-2xl font-black text-white tracking-tight" data-i18n="mnt_panel_title">Панель Ментора</h1>
-                <p class="text-duo-text-dim text-sm font-semibold" data-i18n="mnt_panel_subtitle">
-                    Управляй тестами, загружай новые и контролируй доступ
-                </p>
+
+            <div class="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                <a href="{% url 'exams:mentor_upload' %}" class="group rounded-2xl border border-duo-blue/20 bg-duo-blue/10 p-4 transition hover:-translate-y-0.5 hover:border-duo-blue/35 hover:bg-duo-blue/15">
+                    <div class="flex items-center gap-2 mb-2">
+                        <i class="ph-fill ph-headphones text-duo-blue text-base"></i>
+                        <p class="text-xs font-extrabold uppercase tracking-[0.16em] text-duo-blue">Listening</p>
+                    </div>
+                    <p class="text-sm font-black text-white">Загрузить OCR</p>
+                    <p class="mt-1 text-xs font-semibold text-duo-text-dim">ZIP + mixed archive</p>
+                </a>
+                <a href="{% url 'exams:mentor_upload_reading' %}" class="group rounded-2xl border border-duo-green/20 bg-duo-green/10 p-4 transition hover:-translate-y-0.5 hover:border-duo-green/35 hover:bg-duo-green/15">
+                    <div class="flex items-center gap-2 mb-2">
+                        <i class="ph-fill ph-book-open-text text-duo-green text-base"></i>
+                        <p class="text-xs font-extrabold uppercase tracking-[0.16em] text-duo-green">Reading</p>
+                    </div>
+                    <p class="text-sm font-black text-white">Загрузить OCR</p>
+                    <p class="mt-1 text-xs font-semibold text-duo-text-dim">Passage + answers</p>
+                </a>
+                <a href="{% url 'exams:mentor_upload_writing' %}" class="group rounded-2xl border border-duo-gold/20 bg-duo-gold/10 p-4 transition hover:-translate-y-0.5 hover:border-duo-gold/35 hover:bg-duo-gold/15">
+                    <div class="flex items-center gap-2 mb-2">
+                        <i class="ph-fill ph-pencil-simple text-duo-gold text-base"></i>
+                        <p class="text-xs font-extrabold uppercase tracking-[0.16em] text-duo-gold">Writing</p>
+                    </div>
+                    <p class="text-sm font-black text-white">Загрузить OCR</p>
+                    <p class="mt-1 text-xs font-semibold text-duo-text-dim">Фото задания</p>
+                </a>
+                <a href="{% url 'exams:mentor_upload_speaking' %}" class="group rounded-2xl border border-duo-purple/20 bg-duo-purple/10 p-4 transition hover:-translate-y-0.5 hover:border-duo-purple/35 hover:bg-duo-purple/15">
+                    <div class="flex items-center gap-2 mb-2">
+                        <i class="ph-fill ph-microphone text-duo-purple text-base"></i>
+                        <p class="text-xs font-extrabold uppercase tracking-[0.16em] text-duo-purple">Speaking</p>
+                    </div>
+                    <p class="text-sm font-black text-white">Загрузить OCR</p>
+                    <p class="mt-1 text-xs font-semibold text-duo-text-dim">Фото страниц</p>
+                </a>
+                <a href="{% url 'exams:mentor_video_lessons' %}" class="group rounded-2xl border border-duo-red/20 bg-duo-red/10 p-4 transition hover:-translate-y-0.5 hover:border-duo-red/35 hover:bg-duo-red/15">
+                    <div class="flex items-center gap-2 mb-2">
+                        <i class="ph-fill ph-youtube-logo text-duo-red text-base"></i>
+                        <p class="text-xs font-extrabold uppercase tracking-[0.16em] text-duo-red">Video</p>
+                    </div>
+                    <p class="text-sm font-black text-white">Video Lessons</p>
+                    <p class="mt-1 text-xs font-semibold text-duo-text-dim">YouTube + AI Quiz</p>
+                </a>
             </div>
         </div>
 
-        <div class="flex flex-col sm:flex-row items-center gap-3">
-            <form method="POST" action="{% url 'exams:mentor_create_test' %}" class="flex items-center gap-2">
-                {% csrf_token %}
-                <select name="test_type" class="text-sm bg-duo-surface border-2 border-duo-border rounded-xl px-3 py-2 text-white outline-none focus:border-duo-green cursor-pointer h-[42px] font-bold">
-                    <option value="listening">Listening</option>
-                    <option value="reading">Reading</option>
-                    <option value="writing">Writing</option>
-                    <option value="speaking">Speaking</option>
-                </select>
-                <button type="submit" class="btn-duo-outline text-sm !py-2 h-[42px]">
-                    <i class="ph-bold ph-plus text-lg"></i>
-                    <span data-i18n="mnt_create_test_manual">Создать</span>
-                </button>
-            </form>
-            <a href="{% url 'exams:mentor_upload' %}" id="btn-upload-test" class="btn-duo-green text-sm !py-2 h-[42px]">
-                <i class="ph-fill ph-upload-simple text-lg"></i>
-                <span data-i18n="mnt_upload_test">Загрузить архив</span>
-            </a>
+        <div class="card-duo p-5">
+            <div class="flex items-center justify-between gap-3">
+                <div>
+                    <p class="text-xs font-extrabold uppercase tracking-[0.18em] text-duo-text-muted">Операционный статус</p>
+                    <h2 class="mt-2 text-xl font-black text-white">Фоновая очередь</h2>
+                </div>
+                <span class="rounded-full border border-duo-blue/20 bg-duo-blue/10 px-3 py-1 text-xs font-black uppercase tracking-[0.16em] text-duo-blue">{{ active_tasks|length }} active</span>
+            </div>
+
+            {% if active_tasks %}
+            <div class="mt-4 space-y-3">
+                {% for task in active_tasks %}
+                <a href="{% url 'exams:mentor_task_progress' task.id %}" class="block rounded-2xl border border-white/10 bg-white/5 p-4 transition hover:border-white/20 hover:bg-white/10">
+                    <div class="flex items-start justify-between gap-3">
+                        <div>
+                            <p class="text-sm font-black text-white">{{ task.test_name }}</p>
+                            <p class="mt-1 text-xs font-semibold text-duo-text-dim">{{ task.stage }}</p>
+                        </div>
+                        <span class="rounded-full border border-duo-blue/20 bg-duo-blue/10 px-2.5 py-1 text-xs font-black text-duo-blue">{{ task.progress }}%</span>
+                    </div>
+                </a>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="mt-4 rounded-2xl border border-dashed border-white/10 bg-white/[0.03] p-5">
+                <p class="text-sm font-black text-white">Активных задач сейчас нет</p>
+            </div>
+            {% endif %}
         </div>
     </div>
 
     <!-- Stats Cards -->
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8 animate-slide-up" style="animation-delay: 0.1s;">
+    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-8 animate-slide-up" style="animation-delay: 0.1s;">
         <div class="card-duo p-5 relative overflow-hidden">
             <div class="absolute top-0 right-0 w-20 h-20 bg-duo-blue/5 rounded-bl-full"></div>
             <div class="flex items-center gap-3 relative">
@@ -62,7 +126,7 @@
                     <i class="ph-fill ph-eye text-duo-green text-lg"></i>
                 </div>
                 <div>
-                    <p class="text-2xl font-black text-white" id="active-count">—</p>
+                    <p class="text-2xl font-black text-white" id="active-count">{{ active_count }}</p>
                     <p class="text-xs text-duo-text-muted uppercase tracking-widest font-bold" data-i18n="mnt_active">Активных</p>
                 </div>
             </div>
@@ -74,8 +138,20 @@
                     <i class="ph-fill ph-chat-centered-dots text-duo-purple text-lg"></i>
                 </div>
                 <div>
-                    <p class="text-2xl font-black text-white" id="total-questions">—</p>
+                    <p class="text-2xl font-black text-white" id="total-questions">{{ total_questions }}</p>
                     <p class="text-xs text-duo-text-muted uppercase tracking-widest font-bold" data-i18n="mnt_questions">Вопросов</p>
+                </div>
+            </div>
+        </div>
+        <div class="card-duo p-5 relative overflow-hidden">
+            <div class="absolute top-0 right-0 w-20 h-20 bg-duo-gold/5 rounded-bl-full"></div>
+            <div class="flex items-center gap-3 relative">
+                <div class="w-11 h-11 rounded-2xl flex items-center justify-center bg-duo-gold/15 border-2 border-duo-gold/25">
+                    <i class="ph-fill ph-clock-countdown text-duo-gold text-lg"></i>
+                </div>
+                <div>
+                    <p class="text-2xl font-black text-white">{{ active_tasks|length }}</p>
+                    <p class="text-xs text-duo-text-muted uppercase tracking-widest font-bold">В очереди</p>
                 </div>
             </div>
         </div>
@@ -114,25 +190,55 @@
 
             {% if tests %}
             <div class="overflow-x-auto">
+                <form method="post" id="bulk-actions-form">
+                    {% csrf_token %}
+                    <!-- Bulk toolbar: compact by default, expands when items are selected -->
+                    <div class="border-b-2 border-duo-border bg-duo-surface/40 px-6 py-3" id="bulk-toolbar">
+                        <div class="flex items-center justify-between gap-3">
+                            <label class="flex items-center gap-2.5 text-sm font-bold text-duo-text-muted cursor-pointer select-none hover:text-white transition-colors">
+                                <input type="checkbox" id="select-all-tests" class="h-4 w-4 rounded border-duo-border bg-duo-surface text-duo-green focus:ring-duo-green">
+                                <span>Выбрать все</span>
+                            </label>
+                            <div class="flex items-center gap-2" id="bulk-actions-panel" style="display:none !important">
+                                <span class="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-xs font-black text-duo-text-dim" id="bulk-selected-count">0</span>
+                                <select name="bulk_action" id="bulk-action-select" class="h-[36px] rounded-xl border-2 border-duo-border bg-duo-surface px-3 text-xs font-bold text-white outline-none focus:border-duo-green cursor-pointer">
+                                    <option value="">Действие...</option>
+                                    <option value="publish">✓ Опубликовать</option>
+                                    <option value="unpublish">✕ Снять с публикации</option>
+                                    <option value="duplicate">⎘ Дублировать</option>
+                                    <option value="hide">⊘ Скрыть</option>
+                                </select>
+                                <button type="submit" id="bulk-submit-btn" class="btn-duo-green text-xs h-[36px] !py-0 opacity-50 pointer-events-none">
+                                    <i class="ph-bold ph-lightning"></i>
+                                    Применить
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 <table class="w-full" id="tests-table">
                     <thead>
                         <tr class="border-b-2 border-duo-border/50 text-xs text-duo-text-muted uppercase tracking-widest">
+                            <th class="px-4 py-3 text-center font-extrabold w-10">
+                                <input type="checkbox" id="select-all-tests-head" class="h-4 w-4 rounded border-duo-border bg-duo-surface text-duo-green focus:ring-duo-green">
+                            </th>
                             <th class="px-6 py-3 text-left font-extrabold" data-i18n="mnt_col_name">Название</th>
-                            <th class="px-6 py-3 text-left font-extrabold" data-i18n="mnt_col_type">Тип</th>
                             {% if is_superuser %}<th class="px-6 py-3 text-left font-extrabold" data-i18n="mnt_col_author">Автор</th>{% endif %}
-                            <th class="px-6 py-3 text-center font-extrabold" data-i18n="mnt_col_parts">Части</th>
-                            <th class="px-6 py-3 text-center font-extrabold" data-i18n="mnt_col_questions">Вопросы</th>
+                            <th class="px-4 py-3 text-center font-extrabold" data-i18n="mnt_col_parts">Части</th>
+                            <th class="px-4 py-3 text-center font-extrabold" data-i18n="mnt_col_questions">Вопросы</th>
                             <th class="px-6 py-3 text-center font-extrabold" data-i18n="mnt_col_status">Статус</th>
-                            <th class="px-6 py-3 text-center font-extrabold" data-i18n="mnt_col_date">Дата</th>
+                            <th class="px-4 py-3 text-center font-extrabold hidden lg:table-cell" data-i18n="mnt_col_date">Создан</th>
                             <th class="px-6 py-3 text-right font-extrabold" data-i18n="mnt_col_actions">Действия</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y-2 divide-duo-border/30">
                         {% for test in tests %}
                         <tr class="group hover:bg-duo-surface-2/30 transition-colors test-row" data-name="{{ test.name|lower }}" data-type="{{ test.test_type }}">
+                            <td class="px-4 py-4 text-center">
+                                <input type="checkbox" name="selected_tests" value="{{ test.id }}" class="bulk-test-checkbox h-4 w-4 rounded border-duo-border bg-duo-surface text-duo-green focus:ring-duo-green">
+                            </td>
                             <td class="px-6 py-4">
                                 <div class="flex items-center gap-3">
-                                    <div class="w-9 h-9 rounded-xl flex items-center justify-center
+                                    <div class="shrink-0 w-9 h-9 rounded-xl flex items-center justify-center
                                                 {% if test.test_type == 'listening' %}bg-duo-blue/15 border-2 border-duo-blue/25
                                                 {% elif test.test_type == 'reading' %}bg-duo-green/15 border-2 border-duo-green/25
                                                 {% elif test.test_type == 'writing' %}bg-duo-gold/15 border-2 border-duo-gold/25
@@ -148,18 +254,16 @@
                                         <i class="ph-fill ph-microphone text-duo-purple text-base"></i>
                                         {% endif %}
                                     </div>
-                                    <span class="text-sm font-bold text-white group-hover:text-duo-green transition-colors">{{ test.name }}</span>
+                                    <div>
+                                        <span class="text-sm font-bold text-white group-hover:text-duo-green transition-colors leading-tight block">{{ test.name }}</span>
+                                        <span class="text-[11px] font-semibold
+                                            {% if test.test_type == 'listening' %}text-duo-blue
+                                            {% elif test.test_type == 'reading' %}text-duo-green
+                                            {% elif test.test_type == 'writing' %}text-duo-gold
+                                            {% elif test.test_type == 'speaking' %}text-duo-purple
+                                            {% else %}text-duo-text-muted{% endif %}">{{ test.get_test_type_display }}</span>
+                                    </div>
                                 </div>
-                            </td>
-                            <td class="px-6 py-4">
-                                <span class="badge-duo
-                                    {% if test.test_type == 'listening' %}bg-duo-blue/15 text-duo-blue border border-duo-blue/25
-                                    {% elif test.test_type == 'reading' %}bg-duo-green/15 text-duo-green border border-duo-green/25
-                                    {% elif test.test_type == 'writing' %}bg-duo-gold/15 text-duo-gold border border-duo-gold/25
-                                    {% elif test.test_type == 'speaking' %}bg-duo-purple/15 text-duo-purple border border-duo-purple/25
-                                    {% endif %}">
-                                    {{ test.get_test_type_display }}
-                                </span>
                             </td>
                             {% if is_superuser %}
                             <td class="px-6 py-4 text-sm text-duo-text-dim font-semibold">
@@ -173,10 +277,10 @@
                                 {% endif %}
                             </td>
                             {% endif %}
-                            <td class="px-6 py-4 text-center">
-                                <span class="text-sm text-white font-black">{{ test.parts.count }}</span>
+                            <td class="px-4 py-4 text-center">
+                                <span class="text-sm text-white font-black">{{ test.num_parts }}</span>
                             </td>
-                            <td class="px-6 py-4 text-center">
+                            <td class="px-4 py-4 text-center">
                                 <span class="text-sm text-white font-black test-q-count">{{ test.total_questions }}</span>
                             </td>
                             <td class="px-6 py-4 text-center">
@@ -187,11 +291,42 @@
                                     {% if test.is_active %}<span data-i18n="mnt_status_active">Активен</span>{% else %}<span data-i18n="mnt_status_draft">Черновик</span>{% endif %}
                                 </button>
                             </td>
-                            <td class="px-6 py-4 text-center text-xs text-duo-text-muted font-bold">
+                            <td class="px-4 py-4 text-center text-xs text-duo-text-muted font-bold hidden lg:table-cell">
                                 {{ test.created_at|date:"d M Y" }}
                             </td>
                             <td class="px-6 py-4">
-                                <div class="flex items-center justify-end gap-2">
+                                <div class="flex items-center justify-end gap-1.5">
+                                    <a href="{% url 'exams:mentor_test_preview' test.id %}" target="_blank" rel="noopener"
+                                       class="flex items-center justify-center w-8 h-8 rounded-xl
+                                              bg-white/5 text-duo-text-dim border border-white/10
+                                              hover:bg-white/10 hover:text-white transition-all"
+                                       title="Превью для студента">
+                                        <i class="ph-fill ph-eye text-sm"></i>
+                                    </a>
+                                    {% if test.test_type == 'speaking' %}
+                                    <a href="{% url 'exams:mentor_speaking_builder' test.id %}"
+                                       class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold
+                                              {% if test.has_unvalidated_speaking %}bg-duo-gold/20 text-duo-gold border border-duo-gold/35 hover:bg-duo-gold/30{% else %}bg-duo-blue/15 text-duo-blue border border-duo-blue/25 hover:bg-duo-blue/25{% endif %}
+                                              transition-all"
+                                       title="{% if test.has_unvalidated_speaking %}Требуется валидация частей в Speaking Builder{% else %}Редактировать{% endif %}">
+                                        {% if test.has_unvalidated_speaking %}
+                                        <i class="ph-fill ph-warning"></i>
+                                        <span>Builder!</span>
+                                        {% else %}
+                                        <i class="ph-fill ph-pencil-simple"></i>
+                                        <span data-i18n="mnt_btn_edit">Изменить</span>
+                                        {% endif %}
+                                    </a>
+                                    {% elif test.test_type == 'reading' %}
+                                    <a href="{% url 'exams:mentor_reading_builder' test.id %}"
+                                       class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold
+                                              bg-duo-blue/15 text-duo-blue border border-duo-blue/25
+                                              hover:bg-duo-blue/25 transition-all"
+                                       title="Редактировать">
+                                        <i class="ph-fill ph-pencil-simple"></i>
+                                        <span data-i18n="mnt_btn_edit">Изменить</span>
+                                    </a>
+                                    {% else %}
                                     <a href="{% url 'exams:mentor_test_builder' test.id %}"
                                        class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold
                                               bg-duo-blue/15 text-duo-blue border border-duo-blue/25
@@ -200,8 +335,13 @@
                                         <i class="ph-fill ph-pencil-simple"></i>
                                         <span data-i18n="mnt_btn_edit">Изменить</span>
                                     </a>
+                                    {% endif %}
                                     <a href="{% url 'exams:mentor_delete_test' test.id %}"
-                                       class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold
+                                       data-delete-url="{% url 'exams:mentor_delete_test' test.id %}"
+                                       data-test-name="{{ test.name|escapejs }}"
+                                       data-clone-count="{{ test.cloned_tests.count }}"
+                                       data-clone-names="{% for c in test.cloned_tests.all %}{{ c.name|escapejs }}{% if not forloop.last %}||{% endif %}{% endfor %}"
+                                       class="btn-delete-test flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold
                                               bg-duo-red/15 text-duo-red border border-duo-red/25
                                               hover:bg-duo-red/25 transition-all"
                                        title="Удалить">
@@ -214,6 +354,7 @@
                         {% endfor %}
                     </tbody>
                 </table>
+                </form>
             </div>
             {% else %}
             <!-- Empty state -->
@@ -223,7 +364,7 @@
                 </div>
                 <h3 class="text-lg font-black text-white mb-2" data-i18n="mnt_no_tests_title">Тестов пока нет</h3>
                 <p class="text-sm text-duo-text-dim font-semibold mb-6" data-i18n="mnt_no_tests_desc">Загрузите ваш первый CEFR тест</p>
-                <a href="{% url 'exams:mentor_upload' %}" class="btn-duo-green">
+                <a href="{% url 'exams:mentor_upload' %}" id="btn-upload-first-test" class="btn-duo-green">
                     <i class="ph-fill ph-upload-simple"></i>
                     <span data-i18n="mnt_upload_first">Загрузить первый тест</span>
                 </a>
@@ -232,29 +373,110 @@
         </div>
     </div>
 
+    <div class="mt-8 animate-slide-up" style="animation-delay: 0.25s;">
+        <div class="card-duo p-5">
+            <div class="flex items-center justify-between gap-3">
+                <div>
+                    <p class="text-xs font-extrabold uppercase tracking-[0.18em] text-duo-text-muted">Task history</p>
+                    <h2 class="mt-2 text-xl font-black text-white">Недавние OCR и ingestion задачи</h2>
+                </div>
+                <span class="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-black uppercase tracking-[0.16em] text-duo-text-dim">{{ recent_tasks|length }} recent</span>
+            </div>
+
+            {% if recent_tasks %}
+            <div class="mt-5 grid gap-3 lg:grid-cols-2">
+                {% for task in recent_tasks %}
+                <a href="{% url 'exams:mentor_task_progress' task.id %}" class="rounded-2xl border border-white/10 bg-white/[0.03] p-4 transition hover:border-white/20 hover:bg-white/[0.06]">
+                    <div class="flex items-start justify-between gap-3">
+                        <div>
+                            <p class="text-sm font-black text-white">{{ task.test_name }}</p>
+                            <p class="mt-1 text-xs font-semibold text-duo-text-dim">{{ task.stage }}</p>
+                        </div>
+                        <span class="rounded-full px-3 py-1 text-[11px] font-black uppercase tracking-[0.16em] {% if task.status == 'completed' %}border border-duo-green/20 bg-duo-green/10 text-duo-green{% elif task.status == 'failed' %}border border-red-400/20 bg-red-500/10 text-red-200{% else %}border border-duo-blue/20 bg-duo-blue/10 text-duo-blue{% endif %}">{{ task.status }}</span>
+                    </div>
+                    <div class="mt-4 flex items-center justify-between gap-3 text-xs font-bold text-duo-text-dim">
+                        <span>{{ task.created_at|date:"d M Y H:i" }}</span>
+                        <span>{{ task.progress }}%</span>
+                    </div>
+                </a>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="mt-5 rounded-2xl border border-dashed border-white/10 bg-white/[0.03] p-5">
+                <p class="text-sm font-black text-white">История задач пока пуста</p>
+                <p class="mt-2 text-sm font-semibold text-duo-text-dim">После первых OCR/ingestion запусков здесь появятся completed, failed и active записи.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+</div>
+
+<!-- ── Delete confirmation modal ── -->
+<div id="delete-modal"
+     class="fixed inset-0 z-50 flex items-center justify-center p-4"
+     style="display:none; background:rgba(0,0,0,0.7); backdrop-filter:blur(4px);"
+     aria-modal="true" role="dialog" aria-labelledby="delete-modal-title">
+    <div class="w-full max-w-md card-duo !border-duo-red/30 overflow-hidden animate-fade-in">
+        <div class="border-b-2 border-duo-red/20 bg-duo-red/5 px-6 py-4 flex items-center justify-between gap-3">
+            <div>
+                <p class="text-xs font-extrabold uppercase tracking-[0.16em] text-duo-red">Danger zone</p>
+                <p class="mt-1 text-base font-black text-white" id="delete-modal-title">Удалить тест?</p>
+            </div>
+            <button id="delete-modal-close" class="w-8 h-8 rounded-xl flex items-center justify-center bg-white/5 hover:bg-white/10 text-duo-text-muted hover:text-white transition-all">
+                <i class="ph-bold ph-x text-sm"></i>
+            </button>
+        </div>
+        <div class="p-6 space-y-4">
+            <div class="card-duo p-4 flex items-center gap-3">
+                <div class="w-9 h-9 rounded-xl bg-duo-red/15 flex items-center justify-center flex-shrink-0 border border-duo-red/25">
+                    <i class="ph-fill ph-exam text-duo-red text-base"></i>
+                </div>
+                <p class="text-sm font-bold text-white truncate" id="delete-modal-test-name"></p>
+            </div>
+            <div class="rounded-2xl border border-duo-gold/30 bg-duo-gold/5 p-3 flex items-start gap-2.5">
+                <i class="ph-fill ph-warning text-duo-gold mt-0.5 flex-shrink-0"></i>
+                <p class="text-xs text-duo-text-dim font-semibold">Тест будет снят с публикации и скрыт от учеников. История попыток сохранится.</p>
+            </div>
+            <div id="delete-modal-clones" class="rounded-2xl border border-duo-red/20 bg-duo-red/5 p-4 space-y-3" style="display:none">
+                <div class="flex items-center gap-2">
+                    <i class="ph-fill ph-copy text-duo-red text-sm"></i>
+                    <p class="text-xs font-extrabold text-duo-red" id="delete-modal-clones-title">Найдены клонированные части</p>
+                </div>
+                <ul id="delete-modal-clones-list" class="space-y-1 max-h-32 overflow-y-auto pr-1"></ul>
+                <label class="flex items-center gap-2.5 cursor-pointer select-none group">
+                    <input type="checkbox" id="delete-modal-clones-cb"
+                           class="h-4 w-4 rounded border-duo-border bg-duo-surface text-duo-red focus:ring-duo-red">
+                    <span class="text-sm font-bold text-white group-hover:text-duo-red transition-colors" id="delete-modal-clones-label">
+                        Удалить клонированные части тоже
+                    </span>
+                </label>
+            </div>
+        </div>
+        <div class="px-6 pb-6 flex items-center justify-between gap-3">
+            <button id="delete-modal-cancel" class="btn-duo-outline text-sm">
+                <span>Отмена</span>
+            </button>
+            <button id="delete-modal-confirm" class="btn-duo-red text-sm">
+                <i class="ph-fill ph-trash text-base"></i>
+                <span>Удалить тест</span>
+            </button>
+        </div>
+    </div>
 </div>
 {% endblock %}
 
 {% block extra_scripts %}
 <script>
-    // ----- Compute stats -----
-    document.addEventListener('DOMContentLoaded', () => {
-        const rows = document.querySelectorAll('.test-row');
+    // ----- Stats: server-rendered, only recount active on toggle -----
+    function recomputeActiveCount() {
         let activeCount = 0;
-        let totalQ = 0;
-
-        rows.forEach(row => {
-            const badge = row.querySelector('.status-badge');
-            if (badge && badge.dataset.active === 'true') activeCount++;
-            const qEl = row.querySelector('.test-q-count');
-            if (qEl) totalQ += parseInt(qEl.textContent || '0', 10);
+        document.querySelectorAll('.status-badge').forEach(b => {
+            if (b.dataset.active === 'true') activeCount++;
         });
-
-        const acEl = document.getElementById('active-count');
-        const tqEl = document.getElementById('total-questions');
-        if (acEl) acEl.textContent = activeCount;
-        if (tqEl) tqEl.textContent = totalQ;
-    });
+        const el = document.getElementById('active-count');
+        if (el) el.textContent = activeCount;
+    }
 
     // ----- Search & Filters -----
     const searchInput = document.getElementById('search-tests');
@@ -271,6 +493,7 @@
             
             row.style.display = (matchesSearch && matchesCategory) ? '' : 'none';
         });
+        updateBulkSelectionState();
     }
 
     if (searchInput) {
@@ -294,19 +517,129 @@
     });
 
     // ----- Dynamic Upload Link based on selected category -----
-    const testTypeSelect = document.querySelector('select[name="test_type"]');
+    const UPLOAD_URLS = {
+        listening: '{% url "exams:mentor_upload" %}',
+        reading:   '{% url "exams:mentor_upload_reading" %}',
+        writing:   '{% url "exams:mentor_upload_writing" %}',
+        speaking:  '{% url "exams:mentor_upload_speaking" %}',
+    };
+
+    const UPLOAD_LABELS = {
+        listening: 'Загрузить тест',
+        reading: 'Загрузить тест',
+        writing: 'Загрузить тест',
+        speaking: 'Загрузить тест',
+    };
+
+    const testTypeSelect = document.getElementById('test-type-select');
     const uploadBtn = document.getElementById('btn-upload-test');
+    const emptyUploadBtn = document.getElementById('btn-upload-first-test');
     if (testTypeSelect && uploadBtn) {
-        testTypeSelect.addEventListener('change', (e) => {
-            if (e.target.value === 'writing') {
-                uploadBtn.href = '/mentor/upload-writing/';
-            } else {
-                uploadBtn.href = '/mentor/upload/';
+        function syncUploadBtn() {
+            const type = testTypeSelect.value;
+            uploadBtn.href = UPLOAD_URLS[type] || UPLOAD_URLS.listening;
+            if (emptyUploadBtn) {
+                emptyUploadBtn.href = UPLOAD_URLS[type] || UPLOAD_URLS.listening;
+            }
+
+            const uploadLabel = uploadBtn.querySelector('span');
+            if (uploadLabel) {
+                uploadLabel.textContent = UPLOAD_LABELS[type] || UPLOAD_LABELS.listening;
+            }
+        }
+        testTypeSelect.addEventListener('change', syncUploadBtn);
+        syncUploadBtn(); // set on page load
+    }
+
+    // ----- Delete modal logic -----
+    const deleteModal    = document.getElementById('delete-modal');
+    const modalTestName  = document.getElementById('delete-modal-test-name');
+    const modalClones    = document.getElementById('delete-modal-clones');
+    const modalClonesTitle  = document.getElementById('delete-modal-clones-title');
+    const modalClonesLabel  = document.getElementById('delete-modal-clones-label');
+    const modalClonesList   = document.getElementById('delete-modal-clones-list');
+    const modalClonesCb     = document.getElementById('delete-modal-clones-cb');
+    const modalConfirmBtn   = document.getElementById('delete-modal-confirm');
+    const modalCancelBtn    = document.getElementById('delete-modal-cancel');
+    const modalCloseBtn     = document.getElementById('delete-modal-close');
+
+    let _pendingDeleteBtn = null;
+
+    function openDeleteModal(btn) {
+        _pendingDeleteBtn = btn;
+        const testName   = btn.dataset.testName || 'этот тест';
+        const cloneCount = parseInt(btn.dataset.cloneCount || '0', 10);
+        const cloneNames = cloneCount > 0 ? (btn.dataset.cloneNames || '').split('||').filter(Boolean) : [];
+
+        modalTestName.textContent = testName;
+        modalClonesCb.checked = false;
+
+        if (cloneCount > 0) {
+            modalClones.style.display = '';
+            modalClonesTitle.textContent = `Клонированных частей: ${cloneCount}`;
+            modalClonesLabel.textContent = `Удалить все ${cloneCount} клонированных теста тоже`;
+            modalClonesList.innerHTML = cloneNames.map(name =>
+                `<li class="flex items-center gap-1.5 text-xs text-duo-text-muted font-semibold">
+                    <i class="ph-fill ph-file-text text-duo-text-muted/50 flex-shrink-0"></i>
+                    <span class="truncate">${name.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</span>
+                 </li>`
+            ).join('');
+        } else {
+            modalClones.style.display = 'none';
+        }
+
+        deleteModal.style.display = 'flex';
+        modalConfirmBtn.focus();
+    }
+
+    function closeDeleteModal() {
+        deleteModal.style.display = 'none';
+        _pendingDeleteBtn = null;
+    }
+
+    document.addEventListener('click', (event) => {
+        const deleteBtn = event.target.closest('.btn-delete-test');
+        if (!deleteBtn) return;
+        event.preventDefault();
+        openDeleteModal(deleteBtn);
+    });
+
+    if (modalCancelBtn) modalCancelBtn.addEventListener('click', closeDeleteModal);
+    if (modalCloseBtn)  modalCloseBtn.addEventListener('click', closeDeleteModal);
+    deleteModal?.addEventListener('click', (e) => { if (e.target === deleteModal) closeDeleteModal(); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeDeleteModal(); });
+
+    if (modalConfirmBtn) {
+        modalConfirmBtn.addEventListener('click', async () => {
+            if (!_pendingDeleteBtn) return;
+            const btn = _pendingDeleteBtn;
+            const deleteClones = modalClonesCb.checked ? '1' : '0';
+
+            closeDeleteModal();
+
+            const originalHtml = btn.innerHTML;
+            btn.classList.add('opacity-60', 'pointer-events-none');
+            btn.innerHTML = '<i class="ph-bold ph-spinner animate-spin"></i><span>Удаляем...</span>';
+
+            try {
+                const body = new URLSearchParams({
+                    csrfmiddlewaretoken: getCookie('csrftoken'),
+                    delete_clones: deleteClones,
+                });
+                const res = await fetch(btn.dataset.deleteUrl, {
+                    method: 'POST',
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                    body,
+                });
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                window.location.reload();
+            } catch (err) {
+                console.error('Delete error:', err);
+                btn.classList.remove('opacity-60', 'pointer-events-none');
+                btn.innerHTML = originalHtml;
+                alert('Не удалось удалить тест. Попробуйте снова.');
             }
         });
-        
-        // Trigger initial state
-        testTypeSelect.dispatchEvent(new Event('change'));
     }
 
 
@@ -318,8 +651,12 @@
                 'X-CSRFToken': getCookie('csrftoken'),
             },
         })
-        .then(r => r.json())
+        .then(r => {
+            if (!r.ok) throw new Error(`HTTP ${r.status}`);
+            return r.json();
+        })
         .then(data => {
+            if (data.error) throw new Error(data.error);
             const lang = document.documentElement.lang || 'ru';
             const dict = (typeof _i18n !== 'undefined' && _i18n[lang]) ? _i18n[lang] : {};
             btn.dataset.active = data.is_active ? 'true' : 'false';
@@ -337,12 +674,11 @@
                     .replace('text-duo-green', 'text-duo-text-muted')
                     .replace('border-duo-green/30', 'border-duo-border');
             }
-            // Recount
-            let activeCount = 0;
-            document.querySelectorAll('.status-badge').forEach(b => {
-                if (b.dataset.active === 'true') activeCount++;
-            });
-            document.getElementById('active-count').textContent = activeCount;
+            // Recount active
+            recomputeActiveCount();
+        })
+        .catch(err => {
+            console.error('Toggle failed:', err);
         });
     }
 
@@ -354,5 +690,65 @@
         });
         return v;
     }
+
+    const bulkCheckboxes = () => Array.from(document.querySelectorAll('.bulk-test-checkbox'));
+    const selectAllMain = document.getElementById('select-all-tests');
+    const selectAllHead = document.getElementById('select-all-tests-head');
+    const bulkCountEl = document.getElementById('bulk-selected-count');
+    const bulkSubmitBtn = document.getElementById('bulk-submit-btn');
+    const bulkActionSelect = document.getElementById('bulk-action-select');
+    const bulkForm = document.getElementById('bulk-actions-form');
+
+    function getVisibleCheckboxes() {
+        return bulkCheckboxes().filter((checkbox) => checkbox.closest('.test-row')?.style.display !== 'none');
+    }
+
+    const bulkActionsPanel = document.getElementById('bulk-actions-panel');
+
+    function updateBulkSelectionState() {
+        const visible = getVisibleCheckboxes();
+        const selected = visible.filter((checkbox) => checkbox.checked).length;
+        if (bulkCountEl) bulkCountEl.textContent = selected;
+
+        // Show/hide bulk action panel based on whether anything is selected
+        if (bulkActionsPanel) {
+            bulkActionsPanel.style.cssText = selected > 0 ? '' : 'display:none !important';
+        }
+
+        const enabled = selected > 0 && bulkActionSelect && bulkActionSelect.value;
+        if (bulkSubmitBtn) {
+            bulkSubmitBtn.classList.toggle('opacity-50', !enabled);
+            bulkSubmitBtn.classList.toggle('pointer-events-none', !enabled);
+        }
+
+        const allChecked = visible.length > 0 && selected === visible.length;
+        if (selectAllMain) selectAllMain.checked = allChecked;
+        if (selectAllHead) selectAllHead.checked = allChecked;
+    }
+
+    function toggleAllVisible(checked) {
+        getVisibleCheckboxes().forEach((checkbox) => {
+            checkbox.checked = checked;
+        });
+        updateBulkSelectionState();
+    }
+
+    if (selectAllMain) {
+        selectAllMain.addEventListener('change', (event) => toggleAllVisible(event.target.checked));
+    }
+    if (selectAllHead) {
+        selectAllHead.addEventListener('change', (event) => toggleAllVisible(event.target.checked));
+    }
+    bulkCheckboxes().forEach((checkbox) => checkbox.addEventListener('change', updateBulkSelectionState));
+    if (bulkActionSelect) bulkActionSelect.addEventListener('change', updateBulkSelectionState);
+    if (bulkForm) {
+        bulkForm.addEventListener('submit', (event) => {
+            const selected = getVisibleCheckboxes().filter((checkbox) => checkbox.checked).length;
+            if (!selected || !bulkActionSelect.value) {
+                event.preventDefault();
+            }
+        });
+    }
+    updateBulkSelectionState();
 </script>
 {% endblock %}

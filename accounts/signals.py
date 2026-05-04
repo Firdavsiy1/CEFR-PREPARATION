@@ -4,18 +4,118 @@ Signals for the accounts app.
 Auto-creates a UserProfile whenever a new User is created.
 """
 
+import ipaddress
+
 from django.conf import settings
+from django.contrib.auth import get_user_model
+from django.contrib.auth.signals import user_logged_in as django_user_logged_in
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-from urllib.request import urlopen
+from django.utils import timezone
+from urllib.request import urlopen, Request
 from urllib.error import URLError
 from django.core.files.base import ContentFile
 try:
     from allauth.account.signals import user_logged_in
 except ImportError:
     user_logged_in = None
+try:
+    from allauth.socialaccount.signals import pre_social_login
+except ImportError:
+    pre_social_login = None
 
 from .models import UserProfile
+
+
+if pre_social_login:
+    @receiver(pre_social_login)
+    def connect_google_account_by_email(request, sociallogin, **kwargs):
+        """Link Google social login to an existing user with the same verified email."""
+        if request.user.is_authenticated or sociallogin.is_existing:
+            return
+        if sociallogin.account.provider != 'google':
+            return
+
+        email = (sociallogin.user.email or sociallogin.account.extra_data.get('email') or '').strip().lower()
+        if not email:
+            return
+
+        # Google sends email_verified for accounts with confirmed mailbox ownership.
+        email_verified = sociallogin.account.extra_data.get('email_verified')
+        if email_verified is False:
+            return
+
+        User = get_user_model()
+        existing_user = User.objects.filter(email__iexact=email).first()
+        if not existing_user:
+            return
+
+        sociallogin.connect(request, existing_user)
+
+
+def _extract_client_ip(request):
+    """Extract client IP from request headers."""
+    forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR', '')
+    if forwarded_for:
+        return forwarded_for.split(',')[0].strip()[:64]
+    return request.META.get('REMOTE_ADDR', '')[:64]
+
+
+def _geolocate_ip(ip_address):
+    """Return 'City, Country' for a public IP via ipapi.co. Returns '' on any failure."""
+    if not ip_address:
+        return ''
+    try:
+        ip_obj = ipaddress.ip_address(ip_address)
+        if ip_obj.is_private or ip_obj.is_loopback or ip_obj.is_reserved or ip_obj.is_link_local:
+            return ''
+    except ValueError:
+        return ''
+
+    try:
+        import json as _json
+        req = Request(
+            f'https://ipapi.co/{ip_address}/json/',
+            headers={'User-Agent': 'CEFRPrep/1.0'},
+        )
+        with urlopen(req, timeout=3) as resp:
+            data = _json.loads(resp.read().decode('utf-8'))
+        if data.get('error'):
+            return ''
+        city = data.get('city', '')
+        country = data.get('country_name', '')
+        if city and country:
+            return f'{city}, {country}'
+        return country or city
+    except Exception:
+        return ''
+
+
+def _update_session_city_bg(session_key, ip_address):
+    """Background task: geolocate IP and patch session metadata in DB."""
+    time.sleep(1)  # Wait for session middleware to commit session to DB
+    city = _geolocate_ip(ip_address)
+    if not city:
+        return
+    try:
+        from django.contrib.sessions.backends.db import SessionStore
+        store = SessionStore(session_key=session_key)
+        store.load()
+        meta = store.get('login_meta') or {}
+        if meta.get('city'):  # Already set
+            return
+        meta['city'] = city
+        store['login_meta'] = meta
+        store.modified = True
+        store.save()
+    except Exception:
+        pass
+    finally:
+        try:
+            from django import db
+            db.close_old_connections()
+        except Exception:
+            pass
 
 @receiver(post_save, sender=settings.AUTH_USER_MODEL)
 def create_user_profile(sender, instance, created, **kwargs):
@@ -93,3 +193,25 @@ if user_logged_in:
             # If anything fails during fetching social data, we just skip it 
             # to not block the login process.
             pass
+
+
+@receiver(django_user_logged_in)
+def attach_login_metadata(sender, request, user, **kwargs):
+    """Persist login metadata in session; start background geolocation."""
+    if not request:
+        return
+
+    ip_address = _extract_client_ip(request)
+    request.session['login_meta'] = {
+        'ip_address': ip_address,
+        'user_agent': request.META.get('HTTP_USER_AGENT', '')[:255],
+        'login_at': timezone.now().isoformat(timespec='seconds'),
+        'city': '',  # Filled by background geolocation thread
+    }
+    request.session.modified = True
+
+    # Dispatch geolocation to a Celery task to avoid login latency.
+    session_key = request.session.session_key
+    if session_key and ip_address:
+        from accounts.tasks import update_session_city
+        update_session_city.delay(session_key, ip_address)

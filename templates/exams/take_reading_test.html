@@ -1,0 +1,884 @@
+{% extends "base.html" %}
+{% load static %}
+{% load exam_filters %}
+
+{% block title %}Part {{ current_part_num }} — {{ test.name }}{% endblock %}
+
+{% block extra_head %}
+<style>
+    body > nav { display: none !important; }
+    body > main { padding-top: 0 !important; }
+
+    .timer-badge { font-variant-numeric: tabular-nums; }
+
+    @keyframes pulse-danger {
+        0%, 100% { color: #FFFFFF; border-color: #2B4D56; }
+        50% { color: #FF4B4B; border-color: #FF4B4B; }
+    }
+    .timer-critical { animation: pulse-danger 1s infinite; }
+
+    .test-protected {
+        user-select: none;
+        -webkit-user-select: none;
+    }
+    .test-protected input,
+    .test-protected select,
+    .passage-content,
+    .post-card p,
+    .highlightable-text {
+        user-select: text;
+        -webkit-user-select: text;
+    }
+    .passage-content {
+        font-size: 1.02rem;
+        color: #e7f0f3;
+        font-weight: 600;
+        line-height: 2.4;
+    }
+    .passage-content p {
+        margin-bottom: 1.2em;
+        line-height: 2.4;
+    }
+
+    /* Inline gap inputs inside passage text */
+    .rg-wrap {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        white-space: nowrap;
+        margin: 0 3px;
+        padding: 1px 4px;
+        border-radius: 8px;
+        background: rgba(88, 204, 2, 0.06);
+    }
+    .rg-num {
+        font-size: 0.65rem;
+        font-weight: 900;
+        color: #7FE034;
+        line-height: 1;
+    }
+    .rg-input {
+        display: inline-block;
+        width: 76px;
+        height: 24px;
+        border: 1px solid #2B4D56;
+        border-radius: 7px;
+        background: rgba(10, 18, 20, 0.25);
+        padding: 0 6px;
+        color: #EAFBE1;
+        font-weight: 800;
+        font-family: 'Nunito', sans-serif;
+        font-size: 0.82rem;
+        text-align: center;
+        transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+        user-select: text !important;
+    }
+    .rg-input:focus {
+        outline: none;
+        border-color: #58CC02;
+        background: rgba(88, 204, 2, 0.1);
+        box-shadow: 0 0 0 3px rgba(88, 204, 2, 0.15);
+    }
+
+    .gap-input {
+        border-bottom: 2px solid #2B4D56;
+        background: transparent;
+        padding: 2px 8px;
+        color: #58CC02;
+        font-weight: 800;
+        text-align: center;
+        font-family: 'Nunito', sans-serif;
+        width: 120px;
+        transition: border-color 0.15s;
+    }
+    .gap-input:focus {
+        outline: none;
+        border-bottom-color: #58CC02;
+    }
+
+    .post-card {
+        transition: border-color 0.15s, box-shadow 0.15s, transform 0.15s;
+    }
+    .post-card.is-filled {
+        border-color: rgba(88, 204, 2, 0.4);
+        box-shadow: 0 0 0 1px rgba(88, 204, 2, 0.2);
+    }
+    .option-card.used {
+        opacity: 0.55;
+    }
+    .option-card.used .option-text {
+        text-decoration: line-through;
+        text-decoration-thickness: 2px;
+        text-decoration-color: rgba(88, 204, 2, 0.6);
+    }
+    .letter-input {
+        width: 52px;
+        height: 30px;
+        border: 1px solid #2B4D56;
+        border-radius: 8px;
+        background: rgba(10, 18, 20, 0.35);
+        color: #EAFBE1;
+        font-weight: 900;
+        font-size: 0.95rem;
+        text-align: center;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+    }
+    .letter-input:focus {
+        outline: none;
+        border-color: #58CC02;
+        box-shadow: 0 0 0 3px rgba(88, 204, 2, 0.15);
+        background: rgba(88, 204, 2, 0.1);
+    }
+
+    /* Progress bar */
+    .progress-track {
+        height: 16px;
+        background: #1A2F35;
+        border-radius: 99px;
+        overflow: hidden;
+        border: 2px solid #2B4D56;
+    }
+    .progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #58CC02, #7FE034);
+        border-radius: 99px;
+        transition: width 0.5s ease;
+        box-shadow: 0 0 8px rgba(88, 204, 2, 0.3);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+{% if not preview_mode %}
+<div id="autosave-config"
+     data-attempt-id="{{ attempt.id }}"
+     data-autosave-url="{% url 'exams:api_autosave' attempt.id %}"
+     data-tabblur-url="{% url 'exams:api_log_tab_blur' attempt.id %}"
+     style="display:none;"></div>
+<script id="server-draft-data" type="application/json">{{ draft_answers|safe }}</script>
+{% endif %}
+
+<div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mt-6 test-protected" data-test-id="{{ test.id }}" data-part-id="{{ part.id }}">
+    {% if preview_mode %}
+    <div class="flex items-center justify-between gap-3 mb-6 rounded-2xl border-2 border-duo-blue/30 bg-duo-blue/10 px-4 py-3">
+        <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-xl bg-duo-blue/20 border border-duo-blue/30 flex items-center justify-center flex-shrink-0">
+                <i class="ph-fill ph-eye text-duo-blue text-sm"></i>
+            </div>
+            <div>
+                <p class="text-xs font-extrabold uppercase tracking-widest text-duo-blue">Preview Mode</p>
+                <p class="text-sm font-semibold text-duo-text-dim">Читаемый шаблон. Ответы не сохраняются.</p>
+            </div>
+        </div>
+        <a href="{% if request.user.profile.role == 'mentor' %}{% url 'exams:classroom_list' %}{% else %}{% url 'exams:mentor_dashboard' %}{% endif %}"
+           class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-white/5 text-white border border-white/15 hover:bg-white/10 transition-all flex-shrink-0">
+            <i class="ph-bold ph-arrow-left"></i>
+            <span class="hidden sm:inline">Dashboard</span>
+        </a>
+    </div>
+    {% endif %}
+
+    <!-- Sticky Header with Progress -->
+    <div class="card-duo p-5 mb-8 animate-fade-in sticky top-4 z-40 shadow-2xl">
+        <div class="flex flex-col md:flex-row items-center justify-between gap-4 mb-4">
+            <div class="flex items-center gap-4">
+                <div class="w-12 h-12 rounded-2xl bg-duo-green/15 border border-duo-green/30 flex items-center justify-center font-black text-xl text-duo-green">
+                    {{ current_part_num }}
+                </div>
+                <div>
+                    <h1 class="text-xl font-black text-white">{{ test.name }}</h1>
+                    <p class="text-xs font-bold text-duo-text-muted uppercase tracking-wide mt-0.5">
+                        <span data-i18n="tt_section">Секция</span> {{ current_part_num }}
+                        <span data-i18n="tt_of">из</span> {{ total_parts }} ·
+                        <span data-i18n="rt_module">Reading</span>
+                    </p>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-3">
+                <div class="blur-tracker hidden flex items-center gap-1.5 px-3 py-2 rounded-2xl bg-duo-red/10 border border-duo-red/30" title="Tab switches detected">
+                    <i class="ph-fill ph-eye-slash text-duo-red text-sm"></i>
+                    <span id="blur-counter" class="text-sm font-black text-duo-red">0</span>
+                </div>
+                <div class="flex items-center gap-2.5 px-4 py-2.5 rounded-2xl bg-white/5 border border-white/10" id="timer-container">
+                    <i class="ph-fill ph-timer text-duo-gold text-xl"></i>
+                    <div id="timer" class="timer-badge text-xl font-black tracking-tight text-white">--:--</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Progress bar -->
+        <div class="progress-track">
+            <div class="progress-fill" style="width: {% widthratio current_part_num total_parts 100 %}%"></div>
+        </div>
+        <div class="flex items-center justify-between mt-2">
+            {% for p in all_parts %}
+            <div class="w-6 h-6 rounded-full flex items-center justify-center text-xs font-black
+                {% if p.part_number < part_number %}bg-duo-green text-white
+                {% elif p.part_number == part_number %}bg-duo-green text-white ring-2 ring-duo-green/50 ring-offset-2 ring-offset-[#1A2F35]
+                {% else %}bg-duo-surface-2 text-duo-text-muted border border-duo-border{% endif %}">
+                {% if p.part_number < part_number %}
+                <i class="ph-bold ph-check text-[10px]"></i>
+                {% else %}
+                {{ forloop.counter }}
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- The Form -->
+    <form method="POST" id="test-form" class="space-y-8">
+        {% csrf_token %}
+
+        <section class="part-section animate-slide-up" id="reading-part-{{ part.part_number }}">
+
+            <!-- Part Header -->
+            <div class="card-duo p-6 mb-6">
+                <div class="flex items-center gap-3 mb-3">
+                    <div class="w-10 h-10 rounded-xl bg-duo-green/15 border border-duo-green/30 flex items-center justify-center font-black text-lg text-duo-green">
+                        {{ part.part_number }}
+                    </div>
+                    <div>
+                        <h2 class="text-lg font-black text-white"><span data-i18n="tt_part">Part</span> {{ part.part_number }}</h2>
+                        {% if part.question_number_start and part.question_number_end %}
+                        <p class="text-xs font-bold text-duo-text-muted">
+                            <span data-i18n="rt_questions">Questions</span> {{ part.question_number_start }}–{{ part.question_number_end }}
+                        </p>
+                        {% endif %}
+                    </div>
+                </div>
+                {% if part.instruction %}
+                <div class="flex items-start gap-2 mt-3 p-4 rounded-xl bg-duo-blue/10 border border-duo-blue/20">
+                    <i class="ph-fill ph-info text-duo-blue text-lg mt-0.5"></i>
+                    <p class="text-white/90 leading-relaxed font-semibold text-sm highlightable-text">{{ part.instruction }}</p>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Passage with inline blanks for fill_in_the_blank parts -->
+            {% if part.passage %}
+                {% with questions=part.questions.all %}
+                    {% with first_q=questions.0 %}
+                        {% if first_q.question_type == 'fill_in_the_blank' and '[GAP]' in part.passage.content %}
+                            {# Fill-in-the-blank: inline inputs inside passage text #}
+                            <div class="card-duo p-6 sm:p-8 mb-6">
+                                {% if part.passage.title %}
+                                <h3 class="text-xl font-black text-white mb-5 pb-3 border-b border-white/10">{{ part.passage.title }}</h3>
+                                {% endif %}
+                                <div class="passage-content">
+                                    {{ part.passage.content|render_reading_blanks:questions }}
+                                </div>
+                            </div>
+
+                            {# Only render non-fill_in_the_blank questions below (e.g. multiple_choice mixed in) #}
+                            <div class="space-y-4 mt-2">
+                            {% for question in questions %}
+                            {% if question.question_type != 'fill_in_the_blank' %}
+                                <div class="card-duo p-6">
+                                    <div class="flex items-start gap-3 mb-4">
+                                        <span class="inline-flex items-center justify-center w-8 h-8 rounded-xl bg-duo-green/15 text-duo-green text-sm font-black flex-shrink-0 mt-0.5">
+                                            {{ question.question_number }}
+                                        </span>
+                                        {% if question.question_text %}
+                                        <p class="text-white font-bold leading-relaxed highlightable-text">{{ question.question_text }}</p>
+                                        {% endif %}
+                                    </div>
+                                    <div class="ml-11">
+                                        {% if question.question_type == 'multiple_choice' %}
+                                            <div class="grid grid-cols-1 gap-3">
+                                                {% for option in question.options %}
+                                                <label class="relative flex items-center gap-3 cursor-pointer p-3 rounded-xl hover:bg-white/5 transition-colors">
+                                                    <input type="radio"
+                                                           name="reading_q_{{ question.id }}"
+                                                           value="{{ option|first }}"
+                                                           class="w-5 h-5 text-duo-green focus:ring-duo-green border-duo-border bg-duo-surface accent-[#58CC02]">
+                                                    <span class="text-white/90 font-semibold highlightable-text">{{ option }}</span>
+                                                </label>
+                                                {% endfor %}
+                                            </div>
+                                        {% elif question.question_type == 'true_false_ni' %}
+                                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                                <label class="relative flex items-center gap-3 cursor-pointer p-3 rounded-xl hover:bg-white/5 transition-colors border border-white/10">
+                                                    <input type="radio" name="reading_q_{{ question.id }}" value="True"
+                                                           class="w-5 h-5 text-duo-green focus:ring-duo-green border-duo-border bg-duo-surface accent-[#58CC02]">
+                                                    <span class="text-white/90 font-semibold highlightable-text" data-i18n="rt_true">True</span>
+                                                </label>
+                                                <label class="relative flex items-center gap-3 cursor-pointer p-3 rounded-xl hover:bg-white/5 transition-colors border border-white/10">
+                                                    <input type="radio" name="reading_q_{{ question.id }}" value="False"
+                                                           class="w-5 h-5 text-duo-green focus:ring-duo-green border-duo-border bg-duo-surface accent-[#58CC02]">
+                                                    <span class="text-white/90 font-semibold highlightable-text" data-i18n="rt_false">False</span>
+                                                </label>
+                                                <label class="relative flex items-center gap-3 cursor-pointer p-3 rounded-xl hover:bg-white/5 transition-colors border border-white/10">
+                                                    <input type="radio" name="reading_q_{{ question.id }}" value="No Information"
+                                                           class="w-5 h-5 text-duo-green focus:ring-duo-green border-duo-border bg-duo-surface accent-[#58CC02]">
+                                                    <span class="text-white/90 font-semibold highlightable-text" data-i18n="rt_no_information">No Information</span>
+                                                </label>
+                                            </div>
+                                        {% elif question.question_type == 'matching' %}
+                                            <input type="text"
+                                                   name="reading_q_{{ question.id }}"
+                                                   autocomplete="off"
+                                                   placeholder="Enter letter (A-J)..." data-i18n-placeholder="rt_placeholder_letter"
+                                                   class="gap-input w-full max-w-xs">
+                                        {% elif question.question_type == 'fill_in_the_blank' %}
+                                            <input type="text"
+                                                   name="reading_q_{{ question.id }}"
+                                                   autocomplete="off"
+                                                   placeholder="Your answer..." data-i18n-placeholder="rt_placeholder_answer"
+                                                   class="gap-input w-full max-w-xs">
+                                        {% elif question.question_type == 'insert_sentence' %}
+                                            <input type="text"
+                                                   name="reading_q_{{ question.id }}"
+                                                   autocomplete="off"
+                                                   placeholder="Enter paragraph letter..." data-i18n-placeholder="rt_placeholder_paragraph_letter"
+                                                   class="gap-input w-full max-w-xs">
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            {% endif %}
+                            {% endfor %}
+                            </div>
+                        {% elif part.part_number == 2 %}
+                            {# Part 2: posts as cards, options below, letters only #}
+                            {% with posts=part.passage.content|split_paragraphs %}
+                            <div class="grid grid-cols-1 gap-4">
+                                {% for question in questions %}
+                                {% with post=posts|get_list_item:forloop.counter0 %}
+                                <div class="card-duo post-card p-6">
+                                    <div class="flex items-start justify-between gap-4">
+                                        <div class="flex items-start gap-3">
+                                            <span class="inline-flex items-center justify-center w-8 h-8 rounded-xl bg-duo-green/15 text-duo-green text-sm font-black flex-shrink-0 mt-0.5">
+                                                {{ question.question_number }}
+                                            </span>
+                                            <p class="text-white font-bold leading-relaxed highlightable-text">{{ post|strip_leading_number }}</p>
+                                        </div>
+                                        <input type="text"
+                                               name="reading_q_{{ question.id }}"
+                                               autocomplete="off"
+                                               maxlength="1"
+                                               placeholder="A"
+                                               class="letter-input">
+                                    </div>
+                                </div>
+                                {% endwith %}
+                                {% endfor %}
+                            </div>
+
+                            {% with options=questions.0.options %}
+                            {% if options %}
+                            <div class="card-duo p-6 mt-6">
+                                <div class="flex items-center gap-2 mb-4">
+                                    <i class="ph-fill ph-list-bullets text-duo-green text-lg"></i>
+                                    <h3 class="text-sm font-extrabold text-duo-green uppercase tracking-widest" data-i18n="rt_options">Options</h3>
+                                </div>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    {% for option in options %}
+                                    <div class="option-card flex items-start gap-3 p-3 rounded-xl bg-white/5 border border-white/10" data-letter="{{ option|first|upper }}">
+                                        <span class="w-6 h-6 rounded-lg bg-duo-green/15 text-duo-green text-xs font-black flex items-center justify-center">
+                                            {{ option|first }}
+                                        </span>
+                                        <span class="option-text text-white/90 font-semibold text-sm highlightable-text">{{ option|strip_option_prefix }}</span>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            {% endif %}
+                            {% endwith %}
+                            {% endwith %}
+                        {% elif part.part_number == 3 %}
+                            {# Part 3: show passage, then letters only and options #}
+                            <div class="card-duo p-6 sm:p-8 mb-6">
+                                {% if part.passage.title %}
+                                <h3 class="text-xl font-black text-white mb-5 pb-3 border-b border-white/10">{{ part.passage.title }}</h3>
+                                {% endif %}
+                                <div class="passage-content">{{ part.passage.content|linebreaksbr }}</div>
+                            </div>
+
+                            <div class="grid grid-cols-1 gap-4">
+                                {% for question in questions %}
+                                <div class="card-duo post-card p-6">
+                                    <div class="flex items-start justify-between gap-4">
+                                        <div class="flex items-start gap-3">
+                                            <span class="inline-flex items-center justify-center w-8 h-8 rounded-xl bg-duo-green/15 text-duo-green text-sm font-black flex-shrink-0 mt-0.5">
+                                                {{ question.question_number }}
+                                            </span>
+                                            {% if question.question_text %}
+                                            <p class="text-white font-bold leading-relaxed highlightable-text">{{ question.question_text }}</p>
+                                            {% endif %}
+                                        </div>
+                                        <input type="text"
+                                               name="reading_q_{{ question.id }}"
+                                               autocomplete="off"
+                                               maxlength="1"
+                                               placeholder="A"
+                                               class="letter-input">
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+
+                            {% with options=questions.0.options %}
+                            {% if options %}
+                            <div class="card-duo p-6 mt-6">
+                                <div class="flex items-center gap-2 mb-4">
+                                    <i class="ph-fill ph-list-bullets text-duo-green text-lg"></i>
+                                    <h3 class="text-sm font-extrabold text-duo-green uppercase tracking-widest" data-i18n="rt_options">Options</h3>
+                                </div>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    {% for option in options %}
+                                    <div class="option-card flex items-start gap-3 p-3 rounded-xl bg-white/5 border border-white/10" data-letter="{{ option|first|upper }}">
+                                        <span class="w-6 h-6 rounded-lg bg-duo-green/15 text-duo-green text-xs font-black flex items-center justify-center">
+                                            {{ option|first }}
+                                        </span>
+                                        <span class="option-text text-white/90 font-semibold text-sm highlightable-text">{{ option|strip_option_prefix }}</span>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            {% endif %}
+                            {% endwith %}
+                        {% else %}
+                            {# Other types: show passage text normally, questions below #}
+                            <div class="card-duo p-6 sm:p-8 mb-6">
+                                {% if part.passage.title %}
+                                <h3 class="text-xl font-black text-white mb-5 pb-3 border-b border-white/10">{{ part.passage.title }}</h3>
+                                {% endif %}
+                                <div class="passage-content">{{ part.passage.content|linebreaksbr }}</div>
+                            </div>
+
+                            {# Questions below passage #}
+                            <div class="space-y-4">
+                                {% for question in questions %}
+                                <div class="card-duo p-6">
+                                    <div class="flex items-start gap-3 mb-4">
+                                        <span class="inline-flex items-center justify-center w-8 h-8 rounded-xl bg-duo-green/15 text-duo-green text-sm font-black flex-shrink-0 mt-0.5">
+                                            {{ question.question_number }}
+                                        </span>
+                                        {% if question.question_text %}
+                                        <p class="text-white font-bold leading-relaxed highlightable-text">{{ question.question_text }}</p>
+                                        {% endif %}
+                                    </div>
+
+                                    <div class="ml-11">
+                                        {% if question.question_type == 'multiple_choice' %}
+                                            <div class="grid grid-cols-1 gap-3">
+                                                {% for option in question.options %}
+                                                <label class="relative flex items-center gap-3 cursor-pointer p-3 rounded-xl hover:bg-white/5 transition-colors">
+                                                    <input type="radio"
+                                                           name="reading_q_{{ question.id }}"
+                                                           value="{{ option|first }}"
+                                                           class="w-5 h-5 text-duo-green focus:ring-duo-green border-duo-border bg-duo-surface accent-[#58CC02]">
+                                                    <span class="text-white/90 font-semibold highlightable-text">{{ option }}</span>
+                                                </label>
+                                                {% endfor %}
+                                            </div>
+
+                                        {% elif question.question_type == 'true_false_ni' %}
+                                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                                <label class="relative flex items-center gap-3 cursor-pointer p-3 rounded-xl hover:bg-white/5 transition-colors border border-white/10">
+                                                    <input type="radio" name="reading_q_{{ question.id }}" value="True"
+                                                           class="w-5 h-5 text-duo-green focus:ring-duo-green border-duo-border bg-duo-surface accent-[#58CC02]">
+                                                    <span class="text-white/90 font-semibold highlightable-text" data-i18n="rt_true">True</span>
+                                                </label>
+                                                <label class="relative flex items-center gap-3 cursor-pointer p-3 rounded-xl hover:bg-white/5 transition-colors border border-white/10">
+                                                    <input type="radio" name="reading_q_{{ question.id }}" value="False"
+                                                           class="w-5 h-5 text-duo-green focus:ring-duo-green border-duo-border bg-duo-surface accent-[#58CC02]">
+                                                    <span class="text-white/90 font-semibold highlightable-text" data-i18n="rt_false">False</span>
+                                                </label>
+                                                <label class="relative flex items-center gap-3 cursor-pointer p-3 rounded-xl hover:bg-white/5 transition-colors border border-white/10">
+                                                    <input type="radio" name="reading_q_{{ question.id }}" value="No Information"
+                                                           class="w-5 h-5 text-duo-green focus:ring-duo-green border-duo-border bg-duo-surface accent-[#58CC02]">
+                                                    <span class="text-white/90 font-semibold highlightable-text" data-i18n="rt_no_information">No Information</span>
+                                                </label>
+                                            </div>
+
+                                        {% elif question.question_type == 'matching' %}
+                                            {% if question.options %}
+                                            <select name="reading_q_{{ question.id }}"
+                                                    class="w-full max-w-xs bg-duo-surface border-2 border-duo-border rounded-xl px-4 py-3 text-white font-bold focus:border-duo-green focus:ring-0 transition-colors">
+                                                <option value="" class="text-duo-text-muted" data-i18n="rt_select">— Select —</option>
+                                                {% for option in question.options %}
+                                                <option value="{{ option|first }}">{{ option }}</option>
+                                                {% endfor %}
+                                            </select>
+                                            {% else %}
+                                            <input type="text"
+                                                   name="reading_q_{{ question.id }}"
+                                                   autocomplete="off"
+                                                   placeholder="Enter letter (A-J)..." data-i18n-placeholder="rt_placeholder_letter"
+                                                   class="gap-input w-full max-w-xs">
+                                            {% endif %}
+
+                                        {% elif question.question_type == 'fill_in_the_blank' %}
+                                            <input type="text"
+                                                   name="reading_q_{{ question.id }}"
+                                                   autocomplete="off"
+                                                   placeholder="Your answer..." data-i18n-placeholder="rt_placeholder_answer"
+                                                   class="gap-input w-full max-w-xs">
+
+                                        {% elif question.question_type == 'insert_sentence' %}
+                                            <input type="text"
+                                                   name="reading_q_{{ question.id }}"
+                                                   autocomplete="off"
+                                                   placeholder="Enter paragraph letter..." data-i18n-placeholder="rt_placeholder_paragraph_letter"
+                                                   class="gap-input w-full max-w-xs">
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    {% endwith %}
+                {% endwith %}
+            {% else %}
+                {# No passage — questions only (matching short texts, etc.) #}
+                {% if part.part_number == 2 %}
+                    {% with questions=part.questions.all %}
+                    <div class="grid grid-cols-1 gap-4">
+                        {% for question in questions %}
+                        <div class="card-duo post-card p-6">
+                            <div class="flex items-start justify-between gap-4">
+                                <div class="flex items-start gap-3">
+                                    <span class="inline-flex items-center justify-center w-8 h-8 rounded-xl bg-duo-green/15 text-duo-green text-sm font-black flex-shrink-0 mt-0.5">
+                                        {{ question.question_number }}
+                                    </span>
+                                    {% if question.question_text %}
+                                    <p class="text-white font-bold leading-relaxed highlightable-text">{{ question.question_text }}</p>
+                                    {% endif %}
+                                </div>
+                                <input type="text"
+                                       name="reading_q_{{ question.id }}"
+                                       autocomplete="off"
+                                       maxlength="1"
+                                       placeholder="A"
+                                       class="letter-input">
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    {% with options=questions.0.options %}
+                    {% if options %}
+                    <div class="card-duo p-6 mt-6">
+                        <div class="flex items-center gap-2 mb-4">
+                            <i class="ph-fill ph-list-bullets text-duo-green text-lg"></i>
+                            <h3 class="text-sm font-extrabold text-duo-green uppercase tracking-widest" data-i18n="rt_options">Options</h3>
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            {% for option in options %}
+                            <div class="flex items-start gap-3 p-3 rounded-xl bg-white/5 border border-white/10">
+                                <span class="w-6 h-6 rounded-lg bg-duo-green/15 text-duo-green text-xs font-black flex items-center justify-center">
+                                    {{ option|first }}
+                                </span>
+                                <span class="text-white/90 font-semibold text-sm highlightable-text">{{ option }}</span>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% endwith %}
+                    {% endwith %}
+                {% elif part.part_number == 3 %}
+                    {% with questions=part.questions.all %}
+                    <div class="grid grid-cols-1 gap-4">
+                        {% for question in questions %}
+                        <div class="card-duo post-card p-6">
+                            <div class="flex items-start justify-between gap-4">
+                                <div class="flex items-start gap-3">
+                                    <span class="inline-flex items-center justify-center w-8 h-8 rounded-xl bg-duo-green/15 text-duo-green text-sm font-black flex-shrink-0 mt-0.5">
+                                        {{ question.question_number }}
+                                    </span>
+                                    {% if question.question_text %}
+                                    <p class="text-white font-bold leading-relaxed highlightable-text">{{ question.question_text }}</p>
+                                    {% endif %}
+                                </div>
+                                <input type="text"
+                                       name="reading_q_{{ question.id }}"
+                                       autocomplete="off"
+                                       maxlength="1"
+                                       placeholder="A"
+                                       class="letter-input">
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    {% with options=questions.0.options %}
+                    {% if options %}
+                    <div class="card-duo p-6 mt-6">
+                        <div class="flex items-center gap-2 mb-4">
+                            <i class="ph-fill ph-list-bullets text-duo-green text-lg"></i>
+                            <h3 class="text-sm font-extrabold text-duo-green uppercase tracking-widest" data-i18n="rt_options">Options</h3>
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            {% for option in options %}
+                            <div class="option-card flex items-start gap-3 p-3 rounded-xl bg-white/5 border border-white/10" data-letter="{{ option|first|upper }}">
+                                <span class="w-6 h-6 rounded-lg bg-duo-green/15 text-duo-green text-xs font-black flex items-center justify-center">
+                                    {{ option|first }}
+                                </span>
+                                <span class="option-text text-white/90 font-semibold text-sm highlightable-text">{{ option|strip_option_prefix }}</span>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% endwith %}
+                    {% endwith %}
+                {% else %}
+                    <div class="space-y-4">
+                        {% for question in part.questions.all %}
+                        <div class="card-duo p-6">
+                            <div class="flex items-start gap-3 mb-4">
+                                <span class="inline-flex items-center justify-center w-8 h-8 rounded-xl bg-duo-green/15 text-duo-green text-sm font-black flex-shrink-0 mt-0.5">
+                                    {{ question.question_number }}
+                                </span>
+                                {% if question.question_text %}
+                                <p class="text-white font-bold leading-relaxed highlightable-text">{{ question.question_text }}</p>
+                                {% endif %}
+                            </div>
+
+                            <div class="ml-11">
+                                {% if question.question_type == 'multiple_choice' %}
+                                    <div class="grid grid-cols-1 gap-3">
+                                        {% for option in question.options %}
+                                        <label class="relative flex items-center gap-3 cursor-pointer p-3 rounded-xl hover:bg-white/5 transition-colors">
+                                            <input type="radio"
+                                                   name="reading_q_{{ question.id }}"
+                                                   value="{{ option|first }}"
+                                                   class="w-5 h-5 text-duo-green focus:ring-duo-green border-duo-border bg-duo-surface accent-[#58CC02]">
+                                            <span class="text-white/90 font-semibold highlightable-text">{{ option }}</span>
+                                        </label>
+                                        {% endfor %}
+                                    </div>
+
+                                {% elif question.question_type == 'true_false_ni' %}
+                                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                        <label class="relative flex items-center gap-3 cursor-pointer p-3 rounded-xl hover:bg-white/5 transition-colors border border-white/10">
+                                            <input type="radio" name="reading_q_{{ question.id }}" value="True"
+                                                   class="w-5 h-5 text-duo-green focus:ring-duo-green border-duo-border bg-duo-surface accent-[#58CC02]">
+                                            <span class="text-white/90 font-semibold highlightable-text" data-i18n="rt_true">True</span>
+                                        </label>
+                                        <label class="relative flex items-center gap-3 cursor-pointer p-3 rounded-xl hover:bg-white/5 transition-colors border border-white/10">
+                                            <input type="radio" name="reading_q_{{ question.id }}" value="False"
+                                                   class="w-5 h-5 text-duo-green focus:ring-duo-green border-duo-border bg-duo-surface accent-[#58CC02]">
+                                            <span class="text-white/90 font-semibold highlightable-text" data-i18n="rt_false">False</span>
+                                        </label>
+                                        <label class="relative flex items-center gap-3 cursor-pointer p-3 rounded-xl hover:bg-white/5 transition-colors border border-white/10">
+                                            <input type="radio" name="reading_q_{{ question.id }}" value="No Information"
+                                                   class="w-5 h-5 text-duo-green focus:ring-duo-green border-duo-border bg-duo-surface accent-[#58CC02]">
+                                            <span class="text-white/90 font-semibold highlightable-text" data-i18n="rt_no_information">No Information</span>
+                                        </label>
+                                    </div>
+
+                                {% elif question.question_type == 'fill_in_the_blank' %}
+                                    <input type="text"
+                                           name="reading_q_{{ question.id }}"
+                                           autocomplete="off"
+                                           placeholder="Your answer..." data-i18n-placeholder="rt_placeholder_answer"
+                                           class="gap-input w-full max-w-xs">
+
+                                {% elif question.question_type == 'matching' %}
+                                    {% if question.options %}
+                                    <select name="reading_q_{{ question.id }}"
+                                            class="w-full max-w-xs bg-duo-surface border-2 border-duo-border rounded-xl px-4 py-3 text-white font-bold focus:border-duo-green focus:ring-0 transition-colors">
+                                        <option value="" class="text-duo-text-muted" data-i18n="rt_select">— Select —</option>
+                                        {% for option in question.options %}
+                                        <option value="{{ option|first }}">{{ option }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    {% else %}
+                                    <input type="text"
+                                           name="reading_q_{{ question.id }}"
+                                           autocomplete="off"
+                                           placeholder="Enter letter (A-J)..." data-i18n-placeholder="rt_placeholder_letter"
+                                           class="gap-input w-full max-w-xs">
+                                    {% endif %}
+
+                                {% elif question.question_type == 'insert_sentence' %}
+                                    <input type="text"
+                                           name="reading_q_{{ question.id }}"
+                                           autocomplete="off"
+                                           placeholder="Enter paragraph letter..." data-i18n-placeholder="rt_placeholder_paragraph_letter"
+                                           class="gap-input w-full max-w-xs">
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            {% endif %}
+
+        </section>
+
+        <!-- Navigation -->
+        <input type="hidden" name="_go_back" id="go-back-flag" value="">
+        <div class="flex flex-col sm:flex-row items-center justify-between pt-5 mt-4 border-t-2 border-duo-border gap-4">
+        <div class="flex items-center gap-3">
+                {% if prev_part_number %}
+                {% if preview_mode %}
+                <a href="{% url 'exams:mentor_test_preview' test.id %}?part={{ prev_part_number }}"
+                   class="btn-duo-outline w-full sm:w-auto text-base !px-8 !py-3.5">
+                    <i class="ph-bold ph-arrow-left mr-1"></i>
+                    <span>Часть {{ prev_part_number }}</span>
+                </a>
+                {% else %}
+                <button type="button" id="prev-btn"
+                        class="btn-duo-outline w-full sm:w-auto text-base !px-8 !py-3.5">
+                    <i class="ph-bold ph-arrow-left mr-1"></i>
+                    <span data-i18n="tt_part">Часть</span> {{ prev_part_number }}
+                </button>
+                {% endif %}
+                {% endif %}
+                <div class="text-duo-text-muted text-xs font-bold uppercase tracking-wide">
+                    <i class="ph-fill ph-floppy-disk mr-1"></i>
+                    <span data-i18n="tt_auto_save">{% if preview_mode %}Preview only{% else %}Ответы сохраняются автоматически{% endif %}</span>
+                </div>
+            </div>
+            {% if preview_mode %}
+            {% if next_part_number %}
+            <a href="{% url 'exams:mentor_test_preview' test.id %}?part={{ next_part_number }}"
+               class="btn-duo-green w-full sm:w-auto text-base !px-10 !py-3.5">
+                <span>Часть {{ next_part_number }}</span>
+                <i class="ph-bold ph-arrow-right ml-1"></i>
+            </a>
+            {% else %}
+            <a href="{% if request.user.profile.role == 'mentor' %}{% url 'exams:classroom_list' %}{% else %}{% url 'exams:mentor_dashboard' %}{% endif %}"
+               class="btn-duo-gold w-full sm:w-auto text-base !px-10 !py-3.5">
+                <i class="ph-fill ph-flag-checkered mr-2"></i>
+                <span>Конец теста</span>
+            </a>
+            {% endif %}
+            {% else %}
+            <button type="submit" id="submit-btn"
+                    class="{% if not next_part_number %}btn-duo-gold{% else %}btn-duo-green{% endif %} w-full sm:w-auto text-base !px-10 !py-3.5">
+                {% if not next_part_number %}
+                    <i class="ph-fill ph-flag-checkered mr-2"></i>
+                    <span data-i18n="tt_finish_exam">Завершить экзамен</span>
+                {% else %}
+                    <span data-i18n="tt_part">Часть</span> {{ next_part_number }}
+                    <i class="ph-bold ph-arrow-right ml-1"></i>
+                {% endif %}
+            </button>
+            {% endif %}
+        </div>
+    </form>
+
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{% static 'js/autosave.js' %}"></script>
+<script src="{% static 'js/reading_highlighter.js' %}?v=20260501b"></script>
+<script>
+const PREVIEW_MODE = {% if preview_mode %}true{% else %}false{% endif %};
+
+document.addEventListener('DOMContentLoaded', () => {
+    if (PREVIEW_MODE) {
+        return;
+    }
+
+    // Timer
+    const endISO = '{{ endtime_iso }}';
+    const endTime = new Date(endISO).getTime();
+    const timerEl = document.getElementById('timer');
+    const timerContainer = document.getElementById('timer-container');
+    const form = document.getElementById('test-form');
+
+    function updateTimer() {
+        const now = Date.now();
+        let diff = Math.max(0, Math.floor((endTime - now) / 1000));
+        const m = Math.floor(diff / 60);
+        const s = diff % 60;
+        timerEl.textContent = `${m}:${s.toString().padStart(2, '0')}`;
+
+        if (diff <= 300) {
+            timerContainer.classList.add('timer-critical');
+        }
+        if (diff <= 0) {
+            clearInterval(timerInterval);
+            form.submit();
+        }
+    }
+    const timerInterval = setInterval(updateTimer, 1000);
+    updateTimer();
+
+    // Restore drafts
+    const draftEl = document.getElementById('server-draft-data');
+    if (draftEl) {
+        try {
+            const drafts = JSON.parse(draftEl.textContent);
+            for (const [key, value] of Object.entries(drafts)) {
+                const input = form.querySelector(`[name="${key}"]`);
+                if (!input) continue;
+                if (input.type === 'radio') {
+                    const radio = form.querySelector(`[name="${key}"][value="${value}"]`);
+                    if (radio) radio.checked = true;
+                } else if (input.tagName === 'SELECT') {
+                    input.value = value;
+                } else {
+                    input.value = value;
+                }
+            }
+        } catch (e) {}
+    }
+
+    // Highlight Part 2 cards and strike used options when a letter is entered
+    const updateUsedOptions = () => {
+        const used = new Set();
+        document.querySelectorAll('.post-card .letter-input').forEach((inp) => {
+            const val = (inp.value || '').trim().toUpperCase();
+            if (val) used.add(val);
+        });
+        document.querySelectorAll('.option-card').forEach((card) => {
+            const letter = (card.dataset.letter || '').toUpperCase();
+            card.classList.toggle('used', used.has(letter));
+        });
+    };
+
+    document.querySelectorAll('.letter-input').forEach((input) => {
+        const card = input.closest('.post-card');
+        const updateState = () => {
+            if (!card) return;
+            const hasValue = input.value && input.value.trim().length > 0;
+            card.classList.toggle('is-filled', hasValue);
+            updateUsedOptions();
+        };
+        input.addEventListener('input', updateState);
+        updateState();
+    });
+
+    // Back button
+    const prevBtn = document.getElementById('prev-btn');
+    if (prevBtn) {
+        prevBtn.addEventListener('click', () => {
+            document.getElementById('go-back-flag').value = '1';
+            allowNavigate = true;
+            form.submit();
+        });
+    }
+
+    // Confirm before leaving (but allow internal form navigation)
+    const nextBtn = document.getElementById('submit-btn');
+    let allowNavigate = false;
+    if (nextBtn) {
+        nextBtn.addEventListener('click', () => {
+            allowNavigate = true;
+        });
+    }
+    if (form) {
+        form.addEventListener('submit', () => {
+            allowNavigate = true;
+        });
+    }
+    window.addEventListener('beforeunload', (e) => {
+        if (allowNavigate) return;
+        e.preventDefault();
+        e.returnValue = '';
+    });
+
+});
+</script>
+{% endblock %}

@@ -1,0 +1,3 @@
+Help on method from_text in module google.genai.types:
+
+ffrroomm__tteexxtt(*, text: str) -> 'Part' class method of google.genai.types.Part

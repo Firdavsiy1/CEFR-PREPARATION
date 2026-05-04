@@ -5,27 +5,19 @@
 
 {% block content %}
 <div class="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
-
-    <!-- Back link -->
-    <a href="{% url 'exams:mentor_dashboard' %}" class="btn-duo-outline text-xs !py-2 !px-4 mb-8 inline-flex" id="back-link">
-        <i class="ph-bold ph-arrow-left"></i>
-        <span data-i18n="mnt_back_panel">Панель ментора</span>
-    </a>
+    {% include "exams/mentor/_workspace_header.html" with icon="ph-fill ph-brain" accent="blue" title="Мониторинг ingestion-задачи" subtitle="Следите за фоновым OCR, сохранением и генерацией вспомогательных данных. Экран помогает не терять состояние публикации между upload и builder." page_group="progress" %}
 
     <!-- Progress Card -->
     <div class="card-duo overflow-hidden !p-0 animate-fade-in relative" id="progress-card">
 
-        <!-- Header -->
-        <div class="px-8 py-6 border-b-2 border-duo-border bg-duo-purple/5">
-            <div class="flex items-center gap-4">
-                <div class="w-14 h-14 rounded-2xl flex items-center justify-center bg-duo-purple shadow-[0_4px_0_#A855F7]" id="header-icon-wrapper">
-                    <i class="ph-fill ph-brain text-white text-2xl" id="header-icon"></i>
-                </div>
+        <div class="border-b-2 border-duo-border bg-white/[0.02] px-6 py-4">
+            <div class="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                    <h1 class="text-2xl font-black text-white tracking-tight" id="page-title" data-i18n="mnt_progress_title">Обработка теста</h1>
-                    <p class="text-sm text-duo-text-dim font-semibold mt-0.5">
-                        <span class="text-white font-bold">{{ task.test_name }}</span>
-                    </p>
+                    <p class="text-xs font-extrabold uppercase tracking-[0.16em] text-duo-text-muted">Текущая задача</p>
+                    <p class="mt-2 text-lg font-black text-white">{{ task.test_name }}</p>
+                </div>
+                <div class="rounded-2xl border border-duo-blue/20 bg-duo-blue/10 px-4 py-2 text-xs font-black uppercase tracking-[0.16em] text-duo-blue">
+                    Live Polling
                 </div>
             </div>
         </div>
@@ -79,9 +71,9 @@
             <div class="space-y-3" id="timeline">
                 <div class="timeline-item flex items-center gap-3 p-3 rounded-xl bg-duo-surface/50 border border-duo-border/50 transition-all duration-300" data-threshold="5">
                     <div class="w-8 h-8 rounded-lg flex items-center justify-center bg-duo-surface-2 border border-duo-border flex-shrink-0 timeline-dot">
-                        <i class="ph-fill ph-file-zip text-duo-text-muted text-sm timeline-icon"></i>
+                        <i class="ph-fill ph-file-zip text-duo-text-muted text-sm timeline-icon" id="step1-icon"></i>
                     </div>
-                    <span class="text-sm font-bold text-duo-text-muted timeline-label" data-i18n="mnt_progress_step_unzip">Распаковка архива</span>
+                    <span class="text-sm font-bold text-duo-text-muted timeline-label" id="step1-label" data-i18n="mnt_progress_step_unzip">Распаковка архива</span>
                     <span class="ml-auto text-xs font-bold text-duo-text-muted timeline-check hidden"><i class="ph-fill ph-check-circle text-duo-green text-lg"></i></span>
                 </div>
                 <div class="timeline-item flex items-center gap-3 p-3 rounded-xl bg-duo-surface/50 border border-duo-border/50 transition-all duration-300" data-threshold="20">
@@ -91,11 +83,25 @@
                     <span class="text-sm font-bold text-duo-text-muted timeline-label" data-i18n="mnt_progress_step_ocr">AI-распознавание вопросов (OCR)</span>
                     <span class="ml-auto text-xs font-bold text-duo-text-muted timeline-check hidden"><i class="ph-fill ph-check-circle text-duo-green text-lg"></i></span>
                 </div>
-                <div class="timeline-item flex items-center gap-3 p-3 rounded-xl bg-duo-surface/50 border border-duo-border/50 transition-all duration-300" data-threshold="70">
+                <div class="timeline-item flex items-center gap-3 p-3 rounded-xl bg-duo-surface/50 border border-duo-border/50 transition-all duration-300" data-threshold="70" id="timeline-audio">
                     <div class="w-8 h-8 rounded-lg flex items-center justify-center bg-duo-surface-2 border border-duo-border flex-shrink-0 timeline-dot">
                         <i class="ph-fill ph-waveform text-duo-text-muted text-sm timeline-icon"></i>
                     </div>
                     <span class="text-sm font-bold text-duo-text-muted timeline-label" data-i18n="mnt_progress_step_audio">Анализ аудиодорожек</span>
+                    <span class="ml-auto text-xs font-bold text-duo-text-muted timeline-check hidden"><i class="ph-fill ph-check-circle text-duo-green text-lg"></i></span>
+                </div>
+                <div class="timeline-item flex items-center gap-3 p-3 rounded-xl bg-duo-surface/50 border border-duo-border/50 transition-all duration-300" data-threshold="40" id="timeline-speaking" style="display:none;">
+                    <div class="w-8 h-8 rounded-lg flex items-center justify-center bg-duo-surface-2 border border-duo-border flex-shrink-0 timeline-dot">
+                        <i class="ph-fill ph-magic-wand text-duo-text-muted text-sm timeline-icon"></i>
+                    </div>
+                    <span class="text-sm font-bold text-duo-text-muted timeline-label">Выравнивание и анализ изображения</span>
+                    <span class="ml-auto text-xs font-bold text-duo-text-muted timeline-check hidden"><i class="ph-fill ph-check-circle text-duo-green text-lg"></i></span>
+                </div>
+                <div class="timeline-item flex items-center gap-3 p-3 rounded-xl bg-duo-surface/50 border border-duo-border/50 transition-all duration-300" data-threshold="85" id="timeline-explanations" style="display:none;">
+                    <div class="w-8 h-8 rounded-lg flex items-center justify-center bg-duo-surface-2 border border-duo-border flex-shrink-0 timeline-dot">
+                        <i class="ph-fill ph-lightbulb text-duo-text-muted text-sm timeline-icon"></i>
+                    </div>
+                    <span class="text-sm font-bold text-duo-text-muted timeline-label">Генерация объяснений</span>
                     <span class="ml-auto text-xs font-bold text-duo-text-muted timeline-check hidden"><i class="ph-fill ph-check-circle text-duo-green text-lg"></i></span>
                 </div>
                 <div class="timeline-item flex items-center gap-3 p-3 rounded-xl bg-duo-surface/50 border border-duo-border/50 transition-all duration-300" data-threshold="90">
@@ -174,11 +180,36 @@
 
     let pollInterval = null;
     let lastProgress = 0;
+    let audioHidden = false;
+    let speakingAdapted = false;
 
     function updateUI(data) {
         const progress = data.progress;
         const status = data.status;
         const stage = data.stage;
+
+        // Hide audio step for tests without audio (reading, writing, speaking)
+        if (data.has_audio === false && !audioHidden) {
+            const audioItem = document.getElementById('timeline-audio');
+            if (audioItem) audioItem.style.display = 'none';
+            // Show explanations step for reading/writing
+            const explItem = document.getElementById('timeline-explanations');
+            if (explItem && data.result_test_type !== 'speaking') explItem.style.display = '';
+            audioHidden = true;
+        }
+
+        // Speaking-specific timeline adaptations (run once)
+        if (data.result_test_type === 'speaking' && !speakingAdapted) {
+            // Rename first step from "Распаковка архива" to "Загрузка изображения"
+            const lbl = document.getElementById('step1-label');
+            const ico = document.getElementById('step1-icon');
+            if (lbl) lbl.textContent = 'Загрузка изображения';
+            if (ico) { ico.classList.remove('ph-file-zip'); ico.classList.add('ph-image'); }
+            // Show speaking-specific image alignment step
+            const spkItem = document.getElementById('timeline-speaking');
+            if (spkItem) spkItem.style.display = '';
+            speakingAdapted = true;
+        }
 
         // Update progress bar
         document.getElementById('progress-bar').style.width = progress + '%';
@@ -252,11 +283,16 @@
         document.getElementById('stage-text').classList.remove('text-duo-blue');
         document.getElementById('stage-text').classList.add('text-duo-green');
 
-        // Update header
-        document.getElementById('page-title').textContent = t.mnt_progress_ready || 'Тест готов!';
-        document.getElementById('header-icon-wrapper').classList.remove('bg-duo-purple', 'shadow-[0_4px_0_#A855F7]');
-        document.getElementById('header-icon-wrapper').classList.add('bg-duo-green', 'shadow-[0_4px_0_#45a302]');
-        document.getElementById('header-icon').className = 'ph-fill ph-check-circle text-white text-2xl';
+        // Update header (elements may not exist on all page variants — guard against null)
+        const _titleEl = document.getElementById('page-title');
+        if (_titleEl) _titleEl.textContent = t.mnt_progress_ready || 'Тест готов!';
+        const _iconWrapper = document.getElementById('header-icon-wrapper');
+        if (_iconWrapper) {
+            _iconWrapper.classList.remove('bg-duo-purple', 'shadow-[0_4px_0_#A855F7]');
+            _iconWrapper.classList.add('bg-duo-green', 'shadow-[0_4px_0_#45a302]');
+        }
+        const _iconEl = document.getElementById('header-icon');
+        if (_iconEl) _iconEl.className = 'ph-fill ph-check-circle text-white text-2xl';
 
         // Show result panel
         const panel = document.getElementById('result-panel');
@@ -275,7 +311,8 @@
                 </div>
                 <div class="flex items-center justify-center gap-3 mt-6">
                     ${data.result_test_id ? `
-                    <a href="/mentor/test/${data.result_test_id}/builder/"
+                    <a href="${data.result_test_type === 'speaking' ? '/mentor/speaking-test/' + data.result_test_id + '/builder/?start_wizard=1' : '/mentor/test/' + data.result_test_id + '/' + (data.result_test_type === 'reading' ? 'reading-builder/' : 'builder/')}"
+                       id="open-builder-btn"
                        class="btn-duo-blue text-sm">
                         <i class="ph-fill ph-pencil-simple text-lg"></i>
                         ${t.mnt_progress_open_builder || 'Открыть в конструкторе'}
@@ -285,11 +322,40 @@
                         ${t.mnt_progress_to_panel || 'К панели ментора'}
                     </a>
                 </div>
+                ${data.result_test_type === 'speaking' && data.result_test_id ? `
+                <p class="mt-4 text-xs text-duo-text-dim font-semibold" id="auto-redirect-msg">
+                    <i class="ph-fill ph-arrow-right text-duo-purple mr-1"></i>
+                    Авто-переход в конструктор через <span id="auto-redirect-countdown">3</span> сек...
+                </p>` : ''}
             </div>
         `;
 
         // Hide info card
         document.getElementById('info-card').classList.add('hidden');
+
+        // Auto-redirect to Speaking builder with crop wizard
+        if (data.result_test_type === 'speaking' && data.result_test_id) {
+            const builderUrl = '/mentor/speaking-test/' + data.result_test_id + '/builder/?start_wizard=1';
+            let secs = 3;
+            const countdownEl = document.getElementById('auto-redirect-countdown');
+            const redirectTimer = setInterval(() => {
+                secs--;
+                if (countdownEl) countdownEl.textContent = secs;
+                if (secs <= 0) {
+                    clearInterval(redirectTimer);
+                    window.location.href = builderUrl;
+                }
+            }, 1000);
+            // Allow manual cancel by clicking the button
+            const btn = document.getElementById('open-builder-btn');
+            if (btn) {
+                btn.addEventListener('click', () => {
+                    clearInterval(redirectTimer);
+                    const msg = document.getElementById('auto-redirect-msg');
+                    if (msg) msg.remove();
+                });
+            }
+        }
     }
 
     function showError(data) {
@@ -306,11 +372,16 @@
         document.getElementById('stage-text').classList.remove('text-duo-blue');
         document.getElementById('stage-text').classList.add('text-duo-red');
 
-        // Update header
-        document.getElementById('page-title').textContent = t.mnt_progress_error || 'Ошибка обработки';
-        document.getElementById('header-icon-wrapper').classList.remove('bg-duo-purple', 'shadow-[0_4px_0_#A855F7]');
-        document.getElementById('header-icon-wrapper').classList.add('bg-duo-red', 'shadow-[0_4px_0_#b91c1c]');
-        document.getElementById('header-icon').className = 'ph-fill ph-warning text-white text-2xl';
+        // Update header (guard against null)
+        const _errTitleEl = document.getElementById('page-title');
+        if (_errTitleEl) _errTitleEl.textContent = t.mnt_progress_error || 'Ошибка обработки';
+        const _errIconWrapper = document.getElementById('header-icon-wrapper');
+        if (_errIconWrapper) {
+            _errIconWrapper.classList.remove('bg-duo-purple', 'shadow-[0_4px_0_#A855F7]');
+            _errIconWrapper.classList.add('bg-duo-red', 'shadow-[0_4px_0_#b91c1c]');
+        }
+        const _errIconEl = document.getElementById('header-icon');
+        if (_errIconEl) _errIconEl.className = 'ph-fill ph-warning text-white text-2xl';
 
         // Show error panel
         const panel = document.getElementById('result-panel');

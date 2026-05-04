@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Speaking Test — {{ test.name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto px-4 sm:px-6 py-12 animate-fade-in text-center flex flex-col items-center">
+
+    <div class="w-24 h-24 bg-duo-purple/15 rounded-3xl flex items-center justify-center shadow-[0_4px_0_rgba(168,85,247,0.3)] mb-8">
+        <i class="ph-fill ph-microphone text-duo-purple text-6xl"></i>
+    </div>
+
+    <h1 class="text-3xl font-black text-white mb-3">{{ test.name }}</h1>
+    <p class="text-duo-text-dim font-bold text-base mb-10 leading-relaxed max-w-lg">
+        This speaking exam has <b class="text-white">4 parts</b>: <b class="text-white">1.1, 1.2, 2, 3</b>. Images are shown only in <b class="text-white">1.2 and 2</b>. You have <b class="text-white">60 minutes</b> total.
+    </p>
+
+    <!-- Info Cards -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full mb-10">
+        <div class="card-duo p-5 text-center">
+            <div class="w-12 h-12 mx-auto mb-3 rounded-xl bg-duo-purple/15 flex items-center justify-center">
+                <i class="ph-fill ph-image text-duo-purple text-2xl"></i>
+            </div>
+            <p class="text-sm font-bold text-white mb-1">Reference Image</p>
+            <p class="text-xs text-duo-text-muted font-semibold">Shown only in parts 1.2 and 2</p>
+        </div>
+        <div class="card-duo p-5 text-center">
+            <div class="w-12 h-12 mx-auto mb-3 rounded-xl bg-duo-blue/15 flex items-center justify-center">
+                <i class="ph-fill ph-waveform text-duo-blue text-2xl"></i>
+            </div>
+            <p class="text-sm font-bold text-white mb-1">Record Answer</p>
+            <p class="text-xs text-duo-text-muted font-semibold">Press the mic button to record</p>
+        </div>
+        <div class="card-duo p-5 text-center">
+            <div class="w-12 h-12 mx-auto mb-3 rounded-xl bg-duo-green/15 flex items-center justify-center">
+                <i class="ph-fill ph-check-circle text-duo-green text-2xl"></i>
+            </div>
+            <p class="text-sm font-bold text-white mb-1">Order</p>
+            <p class="text-xs text-duo-text-muted font-semibold">Parts go in fixed sequence only</p>
+        </div>
+    </div>
+
+    <!-- Tips box -->
+    <div class="card-duo w-full p-6 sm:p-8 mb-10 text-left !border-duo-purple/20">
+        <h3 class="text-sm font-black text-duo-purple uppercase tracking-widest mb-4 flex items-center gap-2">
+            <i class="ph-fill ph-lightbulb text-duo-gold"></i> Tips
+        </h3>
+        <ul class="space-y-3 text-sm text-duo-text-dim font-semibold">
+            <li class="flex items-start gap-2">
+                <i class="ph-fill ph-check-circle text-duo-green mt-0.5"></i>
+                <span>Allow microphone access when prompted by your browser.</span>
+            </li>
+            <li class="flex items-start gap-2">
+                <i class="ph-fill ph-check-circle text-duo-green mt-0.5"></i>
+                <span>Speak clearly and at a natural pace — there is no minimum recording time.</span>
+            </li>
+            <li class="flex items-start gap-2">
+                <i class="ph-fill ph-check-circle text-duo-green mt-0.5"></i>
+                <span>You can re-record any answer before moving to the next question.</span>
+            </li>
+            <li class="flex items-start gap-2">
+                <i class="ph-fill ph-check-circle text-duo-green mt-0.5"></i>
+                <span>Do <b class="text-white">not</b> switch tabs — this is monitored.</span>
+            </li>
+        </ul>
+    </div>
+
+    <!-- Permissions Check -->
+    <div class="card-duo w-full p-5 mb-10 text-left !border-duo-gold/20 bg-duo-gold/5" id="mic-check-box">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-duo-gold/15 flex items-center justify-center flex-shrink-0">
+                <i class="ph-fill ph-microphone-slash text-duo-gold text-xl" id="mic-icon"></i>
+            </div>
+            <div>
+                <p class="text-sm font-black text-white" id="mic-status">Microphone access not checked yet</p>
+                <p class="text-xs text-duo-text-muted font-semibold mt-0.5">Click the button below to test your microphone before starting.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Start Button -->
+    <div class="flex flex-col items-center gap-4 w-full">
+        <button id="check-mic-btn"
+                class="btn-duo-outline w-full max-w-xs text-base h-[52px] font-extrabold">
+            <i class="ph-fill ph-microphone text-lg"></i>
+            Test Microphone
+        </button>
+        <a id="start-link"
+           href="{% url 'exams:start_test' test.id %}"
+           class="btn-duo w-full max-w-xs text-lg shadow-[0_4px_0_#A855F7] bg-duo-purple hover:bg-duo-purple/90 border-0 h-[56px] text-white font-extrabold rounded-xl transition-all active:translate-y-1 active:shadow-none flex items-center justify-center gap-2">
+            <i class="ph-bold ph-play text-2xl"></i>
+            Start Speaking Test
+        </a>
+        <a href="{% url 'exams:dashboard' %}" class="text-xs text-duo-text-muted hover:text-white font-semibold transition-colors">
+            ← Back to Dashboard
+        </a>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.getElementById('check-mic-btn').addEventListener('click', async () => {
+    const statusEl = document.getElementById('mic-status');
+    const iconEl = document.getElementById('mic-icon');
+    const boxEl = document.getElementById('mic-check-box');
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        stream.getTracks().forEach(t => t.stop());
+        statusEl.textContent = 'Microphone ready ✓';
+        iconEl.className = 'ph-fill ph-microphone text-duo-green text-xl';
+        boxEl.className = boxEl.className.replace('!border-duo-gold/20 bg-duo-gold/5', '!border-duo-green/20 bg-duo-green/5');
+    } catch (e) {
+        statusEl.textContent = 'Microphone access denied — please allow it in browser settings.';
+        iconEl.className = 'ph-fill ph-microphone-slash text-duo-red text-xl';
+        boxEl.className = boxEl.className.replace('!border-duo-gold/20 bg-duo-gold/5', '!border-duo-red/20 bg-duo-red/5');
+    }
+});
+</script>
+{% endblock %}

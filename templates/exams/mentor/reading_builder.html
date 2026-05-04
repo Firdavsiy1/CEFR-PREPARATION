@@ -1,0 +1,808 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Reading Builder — {{ test.name }}{% endblock %}
+
+{% block extra_head %}
+<style>
+    .builder-layout {
+        display: grid;
+        grid-template-columns: 240px 1fr;
+        gap: 1.5rem;
+        min-height: calc(100vh - 200px);
+    }
+    @media (max-width: 1024px) { .builder-layout { grid-template-columns: 1fr; } }
+
+    .part-nav-btn { transition: all 0.15s ease; }
+    .part-nav-btn.active {
+        background: rgba(28,176,246,0.1);
+        border-color: rgba(28,176,246,0.3) !important;
+        color: #1CB0F6;
+    }
+    .part-nav-btn:hover:not(.active) {
+        background: rgba(255,255,255,0.03);
+        border-color: #2B4D56;
+    }
+
+    .q-card { transition: border-color 0.15s ease; }
+    .q-card:hover { border-color: #2B4D56; }
+
+    .editable-field {
+        background: #1A2F35;
+        border: 2px solid #2B4D56;
+        border-radius: 10px;
+        padding: 0.45rem 0.65rem;
+        color: #fff;
+        font-size: 0.8rem;
+        font-weight: 600;
+        font-family: 'Nunito', sans-serif;
+        width: 100%;
+        transition: border-color 0.15s;
+    }
+    .editable-field:focus { outline: none; border-color: #1CB0F6; box-shadow: 0 0 0 3px rgba(28,176,246,0.1); }
+    .editable-textarea { min-height: 70px; resize: vertical; }
+    .editable-textarea-lg { min-height: 160px; resize: vertical; }
+
+    .save-indicator {
+        position: fixed; bottom: 24px; right: 24px; z-index: 100;
+        padding: 10px 18px; border-radius: 14px; font-size: 0.75rem; font-weight: 800;
+        display: flex; align-items: center; gap: 8px; backdrop-filter: blur(12px);
+        transition: all 0.25s ease; opacity: 0; transform: translateY(8px);
+        pointer-events: none; text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .save-indicator.show { opacity: 1; transform: translateY(0); }
+    .save-indicator.saving { background: rgba(28,176,246,0.15); border: 2px solid rgba(28,176,246,0.3); color: #1CB0F6; }
+    .save-indicator.saved  { background: rgba(88,204,2,0.15);  border: 2px solid rgba(88,204,2,0.3);  color: #58CC02; }
+    .save-indicator.error  { background: rgba(255,75,75,0.15); border: 2px solid rgba(255,75,75,0.3);  color: #FF4B4B; }
+
+    .type-badge { font-size: 0.65rem; font-weight: 800; padding: 2px 8px; border-radius: 6px; text-transform: uppercase; letter-spacing: 0.4px; }
+    .type-multiple_choice  { background: rgba(28,176,246,0.15); color: #1CB0F6; }
+    .type-fill_in_the_blank{ background: rgba(88,204,2,0.15);  color: #58CC02; }
+    .type-matching         { background: rgba(255,200,0,0.15); color: #FFC800; }
+    .type-true_false_ni    { background: rgba(165,85,247,0.15);color: #A855F7; }
+    .type-insert_sentence  { background: rgba(255,107,53,0.15);color: #FF6B35; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
+    {% include "exams/mentor/_workspace_header.html" with icon="ph-fill ph-book-open-text" accent="blue" title="Reading Builder" subtitle="Проверьте passage, диапазоны вопросов, gaps и matching before publish. Этот builder должен быть рабочим местом для финальной валидации OCR." page_group="builder" %}
+
+    <div class="mb-6 grid gap-4 lg:grid-cols-[1.1fr,0.9fr] animate-slide-up">
+        <div class="card-duo p-5">
+            <div class="flex items-start justify-between gap-4">
+                <div>
+                    <p class="text-xs font-extrabold uppercase tracking-[0.16em] text-duo-text-muted">Текущий reading test</p>
+                    <div class="mt-2 flex items-center gap-3">
+                        <h2 class="text-2xl font-black text-white tracking-tight" id="test-title">{{ test.name }}</h2>
+                        <span class="badge-duo bg-duo-blue/15 text-duo-blue border border-duo-blue/30 text-xs font-bold">Reading</span>
+                    </div>
+                    <p class="mt-2 text-sm font-semibold text-duo-text-dim">Конструктор Reading тестов — части, пассажи, вопросы</p>
+                </div>
+
+                <a href="{% url 'exams:mentor_dashboard' %}" class="btn-duo-outline text-xs !py-2.5 !px-4">
+                    <i class="ph-bold ph-arrow-left"></i>
+                    К списку
+                </a>
+            </div>
+        </div>
+
+        <div class="card-duo p-5">
+            <p class="text-xs font-extrabold uppercase tracking-[0.16em] text-duo-text-muted">Контроль качества</p>
+            <div class="mt-3 flex flex-wrap items-center gap-3">
+                <span class="rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-xs font-black uppercase tracking-[0.16em] text-duo-text-dim" id="autosave-status">Все изменения сохранены</span>
+                <button onclick="toggleActive()" id="toggle-active-btn"
+                        class="badge-duo cursor-pointer transition-all text-xs {% if test.is_active %}bg-duo-green/15 text-duo-green border border-duo-green/30 hover:bg-duo-green/25{% else %}bg-duo-surface-2 text-duo-text-muted border border-duo-border hover:bg-duo-surface-2{% endif %}">
+                    {% if test.is_active %}Активен{% else %}Черновик{% endif %}
+                </button>
+                <a href="{% url 'exams:mentor_test_preview' test.id %}" target="_blank" rel="noopener" class="btn-duo-outline text-xs !py-2 !px-3">
+                    <i class="ph-bold ph-eye"></i>
+                    Student preview
+                </a>
+                <button type="button" onclick="loadValidationReport(true)" class="btn-duo-outline text-xs !py-2 !px-3">
+                    <i class="ph-bold ph-shield-check"></i>
+                    Проверить publish
+                </button>
+            </div>
+            <p class="mt-4 text-sm font-semibold leading-relaxed text-duo-text-dim">Здесь особенно важно проверить диапазоны вопросов, корректность options и наличие/отсутствие passage для каждой части.</p>
+        </div>
+    </div>
+
+    <div class="mb-8 card-duo p-5 animate-slide-up" style="animation-delay: 0.08s;" id="validation-panel">
+        <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+                <p class="text-xs font-extrabold uppercase tracking-[0.16em] text-duo-text-muted">Pre-publish validator</p>
+                <h3 class="mt-2 text-lg font-black text-white">Флаги качества Reading теста</h3>
+                <p class="mt-2 text-sm font-semibold text-duo-text-dim">Проверка диапазонов, passage, correct answers и completeness OCR before publish.</p>
+            </div>
+            <div class="flex flex-wrap gap-2 text-[11px] font-black uppercase tracking-[0.16em]">
+                <span class="rounded-full border border-red-400/20 bg-red-500/10 px-3 py-1 text-red-300" id="validation-blockers-chip">0 blockers</span>
+                <span class="rounded-full border border-yellow-300/20 bg-yellow-400/10 px-3 py-1 text-yellow-200" id="validation-warnings-chip">0 warnings</span>
+                <span class="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-duo-text-dim" id="validation-publishable-chip">Проверка...</span>
+            </div>
+        </div>
+        <div class="mt-4 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+            <div class="flex items-center justify-between gap-3">
+                <p class="text-sm font-black text-white" id="validation-summary-text">Загружаем статус публикации...</p>
+                <button type="button" onclick="loadValidationReport(true)" class="text-xs font-black uppercase tracking-[0.16em] text-duo-blue hover:text-white transition-colors">Обновить</button>
+            </div>
+            <div class="mt-4 space-y-2" id="validation-issues"></div>
+        </div>
+    </div>
+
+    <!-- Builder Layout -->
+    <div class="builder-layout">
+
+        <!-- Sidebar -->
+        <aside>
+            <div class="card-duo !p-4 sticky top-4">
+                <div class="flex items-center justify-between mb-3">
+                    <p class="text-xs font-extrabold text-duo-text-dim uppercase tracking-widest">Части</p>
+                    <button onclick="createPart()" class="w-7 h-7 rounded-lg flex items-center justify-center bg-duo-blue/15 border border-duo-blue/30 text-duo-blue hover:bg-duo-blue/25 transition-colors" title="Добавить часть">
+                        <i class="ph-bold ph-plus text-sm"></i>
+                    </button>
+                </div>
+                <nav class="space-y-1.5" id="parts-nav"></nav>
+                <div class="mt-4 pt-3 border-t border-duo-border">
+                    <p class="text-xs text-duo-text-muted font-semibold text-center" id="stats-text">Загрузка...</p>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main>
+            <div id="loading-state" class="card-duo p-12 text-center">
+                <i class="ph-fill ph-spinner animate-spin text-duo-blue text-3xl"></i>
+                <p class="text-duo-text-muted font-bold mt-3 text-sm">Загрузка теста...</p>
+            </div>
+            <div id="empty-state" class="card-duo p-12 text-center hidden">
+                <div class="w-16 h-16 mx-auto mb-4 rounded-2xl flex items-center justify-center bg-duo-blue/10 border-2 border-duo-blue/20">
+                    <i class="ph-fill ph-book-open text-duo-blue text-3xl"></i>
+                </div>
+                <p class="text-white font-extrabold mb-2">Нет частей</p>
+                <p class="text-duo-text-muted text-sm font-semibold mb-4">Добавьте первую часть, чтобы начать</p>
+                <button onclick="createPart()" class="btn-duo-outline text-sm mx-auto">
+                    <i class="ph-bold ph-plus"></i> Добавить Часть 1
+                </button>
+            </div>
+            <div id="part-editor" class="hidden space-y-5"></div>
+        </main>
+    </div>
+
+    <div class="mt-8 mb-12 p-6 bg-duo-surface-2 border-2 border-duo-border rounded-2xl flex flex-col md:flex-row items-center justify-between gap-6 relative overflow-hidden" id="publish-panel">
+        <div class="absolute -right-20 -top-20 w-64 h-64 bg-duo-blue/5 rounded-full blur-3xl pointer-events-none"></div>
+        <div class="relative z-10 w-full md:w-auto">
+            <h3 class="text-xl font-black text-white mb-1">Публикация reading test</h3>
+            <p class="text-duo-text-dim text-sm font-bold">Перед активацией проверьте диапазоны вопросов, наличие passage там, где он нужен, и корректные ответы для каждой части.</p>
+            <div class="mt-3 flex flex-wrap gap-2 text-[11px] font-black uppercase tracking-[0.16em]">
+                <span class="rounded-full border border-duo-blue/20 bg-duo-blue/10 px-3 py-1 text-duo-blue">1. Range check</span>
+                <span class="rounded-full border border-duo-green/20 bg-duo-green/10 px-3 py-1 text-duo-green">2. Passage check</span>
+                <span class="rounded-full border border-duo-gold/20 bg-duo-gold/10 px-3 py-1 text-duo-gold">3. Publish</span>
+            </div>
+        </div>
+
+        <div class="flex flex-col sm:flex-row items-center gap-6 relative z-10 w-full md:w-auto">
+            <button type="button" class="btn-duo-outline text-sm w-full sm:w-auto" onclick="loadValidationReport(true)">
+                <i class="ph-bold ph-seal-warning"></i>
+                Запустить validator
+            </button>
+            <label class="flex items-center gap-3 cursor-pointer group">
+                <input type="checkbox" id="split-parts-toggle" class="appearance-none w-12 h-6 min-w-[3rem] border-2 border-duo-border rounded-full bg-duo-surface 
+                    checked:bg-duo-blue checked:border-duo-blue outline-none transition-colors relative 
+                    before:content-[''] before:absolute before:w-4 before:h-4 before:bg-white before:rounded-full before:top-[2px] before:left-[2px] 
+                    checked:before:translate-x-6 before:transition-transform shadow-inner">
+                <span class="text-sm font-bold text-white group-hover:text-duo-blue transition-colors">Выложить все части отдельно</span>
+            </label>
+            <button class="btn-duo-green px-8 py-4 text-lg flex items-center justify-center gap-2 w-full sm:w-auto hover:-translate-y-1 shadow-[0_4px_0_#46A302] hover:shadow-[0_6px_0_#46A302] active:translate-y-1 active:shadow-none transition-all" onclick="publishTest(this)">
+                <i class="ph-bold ph-check text-xl"></i> <span class="uppercase tracking-wide font-black">Опубликовать reading test</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Save Indicator -->
+<div class="save-indicator" id="save-indicator">
+    <i class="ph-fill ph-floppy-disk"></i>
+    <span id="save-text">Сохранено</span>
+</div>
+
+<!-- Confirm Delete Modal -->
+<div id="confirm-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4">
+    <div class="card-duo max-w-sm w-full p-6 animate-fade-in">
+        <div class="w-12 h-12 rounded-xl bg-red-500/15 flex items-center justify-center mb-4">
+            <i class="ph-fill ph-trash text-red-400 text-xl"></i>
+        </div>
+        <h3 class="text-lg font-black text-white mb-1" id="modal-title">Удалить?</h3>
+        <p class="text-sm text-duo-text-muted font-semibold mb-5" id="modal-msg">Это действие нельзя отменить.</p>
+        <div class="flex gap-3">
+            <button onclick="closeModal()" class="btn-duo-outline text-sm flex-1">Отмена</button>
+            <button onclick="confirmDelete()" class="flex-1 py-2 px-4 rounded-xl bg-red-500/15 border-2 border-red-500/30 text-red-400 font-extrabold text-sm hover:bg-red-500/25 transition-colors">
+                Удалить
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+const TEST_ID  = {{ test.id }};
+const BASE_URL = '';
+const CSRF     = '{{ csrf_token }}';
+
+const QUESTION_TYPES = [
+    ['multiple_choice',   'Multiple Choice'],
+    ['fill_in_the_blank', 'Fill in the Blank'],
+    ['matching',          'Matching'],
+    ['true_false_ni',     'True / False / NI'],
+    ['insert_sentence',   'Insert Sentence'],
+];
+
+// ─── State ───────────────────────────────────────────────────────────────────
+let state = { parts: [], activePartId: null };
+let saveTimer = null;
+let pendingDelete = null;
+
+// ─── Boot ────────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', loadTest);
+document.addEventListener('DOMContentLoaded', () => loadValidationReport());
+
+async function loadTest() {
+    try {
+        const r = await fetch(`${BASE_URL}/api/mentor/reading-test/${TEST_ID}/data/`);
+        const data = await r.json();
+        state.parts = data.parts || [];
+        renderSidebar();
+        if (state.parts.length) {
+            selectPart(state.parts[0].id);
+        } else {
+            showEmptyState();
+        }
+        updateStats();
+    } catch (e) {
+        console.error(e);
+    }
+}
+
+// ─── Sidebar ─────────────────────────────────────────────────────────────────
+function renderSidebar() {
+    const nav = document.getElementById('parts-nav');
+    nav.innerHTML = '';
+    state.parts.forEach(p => {
+        const btn = document.createElement('button');
+        btn.id = `nav-part-${p.id}`;
+        btn.className = `part-nav-btn w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl border-2 border-duo-border text-left`;
+        btn.innerHTML = `
+            <div class="w-7 h-7 rounded-lg flex items-center justify-center bg-duo-blue/10 border border-duo-blue/20 flex-shrink-0">
+                <span class="text-xs font-black text-duo-blue">${p.part_number}</span>
+            </div>
+            <div class="flex-1 min-w-0">
+                <p class="text-xs font-extrabold text-white truncate">Часть ${p.part_number}</p>
+                <p class="text-[10px] text-duo-text-muted font-semibold">${p.questions.length} вопр.</p>
+            </div>`;
+        btn.onclick = () => selectPart(p.id);
+        nav.appendChild(btn);
+    });
+}
+
+function selectPart(partId) {
+    state.activePartId = partId;
+    document.querySelectorAll('.part-nav-btn').forEach(b => b.classList.remove('active'));
+    const navBtn = document.getElementById(`nav-part-${partId}`);
+    if (navBtn) navBtn.classList.add('active');
+    renderPartEditor(partId);
+}
+
+// ─── Part Editor ─────────────────────────────────────────────────────────────
+function renderPartEditor(partId) {
+    const part = state.parts.find(p => p.id === partId);
+    if (!part) return;
+
+    document.getElementById('loading-state').classList.add('hidden');
+    document.getElementById('empty-state').classList.add('hidden');
+    const editor = document.getElementById('part-editor');
+    editor.classList.remove('hidden');
+
+    const passageContent = part.passage ? part.passage.content : '';
+    const passageTitle   = part.passage ? part.passage.title   : '';
+
+    editor.innerHTML = `
+    <!-- Part Header -->
+    <div class="card-duo !p-5">
+        <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-xl flex items-center justify-center bg-duo-blue/15 border-2 border-duo-blue/25">
+                    <span class="text-sm font-black text-duo-blue">${part.part_number}</span>
+                </div>
+                <h2 class="text-base font-black text-white">Часть ${part.part_number}</h2>
+            </div>
+            <button onclick="deletePart(${part.id})" class="w-8 h-8 rounded-lg flex items-center justify-center text-duo-text-muted hover:text-red-400 hover:bg-red-500/10 transition-colors border border-duo-border" title="Удалить часть">
+                <i class="ph-bold ph-trash text-sm"></i>
+            </button>
+        </div>
+
+        <!-- Question range -->
+        <div class="flex gap-3 mb-4">
+            <div class="flex-1">
+                <label class="text-xs font-extrabold text-duo-text-dim mb-1.5 block uppercase tracking-widest">От вопроса №</label>
+                <input type="number" min="1" class="editable-field" id="part-qstart"
+                       value="${part.question_number_start || ''}"
+                       oninput="schedulePartSave(${part.id})"
+                       placeholder="1">
+            </div>
+            <div class="flex-1">
+                <label class="text-xs font-extrabold text-duo-text-dim mb-1.5 block uppercase tracking-widest">До вопроса №</label>
+                <input type="number" min="1" class="editable-field" id="part-qend"
+                       value="${part.question_number_end || ''}"
+                       oninput="schedulePartSave(${part.id})"
+                       placeholder="6">
+            </div>
+        </div>
+
+        <!-- Instruction -->
+        <div class="mb-4">
+            <label class="text-xs font-extrabold text-duo-text-dim mb-1.5 block uppercase tracking-widest">Инструкция</label>
+            <textarea id="part-instruction" class="editable-field editable-textarea"
+                      oninput="schedulePartSave(${part.id})"
+                      placeholder="Read the text. Fill in each gap with ONE word...">${escHtml(part.instruction)}</textarea>
+        </div>
+    </div>
+
+    <!-- Passage -->
+    <div class="card-duo !p-5">
+        <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center gap-2">
+                <i class="ph-fill ph-article text-duo-blue"></i>
+                <h3 class="text-sm font-extrabold text-white">Пассаж (текст для чтения)</h3>
+            </div>
+            <label class="flex items-center gap-2 cursor-pointer select-none">
+                <span class="text-xs font-bold text-duo-text-muted">Без пассажа</span>
+                <div class="relative">
+                    <input type="checkbox" id="no-passage-toggle" class="peer sr-only"
+                           ${!passageContent ? 'checked' : ''}
+                           onchange="togglePassage(${part.id})">
+                    <div class="w-10 h-5 bg-duo-surface-2 border-2 border-duo-border peer-checked:bg-duo-blue/30 peer-checked:border-duo-blue/50 rounded-full transition-colors"></div>
+                    <div class="absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-duo-text-muted peer-checked:translate-x-5 peer-checked:bg-duo-blue transition-all"></div>
+                </div>
+            </label>
+        </div>
+        <div id="passage-fields" class="${!passageContent ? 'hidden' : ''} space-y-3">
+            <input type="text" id="passage-title" class="editable-field"
+                   placeholder="Название пассажа (напр. Sepsis)"
+                   value="${escHtml(passageTitle)}"
+                   oninput="schedulePartSave(${part.id})">
+            <textarea id="passage-content" class="editable-field editable-textarea-lg font-mono text-xs leading-relaxed"
+                      placeholder="Полный текст пассажа. Пробелы между абзацами — двойной перенос строки.&#10;Для fill-in-the-blank используйте [GAP] вместо пропуска."
+                      oninput="schedulePartSave(${part.id})">${escHtml(passageContent)}</textarea>
+        </div>
+        <p id="no-passage-hint" class="text-xs text-duo-text-muted font-semibold ${!passageContent ? '' : 'hidden'}">
+            Эта часть не требует единого пассажа (напр. matching с короткими объявлениями).
+        </p>
+    </div>
+
+    <!-- Questions -->
+    <div class="card-duo !p-5">
+        <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center gap-2">
+                <i class="ph-fill ph-question text-duo-blue"></i>
+                <h3 class="text-sm font-extrabold text-white">Вопросы <span class="text-duo-text-muted font-bold text-xs" id="q-count">(${part.questions.length})</span></h3>
+            </div>
+            <button onclick="createQuestion(${part.id})" class="btn-duo-outline text-xs !py-1.5 !px-3">
+                <i class="ph-bold ph-plus"></i> Добавить
+            </button>
+        </div>
+        <div class="space-y-3" id="questions-list">
+            ${part.questions.map(q => renderQuestionCard(q, part.id)).join('')}
+        </div>
+        ${part.questions.length === 0 ? `
+        <div class="text-center py-8 text-duo-text-muted">
+            <i class="ph-fill ph-question text-3xl mb-2 block"></i>
+            <p class="text-xs font-bold">Нет вопросов. Нажмите «Добавить».</p>
+        </div>` : ''}
+    </div>`;
+}
+
+function renderQuestionCard(q, partId) {
+    const typeBadge = QUESTION_TYPES.find(t => t[0] === q.question_type);
+    const typeLabel = typeBadge ? typeBadge[1] : q.question_type;
+    const optionsText = Array.isArray(q.options) ? q.options.join('\n') : '';
+    return `
+    <div class="q-card border-2 border-duo-border rounded-2xl p-4 bg-duo-surface/50" id="qcard-${q.id}">
+        <div class="flex items-start gap-3">
+            <div class="w-8 h-8 rounded-lg flex items-center justify-center bg-duo-surface-2 border border-duo-border flex-shrink-0 mt-0.5">
+                <span class="text-xs font-black text-duo-text-muted">${q.question_number}</span>
+            </div>
+            <div class="flex-1 min-w-0 space-y-2.5">
+                <!-- Row 1: q_number + type -->
+                <div class="flex items-center gap-2 flex-wrap">
+                    <input type="number" min="1" value="${q.question_number}"
+                           class="editable-field !w-16 text-center text-xs"
+                           placeholder="№"
+                           onchange="updateQuestionField(${q.id}, 'question_number', parseInt(this.value))">
+                    <select class="editable-field !w-auto text-xs cursor-pointer"
+                            onchange="updateQuestionField(${q.id}, 'question_type', this.value)">
+                        ${QUESTION_TYPES.map(([v,l]) => `<option value="${v}" ${q.question_type===v?'selected':''}>${l}</option>`).join('')}
+                    </select>
+                    <span class="type-badge type-${q.question_type}">${typeLabel}</span>
+                </div>
+                <!-- Row 2: question_text -->
+                <textarea class="editable-field editable-textarea text-xs"
+                          placeholder="Текст вопроса / стебель / утверждение..."
+                          oninput="scheduleQSave(${q.id})"
+                          id="qt-${q.id}">${escHtml(q.question_text)}</textarea>
+                <!-- Row 3: options -->
+                <div>
+                    <label class="text-[10px] font-extrabold text-duo-text-dim uppercase tracking-widest block mb-1">Варианты (по одному на строку)</label>
+                    <textarea class="editable-field editable-textarea font-mono text-xs"
+                              placeholder="A) текст варианта&#10;B) текст варианта&#10;..."
+                              oninput="scheduleQSave(${q.id})"
+                              id="qo-${q.id}">${escHtml(optionsText)}</textarea>
+                </div>
+                <!-- Row 4: correct answer + delete -->
+                <div class="flex items-center gap-2">
+                    <div class="flex-1">
+                        <label class="text-[10px] font-extrabold text-duo-text-dim uppercase tracking-widest block mb-1">Правильный ответ</label>
+                        <input type="text" value="${escHtml(q.correct_answer)}"
+                               class="editable-field text-xs"
+                               placeholder="A / killers / True"
+                               oninput="scheduleQSave(${q.id})"
+                               id="qa-${q.id}">
+                    </div>
+                    <div class="flex-1">
+                        <label class="text-[10px] font-extrabold text-duo-text-dim uppercase tracking-widest block mb-1">Пояснение (опционально)</label>
+                        <input type="text" value="${escHtml(q.explanation)}"
+                               class="editable-field text-xs"
+                               placeholder="Почему этот ответ верен..."
+                               oninput="scheduleQSave(${q.id})"
+                               id="qe-${q.id}">
+                    </div>
+                    <button onclick="deleteQuestion(${q.id})"
+                            class="mt-5 w-8 h-8 flex-shrink-0 rounded-lg flex items-center justify-center text-duo-text-muted hover:text-red-400 hover:bg-red-500/10 border border-duo-border transition-colors">
+                        <i class="ph-bold ph-trash text-sm"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>`;
+}
+
+// ─── Part Save ────────────────────────────────────────────────────────────────
+let partSaveTimer = null;
+function schedulePartSave(partId) {
+    clearTimeout(partSaveTimer);
+    partSaveTimer = setTimeout(() => savePartData(partId), 800);
+}
+
+async function savePartData(partId) {
+    const instruction = document.getElementById('part-instruction')?.value || '';
+    const qStart = document.getElementById('part-qstart')?.value || null;
+    const qEnd   = document.getElementById('part-qend')?.value   || null;
+
+    const noPassage = document.getElementById('no-passage-toggle')?.checked;
+    const passageTitle   = document.getElementById('passage-title')?.value || '';
+    const passageContent = document.getElementById('passage-content')?.value || '';
+
+    const body = {
+        instruction,
+        question_number_start: qStart ? parseInt(qStart) : null,
+        question_number_end:   qEnd   ? parseInt(qEnd)   : null,
+        passage: noPassage ? null : { title: passageTitle, content: passageContent },
+    };
+
+    showSaving();
+    try {
+        const r = await apiFetch(`${BASE_URL}/api/mentor/reading-part/${partId}/update/`, 'POST', body);
+        if (r.ok) {
+            // Update local state
+            const part = state.parts.find(p => p.id === partId);
+            if (part) {
+                part.instruction = instruction;
+                part.question_number_start = qStart ? parseInt(qStart) : null;
+                part.question_number_end   = qEnd   ? parseInt(qEnd)   : null;
+                if (noPassage) { part.passage = null; }
+                else { part.passage = { ...(part.passage||{}), title: passageTitle, content: passageContent }; }
+            }
+            showSaved();
+        } else { showError(); }
+    } catch { showError(); }
+}
+
+// ─── Question Save ────────────────────────────────────────────────────────────
+const qSaveTimers = {};
+function scheduleQSave(qId) {
+    clearTimeout(qSaveTimers[qId]);
+    qSaveTimers[qId] = setTimeout(() => saveQuestion(qId), 800);
+}
+
+async function saveQuestion(qId) {
+    const qt = document.getElementById(`qt-${qId}`)?.value || '';
+    const qo = document.getElementById(`qo-${qId}`)?.value || '';
+    const qa = document.getElementById(`qa-${qId}`)?.value || '';
+    const qe = document.getElementById(`qe-${qId}`)?.value || '';
+
+    const body = { question_text: qt, options: qo, correct_answer: qa, explanation: qe };
+    showSaving();
+    try {
+        const r = await apiFetch(`${BASE_URL}/api/mentor/reading-question/${qId}/update/`, 'POST', body);
+        if (r.ok) showSaved(); else showError();
+    } catch { showError(); }
+}
+
+async function updateQuestionField(qId, field, value) {
+    showSaving();
+    try {
+        const r = await apiFetch(`${BASE_URL}/api/mentor/reading-question/${qId}/update/`, 'POST', { [field]: value });
+        if (r.ok) { showSaved(); if (field === 'question_number') refreshQCard(qId, value); }
+        else showError();
+    } catch { showError(); }
+}
+
+function refreshQCard(qId, newNum) {
+    const badge = document.querySelector(`#qcard-${qId} .w-8 span`);
+    if (badge) badge.textContent = newNum;
+}
+
+// ─── Passage toggle ───────────────────────────────────────────────────────────
+function togglePassage(partId) {
+    const checked = document.getElementById('no-passage-toggle').checked;
+    document.getElementById('passage-fields').classList.toggle('hidden', checked);
+    document.getElementById('no-passage-hint').classList.toggle('hidden', !checked);
+    schedulePartSave(partId);
+}
+
+// ─── Create / Delete ─────────────────────────────────────────────────────────
+async function createPart() {
+    showSaving();
+    try {
+        const r = await apiFetch(`${BASE_URL}/api/mentor/reading-test/${TEST_ID}/part/create/`, 'POST', {});
+        if (!r.ok) { showError(); return; }
+        const newPart = await r.json();
+        newPart.questions = [];
+        state.parts.push(newPart);
+        renderSidebar();
+        selectPart(newPart.id);
+        updateStats();
+        showSaved();
+    } catch { showError(); }
+}
+
+async function createQuestion(partId) {
+    showSaving();
+    try {
+        const r = await apiFetch(`${BASE_URL}/api/mentor/reading-part/${partId}/question/create/`, 'POST', {});
+        if (!r.ok) { showError(); return; }
+        const newQ = await r.json();
+        const part = state.parts.find(p => p.id === partId);
+        if (part) part.questions.push(newQ);
+        // Append card to DOM without full re-render
+        const list = document.getElementById('questions-list');
+        if (list) {
+            list.innerHTML += renderQuestionCard(newQ, partId);
+            document.getElementById(`qt-${newQ.id}`)?.focus();
+        }
+        updateQCount(part);
+        updateStats();
+        showSaved();
+    } catch { showError(); }
+}
+
+function deletePart(partId) {
+    pendingDelete = { type: 'part', id: partId };
+    document.getElementById('modal-title').textContent = 'Удалить часть?';
+    document.getElementById('modal-msg').textContent   = 'Все вопросы и пассаж этой части будут удалены.';
+    document.getElementById('confirm-modal').classList.remove('hidden');
+}
+
+function deleteQuestion(qId) {
+    pendingDelete = { type: 'question', id: qId };
+    document.getElementById('modal-title').textContent = 'Удалить вопрос?';
+    document.getElementById('modal-msg').textContent   = 'Это действие нельзя отменить.';
+    document.getElementById('confirm-modal').classList.remove('hidden');
+}
+
+async function confirmDelete() {
+    closeModal();
+    if (!pendingDelete) return;
+    const { type, id } = pendingDelete;
+    pendingDelete = null;
+
+    const url = type === 'part'
+        ? `${BASE_URL}/api/mentor/reading-part/${id}/delete/`
+        : `${BASE_URL}/api/mentor/reading-question/${id}/delete/`;
+
+    showSaving();
+    try {
+        const r = await apiFetch(url, 'POST', {});
+        if (!r.ok) { showError(); return; }
+
+        if (type === 'part') {
+            state.parts = state.parts.filter(p => p.id !== id);
+            renderSidebar();
+            if (state.parts.length) selectPart(state.parts[0].id);
+            else showEmptyState();
+        } else {
+            // Remove from state
+            state.parts.forEach(p => { p.questions = p.questions.filter(q => q.id !== id); });
+            document.getElementById(`qcard-${id}`)?.remove();
+            const part = state.parts.find(p => p.id === state.activePartId);
+            if (part) updateQCount(part);
+        }
+        updateStats();
+        showSaved();
+    } catch { showError(); }
+}
+
+function closeModal() { document.getElementById('confirm-modal').classList.add('hidden'); }
+
+// ─── Toggle Active ────────────────────────────────────────────────────────────
+async function toggleActive() {
+    const r = await apiFetch(`${BASE_URL}/api/mentor/test/${TEST_ID}/toggle-active/`, 'POST', {});
+    if (!r.ok) { showError(); return; }
+    const d = await r.json();
+    if (d.error) { showError(); return; }
+    const btn = document.getElementById('toggle-active-btn');
+    if (d.is_active) {
+        btn.textContent = 'Активен';
+        btn.className = btn.className.replace(/bg-\S+\/\S+\s?text-\S+\s?border\s?\S+/g, '').trim();
+        btn.classList.add('bg-duo-green/15', 'text-duo-green', 'border', 'border-duo-green/30');
+    } else {
+        btn.textContent = 'Черновик';
+        btn.classList.add('bg-duo-surface-2', 'text-duo-text-muted', 'border', 'border-duo-border');
+    }
+}
+
+function renderValidationReport(report) {
+    const blockers = report?.summary?.blockers || 0;
+    const warnings = report?.summary?.warnings || 0;
+    const isPublishable = !!report?.is_publishable;
+    const issues = report?.issues || [];
+
+    document.getElementById('validation-blockers-chip').textContent = `${blockers} blockers`;
+    document.getElementById('validation-warnings-chip').textContent = `${warnings} warnings`;
+
+    const publishableChip = document.getElementById('validation-publishable-chip');
+    publishableChip.textContent = isPublishable ? 'Можно публиковать' : 'Публикация заблокирована';
+    publishableChip.className = isPublishable
+        ? 'rounded-full border border-duo-green/20 bg-duo-green/10 px-3 py-1 text-duo-green'
+        : 'rounded-full border border-red-400/20 bg-red-500/10 px-3 py-1 text-red-300';
+
+    document.getElementById('validation-summary-text').textContent = isPublishable
+        ? 'Критичных проблем не найдено. Reading тест можно публиковать.'
+        : `Найдены критичные проблемы: ${blockers} blocker(s).`;
+
+    const issuesWrap = document.getElementById('validation-issues');
+    if (!issues.length) {
+        issuesWrap.innerHTML = '<div class="rounded-xl border border-duo-green/20 bg-duo-green/10 px-4 py-3 text-sm font-bold text-duo-green">Пока проблем не найдено.</div>';
+    } else {
+        issuesWrap.innerHTML = issues.map((issue) => {
+            const isBlocker = issue.severity === 'blocker';
+            const classes = isBlocker
+                ? 'border-red-400/20 bg-red-500/10 text-red-100'
+                : 'border-yellow-300/20 bg-yellow-400/10 text-yellow-100';
+            const badge = isBlocker ? 'BLOCKER' : 'WARNING';
+            return `
+                <div class="rounded-xl border px-4 py-3 ${classes}">
+                    <div class="flex items-start justify-between gap-3">
+                        <div>
+                            <p class="text-xs font-black uppercase tracking-[0.16em]">${badge}</p>
+                            <p class="mt-1 text-sm font-black">${issue.message}</p>
+                            <p class="mt-1 text-xs font-semibold opacity-80">${issue.location || 'Test level'}</p>
+                        </div>
+                        <span class="text-[10px] font-black uppercase tracking-[0.16em] opacity-70">${issue.code}</span>
+                    </div>
+                </div>`;
+        }).join('');
+    }
+
+    const publishButton = document.querySelector('#publish-panel button[onclick="publishTest(this)"]');
+    if (publishButton) {
+        publishButton.disabled = !isPublishable;
+        publishButton.classList.toggle('opacity-60', !isPublishable);
+        publishButton.classList.toggle('pointer-events-none', !isPublishable);
+    }
+}
+
+async function loadValidationReport(forceToast = false) {
+    try {
+        const response = await fetch(`${BASE_URL}/api/mentor/test/${TEST_ID}/validate/`);
+        const report = await response.json();
+        renderValidationReport(report);
+        if (forceToast) {
+            if (report.is_publishable) showSaved();
+            else showError();
+        }
+        return report;
+    } catch (error) {
+        console.error('Validation failed', error);
+        showError();
+        return null;
+    }
+}
+
+async function publishTest(btn) {
+    const report = await loadValidationReport(true);
+    if (!report || !report.is_publishable) {
+        return;
+    }
+
+    const originalHtml = btn.innerHTML;
+    btn.innerHTML = '<i class="ph ph-spinner spin"></i> <span>PUBLISHING...</span>';
+    btn.disabled = true;
+
+    const splitParts = document.getElementById('split-parts-toggle').checked;
+
+    try {
+        const response = await apiFetch(`${BASE_URL}/api/mentor/test/${TEST_ID}/publish/`, 'POST', { split_parts: splitParts });
+        const data = await response.json();
+        if (response.ok && data.success) {
+            window.location.href = '/mentor/';
+            return;
+        }
+        if (data.validation) {
+            renderValidationReport(data.validation);
+        }
+        alert(data.error || 'Ошибка публикации');
+    } catch (error) {
+        console.error(error);
+        alert('Server error while publishing');
+    }
+
+    btn.innerHTML = originalHtml;
+    btn.disabled = false;
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+function showEmptyState() {
+    document.getElementById('loading-state').classList.add('hidden');
+    document.getElementById('part-editor').classList.add('hidden');
+    document.getElementById('empty-state').classList.remove('hidden');
+}
+
+function updateQCount(part) {
+    const el = document.getElementById('q-count');
+    if (el && part) el.textContent = `(${part.questions.length})`;
+    const navEl = document.querySelector(`#nav-part-${part?.id} p.text-\\[10px\\]`);
+    if (navEl && part) navEl.textContent = `${part.questions.length} вопр.`;
+}
+
+function updateStats() {
+    const total = state.parts.reduce((s, p) => s + p.questions.length, 0);
+    document.getElementById('stats-text').textContent = `${state.parts.length} частей · ${total} вопросов`;
+}
+
+async function apiFetch(url, method, body) {
+    return fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+        body: JSON.stringify(body),
+    });
+}
+
+function escHtml(str) {
+    if (!str) return '';
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ─── Save Indicator ───────────────────────────────────────────────────────────
+function showSaving() {
+    const el = document.getElementById('save-indicator');
+    el.className = 'save-indicator saving show';
+    document.getElementById('save-text').textContent = 'Сохранение...';
+    document.getElementById('autosave-status').textContent = 'Сохранение...';
+}
+function showSaved() {
+    const el = document.getElementById('save-indicator');
+    el.className = 'save-indicator saved show';
+    document.getElementById('save-text').textContent = 'Сохранено';
+    document.getElementById('autosave-status').textContent = 'Все изменения сохранены';
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(() => { el.classList.remove('show'); }, 2000);
+}
+function showError() {
+    const el = document.getElementById('save-indicator');
+    el.className = 'save-indicator error show';
+    document.getElementById('save-text').textContent = 'Ошибка сохранения';
+    document.getElementById('autosave-status').textContent = 'Ошибка!';
+}
+</script>
+{% endblock %}

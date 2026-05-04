@@ -26,7 +26,7 @@
                 {% endwith %}
             {% endif %}
         {% else %}
-            {% if test.parts.count > 1 %}
+            {% if test.num_parts > 1 %}
                 {% if test.test_type == 'listening' %}
                     <img src="{% static 'images/full_listening.png' %}" alt="Listening" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110">
                 {% elif test.test_type == 'reading' %}
@@ -37,6 +37,9 @@
                     <img src="{% static 'images/full_listening.png' %}" alt="Test" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110">
                 {% endif %}
             {% else %}
+                {% if test.test_type == 'speaking' %}
+                    <img src="{% static 'images/full_speaking.png' %}" alt="Speaking" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110">
+                {% else %}
                 {% with part=test.parts.first %}
                     {% if part.part_number == 1 %}
                         <img src="{% static 'images/part_1.png' %}" alt="Part 1" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110">
@@ -58,6 +61,7 @@
                         {% endif %}
                     {% endif %}
                 {% endwith %}
+                {% endif %}
             {% endif %}
         {% endif %}
 
@@ -128,7 +132,7 @@
                         </div>
                         <div class="flex flex-col">
                             <span class="text-[10px] text-duo-text-muted font-bold leading-none">Секций</span>
-                            <span class="text-xs text-white font-black">{{ test.parts.count }}</span>
+                            <span class="text-xs text-white font-black">{{ test.num_parts }}</span>
                         </div>
                     </div>
                     <div class="flex items-center gap-2.5 p-2 rounded-xl bg-duo-surface-2/50 border border-white/5 group-hover:bg-duo-surface-2 transition-colors">

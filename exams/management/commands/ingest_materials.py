@@ -11,7 +11,13 @@ from django.db import transaction
 
 from PIL import Image, ExifTags
 
-from exams.models import Test, Part, Question, Choice
+from exams.models import Test, Part, Question, Choice, ReadingTest
+from exams.reading_services import (
+    build_parts_data_from_folder,
+    parse_reading_materials,
+    ingest_reading_json,
+    generate_reading_explanations,
+)
 
 PART_QUESTION_TYPES = {
     1: 'multiple_choice',
@@ -42,6 +48,9 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument('--test',     type=str, default=None)
+        parser.add_argument('--test-id',  type=int, default=None,
+                            help='ID of a pre-created Test record to ingest into. '
+                                 'When set, skips Test creation and uses the given Test directly.')
         parser.add_argument('--dry-run',  action='store_true')
         parser.add_argument('--skip-ocr', action='store_true')
         parser.add_argument(
@@ -69,6 +78,7 @@ class Command(BaseCommand):
         self.thinking_level = options['thinking_level'].upper()   # SDK хочет UPPER
         self.genai_client  = None
         self.max_workers   = options['workers']
+        self.test_id       = options.get('test_id')  # None = create new Test, int = use existing
 
         if not self.skip_ocr:
             try:
@@ -178,6 +188,17 @@ class Command(BaseCommand):
             self._ingest_writing_module(test_name, module_dir, part_dirs)
             return
 
+        if module_name == 'Reading':
+            # Reading uses the dedicated AI service (multi-image + answer-key approach)
+            if not part_dirs:
+                self.stderr.write(self.style.WARNING('  ⚠  No Part folders found for Reading.'))
+                return
+            if dry_run:
+                self._dry_run_preview_reading(part_dirs)
+                return
+            self._ingest_reading_module(test_name, module_dir)
+            return
+
         if not part_dirs:
             self.stderr.write(self.style.WARNING(f'  ⚠  No Part folders found for {module_name}.'))
             return
@@ -226,14 +247,23 @@ class Command(BaseCommand):
         self.stdout.write(self.style.MIGRATE_HEADING('\n  💾  Saving to database...'))
 
         with transaction.atomic():
-            test_obj, created = Test.objects.update_or_create(
-                name=test_name,
-                defaults={'test_type': module_name.lower(), 'is_active': True},
-            )
-            if not created:
-                self.stdout.write(f'  ↻  Re-ingesting "{test_name}" (clearing old data)…')
+            if self.test_id:
+                test_obj = Test.objects.get(pk=self.test_id)
+                test_obj.test_type = module_name.lower()
+                test_obj.is_active = True
+                test_obj.is_deleted = False
+                test_obj.deleted_at = None
+                test_obj.save(update_fields=['test_type', 'is_active', 'is_deleted', 'deleted_at'])
                 test_obj.parts.all().delete()
+                self.stdout.write(f'  ↻  Using pre-created Test (id={self.test_id}): "{test_obj.name}"')
+                created = False
             else:
+                test_obj = Test.objects.create(
+                    name=test_name,
+                    test_type=module_name.lower(),
+                    is_active=True,
+                )
+                created = True
                 self.stdout.write(self.style.SUCCESS(f'  ✓  Created Test: {test_name}'))
 
             global_offset   = 0
@@ -473,6 +503,124 @@ class Command(BaseCommand):
             self.stdout.write(
                 f'    Part {part_num}: {len(answers)} Qs ({q_type})  files={files}'
             )
+
+    def _dry_run_preview_reading(self, part_dirs):
+        self.stdout.write(self.style.WARNING('  [DRY RUN — Reading] No database changes.\n'))
+        IMAGE_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.webp'}
+        for pd in part_dirs:
+            part_num = int(pd.name.split()[-1])
+            images = [f for f in pd.iterdir() if f.suffix.lower() in IMAGE_EXTENSIONS]
+            answer_key = ''
+            for candidate in ('Answers', 'answers.txt', 'answers'):
+                fp = pd / candidate
+                if fp.exists():
+                    answer_key = fp.read_text(encoding='utf-8').strip()
+                    break
+            ans_lines = len([l for l in answer_key.splitlines() if l.strip()])
+            self.stdout.write(
+                f'    Part {part_num}: {len(images)} image(s)  {ans_lines} answers'
+            )
+
+    # ------------------------------------------------------------------
+    # Reading module — dedicated AI service
+    # ------------------------------------------------------------------
+
+    def _ingest_reading_module(self, test_name: str, module_dir: Path):
+        """
+        Ingest a Reading module using the reading_services AI pipeline.
+
+        Flow:
+          1. build_parts_data_from_folder() — scans Part N/ subdirs, collects
+             image paths + answer key text
+          2. parse_reading_materials()      — single Gemini call (all parts)
+          3. ingest_reading_json()          — atomic DB write
+
+        Progress messages follow the same patterns as Listening so the
+        ProgressCapture in mentor_views picks them up correctly.
+        """
+        # ── Phase 1: scan folder ─────────────────────────────────────
+        self.stdout.write(self.style.MIGRATE_HEADING(
+            '\n  📂  Scanning Reading parts...'
+        ))
+        try:
+            parts_data = build_parts_data_from_folder(module_dir)
+        except (FileNotFoundError, ValueError) as e:
+            self.stderr.write(self.style.ERROR(f'  ✗  Folder scan failed: {e}'))
+            raise
+
+        for pd in parts_data:
+            self.stdout.write(
+                f'    Part {pd["part_number"]}: '
+                f'{len(pd["image_paths"])} image(s)  '
+                f'{len([l for l in pd["answer_key"].splitlines() if l.strip()])} answers'
+            )
+
+        # ── Phase 2: AI call ─────────────────────────────────────────
+        if not self.skip_ocr:
+            self.stdout.write(self.style.MIGRATE_HEADING(
+                f'\n  ⚡  Running OCR for {len(parts_data)} parts in parallel...'
+            ))
+            try:
+                parsed_json = parse_reading_materials(parts_data)
+            except Exception as e:
+                self.stderr.write(self.style.ERROR(f'  ✗  Gemini API error: {e}'))
+                raise
+
+            total_q = sum(len(p.get('questions', [])) for p in parsed_json.get('parts', []))
+            self.stdout.write(self.style.SUCCESS(
+                f'    ✓  OCR done  ({len(parsed_json.get("parts", []))} parts, '
+                f'{total_q} questions extracted)'
+            ))
+        else:
+            self.stdout.write('  ⏭  Skipping OCR (--skip-ocr)')
+            parsed_json = {'parts': []}
+
+        # ── Phase 3: Save to DB ──────────────────────────────────────
+        self.stdout.write(self.style.MIGRATE_HEADING('\n  💾  Saving to database...'))
+
+        with transaction.atomic():
+            if self.test_id:
+                test_obj = Test.objects.get(pk=self.test_id)
+                test_obj.test_type = 'reading'
+                test_obj.is_active = True
+                test_obj.is_deleted = False
+                test_obj.deleted_at = None
+                test_obj.save(update_fields=['test_type', 'is_active', 'is_deleted', 'deleted_at'])
+                self.stdout.write(f'  ↻  Using pre-created Test (id={self.test_id}): "{test_obj.name}"')
+            else:
+                test_obj = Test.objects.create(
+                    name=test_name,
+                    test_type='reading',
+                    is_active=True,
+                )
+                self.stdout.write(self.style.SUCCESS(f'  ✓  Created Test: {test_name}'))
+
+            ReadingTest.objects.get_or_create(test=test_obj)
+
+            if parsed_json.get('parts'):
+                summary = ingest_reading_json(test_obj, parsed_json)
+            else:
+                summary = {'parts_created': 0, 'questions_created': 0, 'passages_created': 0}
+
+        self.stdout.write(self.style.SUCCESS(
+            f'\n  ✅  Successfully ingested {test_name}: '
+            f'{summary["questions_created"]} questions across '
+            f'{summary["parts_created"]} parts '
+            f'({summary["passages_created"]} passages).\n'
+        ))
+
+        # ── Phase 4: Generate explanations ───────────────────────────
+        if not self.skip_ocr and summary['questions_created'] > 0:
+            self.stdout.write(self.style.MIGRATE_HEADING(
+                '\n  💡  Generating AI explanations for reading questions...'
+            ))
+            try:
+                n = generate_reading_explanations(test_obj)
+                self.stdout.write(self.style.SUCCESS(
+                    f'    ✓  Explanations generated for {n} questions.'
+                ))
+            except Exception as e:
+                self.stderr.write(self.style.WARNING(f'    ⚠  Explanation generation failed: {e}'))
 
     # ------------------------------------------------------------------
     # answers.txt parser
@@ -833,16 +981,21 @@ If a question has no choices, use an empty list for "choices"."""
             prompt = (
                 "Listen to the attached audio track for this exam part.\n"
                 "Provide the full transcript of the audio.\n"
-                "For each question provided, write a short explanation of why the given correct answer is right. "
-                "Quote the specific part of the transcript that proves it.\n\n"
+                "For each question provided, write a detailed tutor-style explanation (4-6 sentences) of "
+                "why the given correct answer is right. Structure each explanation as follows:\n"
+                "1. State what the correct answer is and directly explain why it is correct.\n"
+                "2. Quote the specific part of the transcript/audio that proves it.\n"
+                "3. Explain why the other options are NOT correct (if applicable).\n"
+                "4. Mention any key vocabulary, grammar, or audio cue (tone, stress, hesitation) "
+                "that helps a student identify the answer.\n\n"
                 "Questions and correct answers:\n"
                 + "\n".join(q_list_str) + "\n\n"
                 "Request the output STRICTLY as JSON:\n"
                 "{\n"
                 '    "transcript": "Full text of the audio...",\n'
                 '    "explanations": {\n'
-                '        "1": "The answer is A because...",\n'
-                '        "2": "The answer is C because..."\n'
+                '        "1": "Detailed explanation for question 1...",\n'
+                '        "2": "Detailed explanation for question 2..."\n'
                 "    }\n"
                 "}"
             )
@@ -908,44 +1061,58 @@ If a question has no choices, use an empty list for "choices"."""
 
         self.stdout.write(self.style.MIGRATE_HEADING('\n  💾  Saving Writing Tasks to database...'))
         with transaction.atomic():
-            test_obj, created = Test.objects.update_or_create(
-                name=test_name,
-                defaults={'test_type': 'writing', 'is_active': True},
-            )
-            if not created:
+            if self.test_id:
+                test_obj = Test.objects.get(pk=self.test_id)
+                test_obj.test_type = 'writing'
+                test_obj.is_active = True
+                test_obj.is_deleted = False
+                test_obj.deleted_at = None
+                test_obj.save(update_fields=['test_type', 'is_active', 'is_deleted', 'deleted_at'])
                 test_obj.writing_tasks.all().delete()
+                self.stdout.write(f'  ↻  Using pre-created Test (id={self.test_id}): "{test_obj.name}"')
+            else:
+                test_obj = Test.objects.create(
+                    name=test_name,
+                    test_type='writing',
+                    is_active=True,
+                )
                 
             from exams.models import WritingTask
             
             if 1 in extracted_data:
                 d = extracted_data[1]
-                situation = d.get('situation_context', '')
-                shared = d.get('shared_input_text', '')
-                full_input = f"{situation}\n\n{shared}" if situation else shared
+                situation = (d.get('situation_context') or '').strip()
+                shared = (d.get('shared_input_text') or '').strip()
+                full_input = f"{situation}\n\n{shared}".strip() if situation else shared
+                if not full_input:
+                    full_input = ''
                 
                 WritingTask.objects.create(
                     test=test_obj, task_type='informal', order=1,
                     input_text=full_input,
-                    prompt=d.get('task_1_1_prompt', 'Write an email to your friend. Write about 50 words.'),
+                    prompt=(d.get('task_1_1_prompt') or 'Write an email to your friend. Write about 50 words.').strip(),
                     min_words=40, max_words=60
                 )
                 WritingTask.objects.create(
                     test=test_obj, task_type='formal', order=2,
                     input_text=full_input,
-                    prompt=d.get('task_1_2_prompt', 'Write an email to the organiser. Write about 120-150 words.'),
+                    prompt=(d.get('task_1_2_prompt') or 'Write an email to the organiser. Write about 120-150 words.').strip(),
                     min_words=120, max_words=150
                 )
                 
             if 2 in extracted_data:
                 d = extracted_data[2]
-                essay_theme = d.get('essay_theme', '')
-                essay_statement = d.get('essay_statement', '')
-                essay_input = f'{essay_theme}\n\nWrite your essay in response to this statement:\n\n"{essay_statement}"'
+                essay_theme = (d.get('essay_theme') or '').strip()
+                essay_statement = (d.get('essay_statement') or '').strip()
+                if essay_theme or essay_statement:
+                    essay_input = f'{essay_theme}\n\nWrite your essay in response to this statement:\n\n"{essay_statement}"'.strip()
+                else:
+                    essay_input = ''
                 
                 WritingTask.objects.create(
                     test=test_obj, task_type='essay', order=3,
                     input_text=essay_input,
-                    prompt=d.get('essay_word_count', 'Write 180-200 words.'),
+                    prompt=(d.get('essay_word_count') or 'Write 180-200 words.').strip(),
                     min_words=180, max_words=200
                 )
 

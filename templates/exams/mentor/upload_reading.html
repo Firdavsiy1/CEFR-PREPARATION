@@ -1,0 +1,212 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Загрузить Reading тест — Панель Ментора{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+    {% include "exams/mentor/_workspace_header.html" with icon="ph-fill ph-book-open-text" accent="blue" title="Reading OCR загрузка" subtitle="Поток для reading-архивов с passage, страницами и файлом Answers. После ingestion вы сразу переходите в reading builder." page_group="upload-reading" %}
+
+    <!-- Upload Card -->
+    <div class="card-duo overflow-hidden !p-0 animate-fade-in relative min-h-[500px]">
+
+        <div class="grid gap-3 border-b-2 border-duo-border bg-white/[0.02] px-6 py-5 sm:grid-cols-3">
+            <div class="rounded-2xl border border-white/10 bg-white/5 p-4">
+                <p class="text-[11px] font-black uppercase tracking-[0.16em] text-duo-blue">Шаг 1</p>
+                <p class="mt-2 text-sm font-black text-white">Имя теста</p>
+                <p class="mt-1 text-xs font-semibold text-duo-text-dim">Используется как основная сущность и заголовок builder.</p>
+            </div>
+            <div class="rounded-2xl border border-white/10 bg-white/5 p-4">
+                <p class="text-[11px] font-black uppercase tracking-[0.16em] text-duo-blue">Шаг 2</p>
+                <p class="mt-2 text-sm font-black text-white">ZIP по структуре Reading</p>
+                <p class="mt-1 text-xs font-semibold text-duo-text-dim">Части, страницы и файл Answers в одном архиве.</p>
+            </div>
+            <div class="rounded-2xl border border-white/10 bg-white/5 p-4">
+                <p class="text-[11px] font-black uppercase tracking-[0.16em] text-duo-blue">Шаг 3</p>
+                <p class="mt-2 text-sm font-black text-white">Редактура и publish</p>
+                <p class="mt-1 text-xs font-semibold text-duo-text-dim">Проверьте gaps, matching и диапазоны вопросов в builder.</p>
+            </div>
+        </div>
+
+        <!-- Form -->
+        <form method="post" enctype="multipart/form-data" class="p-8 space-y-7" id="upload-form">
+            {% csrf_token %}
+
+            <!-- Test Name -->
+            <div>
+                <label for="test_name" class="block text-xs font-extrabold text-duo-text-dim mb-2 uppercase tracking-widest">
+                    <i class="ph-fill ph-text-t text-duo-green mr-1"></i>
+                    Название теста
+                </label>
+                <input type="text" id="test_name" name="test_name" required
+                       placeholder="Например: CEFR Reading Test 10"
+                       class="input-duo !pl-4">
+                <p class="mt-1.5 text-xs text-duo-text-muted font-semibold">Это будет отображаемое имя теста</p>
+            </div>
+
+            <!-- ZIP File Upload -->
+            <div>
+                <label class="block text-xs font-extrabold text-duo-text-dim mb-2 uppercase tracking-widest">
+                    <i class="ph-fill ph-file-zip text-duo-gold mr-1"></i>
+                    Архив материалов (.zip)
+                </label>
+
+                <!-- Drop Zone -->
+                <div id="drop-zone"
+                     class="relative border-2 border-dashed border-duo-border rounded-2xl p-10
+                            text-center cursor-pointer
+                            hover:border-duo-blue/50 hover:bg-duo-blue/[0.02]
+                            transition-all duration-300 group">
+
+                    <input type="file" name="zip_file" id="zip_file" accept=".zip" required
+                           class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10">
+
+                    <div id="drop-content">
+                        <div class="w-16 h-16 mx-auto mb-4 rounded-2xl flex items-center justify-center
+                                    bg-duo-surface-2 border-2 border-duo-border
+                                    group-hover:border-duo-blue/40 group-hover:bg-duo-blue/5 transition-all">
+                            <i class="ph-fill ph-cloud-arrow-up text-3xl text-duo-text-muted group-hover:text-duo-blue transition-colors"></i>
+                        </div>
+                        <p class="text-sm font-bold text-white mb-1">Перетащите .zip файл сюда или нажмите</p>
+                        <p class="text-xs text-duo-text-muted font-semibold">Максимальный размер: 500MB</p>
+                    </div>
+
+                    <div id="file-selected" class="hidden">
+                        <div class="w-16 h-16 mx-auto mb-4 rounded-2xl flex items-center justify-center
+                                    bg-duo-blue/15 border-2 border-duo-blue/30">
+                            <i class="ph-fill ph-file-zip text-3xl text-duo-blue"></i>
+                        </div>
+                        <p class="text-sm font-extrabold text-duo-blue mb-1" id="file-name">file.zip</p>
+                        <p class="text-xs text-duo-text-dim font-bold" id="file-size">0 MB</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ZIP Structure Info -->
+            <div class="card-duo !bg-duo-surface/50 p-5">
+                <h3 class="text-xs font-extrabold text-duo-text-dim mb-3 flex items-center gap-2 uppercase tracking-widest">
+                    <i class="ph-fill ph-folder-notch text-duo-blue"></i>
+                    Структура ZIP архива
+                </h3>
+                <pre class="text-xs text-duo-text-dim font-mono leading-relaxed bg-duo-bg rounded-xl p-4 border-2 border-duo-border overflow-x-auto"><code>любое_название/  ← имя папки не важно
+  └── Reading/
+      ├── Part 1/
+      │   ├── photo_1.jpg
+      │   ├── photo_2.jpg      ← можно несколько страниц
+      │   └── Answers          ← файл без расширения
+      ├── Part 2/
+      │   ├── photo_1.jpg
+      │   └── Answers
+      ├── Part 3/
+      │   └── ...
+      ├── Part 4/
+      │   └── ...
+      └── Part 5/
+          └── ...</code></pre>
+                <p class="mt-3 text-xs text-duo-text-muted font-semibold">
+                    <i class="ph-fill ph-info text-duo-blue mr-1"></i>
+                    Файл <strong class="text-white">Answers</strong>: одна строка на вопрос, напр.
+                    <code class="bg-duo-surface-2 px-1.5 py-0.5 rounded-lg text-duo-green font-bold">1. killers</code>
+                    или <code class="bg-duo-surface-2 px-1.5 py-0.5 rounded-lg text-duo-green font-bold">7. A</code>
+                </p>
+            </div>
+
+            <!-- Split Options -->
+            <label class="flex items-center gap-4 p-4 rounded-xl border-2 border-duo-border bg-duo-surface/50 cursor-pointer hover:border-duo-green/50 transition-colors group">
+                <div class="relative flex items-center justify-center flex-shrink-0">
+                    <input type="checkbox" name="split_parts" id="split_parts"
+                           class="peer appearance-none w-6 h-6 border-2 border-duo-border rounded-md bg-duo-surface
+                                  checked:bg-duo-green checked:border-duo-green transition-colors cursor-pointer
+                                  group-hover:border-duo-green/50">
+                    <i class="ph-bold ph-check absolute text-white opacity-0 peer-checked:opacity-100 pointer-events-none text-sm drop-shadow-sm"></i>
+                </div>
+                <div>
+                    <span class="text-sm font-bold text-white block">Выложить все части отдельно</span>
+                    <span class="text-xs font-semibold text-duo-text-muted mt-0.5 block leading-tight">Помимо общего полного теста, будут созданы микро-тесты по одной части.</span>
+                </div>
+            </label>
+
+            <!-- Submit -->
+            <div class="flex items-center justify-between pt-2">
+                <a href="{% url 'exams:mentor_dashboard' %}" class="text-sm text-duo-text-dim hover:text-white transition-colors font-bold">
+                    Отмена
+                </a>
+                <button type="submit" id="submit-btn" class="btn-duo-green text-sm">
+                    <i class="ph-fill ph-rocket-launch text-lg"></i>
+                    <span id="submit-text">Загрузить и обработать</span>
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Warning -->
+    <div class="mt-6 card-duo !border-duo-gold/30 p-4 animate-slide-up" style="animation-delay: 0.3s">
+        <div class="flex items-start gap-3">
+            <div class="w-10 h-10 rounded-xl bg-duo-gold/15 flex items-center justify-center flex-shrink-0">
+                <i class="ph-fill ph-warning text-duo-gold text-lg"></i>
+            </div>
+            <div>
+                <p class="text-sm font-extrabold text-duo-gold mb-1">Важные замечания</p>
+                <ul class="text-xs text-duo-text-dim space-y-1.5 font-semibold">
+                    <li class="flex items-start gap-2"><i class="ph-fill ph-dot text-duo-gold mt-0.5"></i> Обработка использует <strong class="text-white">Gemini AI OCR</strong> и выполняется в фоновом режиме.</li>
+                    <li class="flex items-start gap-2"><i class="ph-fill ph-dot text-duo-gold mt-0.5"></i> Тест с таким же именем будет <strong class="text-white">перезаписан</strong>.</li>
+                    <li class="flex items-start gap-2"><i class="ph-fill ph-dot text-duo-gold mt-0.5"></i> Результаты OCR можно редактировать в <strong class="text-white">Конструкторе чтения</strong>.</li>
+                    <li class="flex items-start gap-2"><i class="ph-fill ph-dot text-duo-green mt-0.5"></i> Вы можете <strong class="text-white">закрыть страницу</strong> — обработка не прервётся.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    const fileInput    = document.getElementById('zip_file');
+    const dropContent  = document.getElementById('drop-content');
+    const fileSelected = document.getElementById('file-selected');
+    const fileName     = document.getElementById('file-name');
+    const fileSize     = document.getElementById('file-size');
+    const dropZone     = document.getElementById('drop-zone');
+    const form         = document.getElementById('upload-form');
+    const submitBtn    = document.getElementById('submit-btn');
+    const submitText   = document.getElementById('submit-text');
+
+    fileInput.addEventListener('change', () => {
+        if (fileInput.files.length > 0) {
+            const file = fileInput.files[0];
+            dropContent.classList.add('hidden');
+            fileSelected.classList.remove('hidden');
+            fileName.textContent = file.name;
+            fileSize.textContent = (file.size / 1024 / 1024).toFixed(2) + ' MB';
+            dropZone.classList.add('border-duo-blue/40', 'bg-duo-blue/[0.02]');
+            dropZone.classList.remove('border-duo-border');
+        }
+    });
+
+    ['dragenter', 'dragover'].forEach(ev => {
+        dropZone.addEventListener(ev, (e) => {
+            e.preventDefault();
+            dropZone.classList.add('border-duo-blue/60', 'bg-duo-blue/[0.05]');
+        });
+    });
+    ['dragleave', 'drop'].forEach(ev => {
+        dropZone.addEventListener(ev, (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('border-duo-blue/60', 'bg-duo-blue/[0.05]');
+        });
+    });
+    dropZone.addEventListener('drop', (e) => {
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            fileInput.files = files;
+            fileInput.dispatchEvent(new Event('change'));
+        }
+    });
+
+    form.addEventListener('submit', () => {
+        submitBtn.disabled = true;
+        submitText.innerHTML = '<i class="ph ph-spinner animate-spin"></i> Загрузка...';
+    });
+</script>
+{% endblock %}

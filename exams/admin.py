@@ -1,17 +1,35 @@
 """
 Django Admin configuration for the CEFR Exams application.
 
-Key features:
-  - Inline editing for Parts within Tests, Questions within Parts
-  - Side-by-side view of OCR text and original question screenshot
-  - Image previews (question screenshots and map images)
-  - Read-only attempt/answer records (no accidental data mutation)
+Layout:
+  ── Listening:  Test → Part → Question → Choice
+  ── Reading:    ReadingTest → ReadingPart → ReadingPassage / ReadingQuestion
+  ── Writing:    WritingTask (read-only submissions inline)
+  ── Speaking:   SpeakingPart → SpeakingQuestion (managed via builder; admin is read-only)
+  ── Attempts:   UserAttempt → UserAnswer / ReadingUserAnswer / TabBlurEvent
 """
 
 from django.contrib import admin
 from django.utils.html import format_html
 
-from .models import Test, Part, Question, Choice, UserAttempt, UserAnswer
+from .models import (
+    Test, Part, Question, Choice, UserAttempt, UserAnswer,
+    AutoSaveDraft, TabBlurEvent,
+    ReadingTest, ReadingPart, ReadingPassage, ReadingQuestion,
+    ReadingUserAnswer,
+    WritingTask, WritingSubmission,
+    SpeakingPart, SpeakingQuestion, SpeakingSubmission,
+    VideoLesson, QuizQuestion,
+    WordCache, DictionaryEntry,
+)
+
+# ---------------------------------------------------------------------------
+# Site branding
+# ---------------------------------------------------------------------------
+
+admin.site.site_header = 'CEFR Preparer — Admin'
+admin.site.site_title = 'CEFR Preparer'
+admin.site.index_title = 'Панель управления'
 
 
 # ---------------------------------------------------------------------------
@@ -23,10 +41,11 @@ class PartInline(admin.TabularInline):
     extra = 0
     fields = (
         'part_number', 'points_per_question', 'audio_file',
-        'question_image', 'map_image', 'passage_title', 'instructions',
+        'question_image', 'map_image',
     )
     readonly_fields = ('points_per_question',)
     show_change_link = True
+    ordering = ('part_number',)
 
 
 class QuestionInline(admin.TabularInline):
@@ -55,18 +74,43 @@ class UserAnswerInline(admin.TabularInline):
         return False
 
 
+class ReadingUserAnswerInline(admin.TabularInline):
+    model = ReadingUserAnswer
+    extra = 0
+    readonly_fields = ('question', 'given_answer', 'is_correct')
+    can_delete = False
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+
+class TabBlurEventInline(admin.TabularInline):
+    model = TabBlurEvent
+    extra = 0
+    readonly_fields = ('timestamp', 'duration_seconds')
+    can_delete = False
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+
 # ---------------------------------------------------------------------------
 # Test admin
 # ---------------------------------------------------------------------------
 
 @admin.register(Test)
 class TestAdmin(admin.ModelAdmin):
-    list_display = ('name', 'test_type', 'is_active', 'part_count',
+    list_display = ('name', 'test_type', 'author_name', 'is_active', 'part_count',
                     'question_count', 'created_at')
     list_filter = ('test_type', 'is_active')
-    search_fields = ('name',)
+    search_fields = ('name', 'author__username')
     list_editable = ('is_active',)
+    ordering = ('-created_at',)
     inlines = [PartInline]
+
+    @admin.display(description='Автор')
+    def author_name(self, obj):
+        return obj.author.username if obj.author else '—'
 
     @admin.display(description='Parts')
     def part_count(self, obj):
@@ -87,7 +131,12 @@ class PartAdmin(admin.ModelAdmin):
         'test', 'part_number', 'points_per_question',
         'question_count', 'has_audio', 'has_image', 'has_map',
     )
-    list_filter = ('test', 'part_number')
+    list_filter = (
+        ('test', admin.RelatedOnlyFieldListFilter),
+        'part_number',
+    )
+    search_fields = ('test__name',)
+    ordering = ('test', 'part_number')
     readonly_fields = (
         'points_per_question', 'question_image_preview', 'map_image_preview',
     )
@@ -246,8 +295,12 @@ class QuestionAdmin(admin.ModelAdmin):
 @admin.register(Choice)
 class ChoiceAdmin(admin.ModelAdmin):
     list_display = ('question', 'label', 'text')
-    list_filter = ('question__part__test', 'question__part__part_number')
+    list_filter = (
+        ('question__part__test', admin.RelatedOnlyFieldListFilter),
+        'question__part__part_number',
+    )
     search_fields = ('text',)
+    ordering = ('question__part__test', 'question__question_number', 'label')
 
 
 # ---------------------------------------------------------------------------
@@ -261,14 +314,20 @@ class UserAttemptAdmin(admin.ModelAdmin):
         'total_questions', 'total_score', 'max_possible_score',
         'display_score_pct',
     )
-    list_filter = ('test', 'user')
+    list_filter = (
+        ('test', admin.RelatedOnlyFieldListFilter),
+        ('user', admin.RelatedOnlyFieldListFilter),
+    )
+    search_fields = ('user__username', 'test__name')
     date_hierarchy = 'started_at'
+    ordering = ('-started_at',)
+    show_full_result_count = False
     readonly_fields = (
         'user', 'test', 'started_at', 'completed_at',
         'total_correct', 'total_questions', 'total_score',
         'max_possible_score',
     )
-    inlines = [UserAnswerInline]
+    inlines = [UserAnswerInline, ReadingUserAnswerInline, TabBlurEventInline]
 
     def has_add_permission(self, request):
         return False
@@ -291,8 +350,446 @@ class UserAttemptAdmin(admin.ModelAdmin):
 @admin.register(UserAnswer)
 class UserAnswerAdmin(admin.ModelAdmin):
     list_display = ('attempt', 'question', 'given_answer', 'is_correct')
-    list_filter = ('is_correct', 'attempt__test')
+    list_filter = (
+        'is_correct',
+        ('attempt__test', admin.RelatedOnlyFieldListFilter),
+    )
+    search_fields = ('attempt__user__username', 'question__correct_answer')
+    show_full_result_count = False
     readonly_fields = ('attempt', 'question', 'given_answer', 'is_correct')
 
     def has_add_permission(self, request):
         return False
+
+
+# ---------------------------------------------------------------------------
+# Auto-save & Anti-cheat admins
+# ---------------------------------------------------------------------------
+
+@admin.register(AutoSaveDraft)
+class AutoSaveDraftAdmin(admin.ModelAdmin):
+    list_display = ('attempt', 'updated_at')
+    readonly_fields = ('attempt', 'data', 'updated_at')
+
+    def has_add_permission(self, request):
+        return False
+
+
+@admin.register(TabBlurEvent)
+class TabBlurEventAdmin(admin.ModelAdmin):
+    list_display = ('attempt', 'timestamp', 'duration_seconds')
+    list_filter = ('attempt__test',)
+    readonly_fields = ('attempt', 'timestamp', 'duration_seconds')
+
+    def has_add_permission(self, request):
+        return False
+
+
+# ---------------------------------------------------------------------------
+# Reading Module Admin
+# ---------------------------------------------------------------------------
+
+class ReadingQuestionInline(admin.TabularInline):
+    model = ReadingQuestion
+    extra = 0
+    fields = (
+        'question_number', 'question_type', 'question_text',
+        'correct_answer', 'explanation',
+    )
+    show_change_link = True
+
+
+class ReadingPassageInline(admin.StackedInline):
+    model = ReadingPassage
+    extra = 0
+    fields = ('title', 'content')
+    show_change_link = True
+
+
+class ReadingPartInline(admin.TabularInline):
+    model = ReadingPart
+    extra = 0
+    fields = (
+        'part_number', 'instruction',
+        'question_number_start', 'question_number_end',
+    )
+    show_change_link = True
+
+
+@admin.register(ReadingTest)
+class ReadingTestAdmin(admin.ModelAdmin):
+    """
+    Entry point for reading test metadata — links to the base Test.
+    Reading parts are managed via ReadingPart (FK to Test, not ReadingTest).
+    """
+    list_display = ('test', 'total_parts', 'reading_parts_count', 'reading_questions_count')
+    raw_id_fields = ('test',)
+
+    @admin.display(description='Parts')
+    def reading_parts_count(self, obj):
+        return obj.test.reading_parts.count()
+
+    @admin.display(description='Questions')
+    def reading_questions_count(self, obj):
+        return ReadingQuestion.objects.filter(part__test=obj.test).count()
+
+
+@admin.register(ReadingPart)
+class ReadingPartAdmin(admin.ModelAdmin):
+    list_display = (
+        'test', 'part_number',
+        'question_number_start', 'question_number_end',
+        'question_count', 'has_passage',
+    )
+    list_filter = (
+        ('test', admin.RelatedOnlyFieldListFilter),
+        'part_number',
+    )
+    search_fields = ('test__name', 'instruction')
+    ordering = ('test', 'part_number')
+    inlines = [ReadingPassageInline, ReadingQuestionInline]
+
+    fieldsets = (
+        (None, {
+            'fields': ('test', 'part_number', 'question_number_start', 'question_number_end'),
+        }),
+        ('Instructions', {
+            'fields': ('instruction',),
+        }),
+    )
+
+    @admin.display(description='Questions')
+    def question_count(self, obj):
+        return obj.questions.count()
+
+    @admin.display(boolean=True, description='Passage')
+    def has_passage(self, obj):
+        return hasattr(obj, 'passage')
+
+
+@admin.register(ReadingPassage)
+class ReadingPassageAdmin(admin.ModelAdmin):
+    list_display = ('part', 'title', 'content_preview')
+    search_fields = ('title', 'content', 'part__test__name')
+    readonly_fields = ('part',)
+
+    @admin.display(description='Content (preview)')
+    def content_preview(self, obj):
+        text = obj.content[:120]
+        return f"{text}…" if len(obj.content) > 120 else text
+
+
+@admin.register(ReadingQuestion)
+class ReadingQuestionAdmin(admin.ModelAdmin):
+    list_display = (
+        'question_number', 'part', 'question_type',
+        'short_text', 'correct_answer',
+    )
+    list_filter = (
+        'question_type',
+        ('part__test', admin.RelatedOnlyFieldListFilter),
+        'part__part_number',
+    )
+    search_fields = ('question_text', 'correct_answer', 'part__test__name')
+    list_per_page = 40
+
+    fieldsets = (
+        ('Question', {
+            'fields': (
+                'part', 'question_number', 'question_type',
+                'question_text', 'options',
+            ),
+        }),
+        ('Answer', {
+            'fields': ('correct_answer', 'explanation'),
+        }),
+    )
+
+    @admin.display(description='Text (preview)')
+    def short_text(self, obj):
+        if obj.question_text:
+            text = obj.question_text[:70]
+            return f"{text}…" if len(obj.question_text) > 70 else text
+        return "—"
+
+
+@admin.register(ReadingUserAnswer)
+class ReadingUserAnswerAdmin(admin.ModelAdmin):
+    list_display = ('attempt', 'question', 'given_answer', 'is_correct')
+    list_filter = (
+        'is_correct',
+        ('attempt__test', admin.RelatedOnlyFieldListFilter),
+    )
+    show_full_result_count = False
+    readonly_fields = ('attempt', 'question', 'given_answer', 'is_correct')
+
+    def has_add_permission(self, request):
+        return False
+
+
+# ---------------------------------------------------------------------------
+# Writing Module Admin (read-only monitoring — managed via mentor builder)
+# ---------------------------------------------------------------------------
+
+class WritingSubmissionInline(admin.TabularInline):
+    model = WritingSubmission
+    extra = 0
+    fields = ('attempt', 'word_count', 'is_graded', 'estimated_level')
+    readonly_fields = ('attempt', 'word_count', 'is_graded', 'estimated_level')
+    can_delete = False
+    show_change_link = True
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(WritingTask)
+class WritingTaskAdmin(admin.ModelAdmin):
+    list_display = ('test', 'task_type', 'order', 'word_range', 'has_prompt', 'has_input_text')
+    list_filter = (
+        ('test', admin.RelatedOnlyFieldListFilter),
+        'task_type',
+    )
+    search_fields = ('test__name', 'prompt')
+    ordering = ('test', 'order')
+    inlines = [WritingSubmissionInline]
+
+    fieldsets = (
+        (None, {
+            'fields': ('test', 'task_type', 'order'),
+        }),
+        ('Задание', {
+            'fields': ('prompt', 'input_text'),
+        }),
+        ('Лимит слов', {
+            'fields': ('min_words', 'max_words'),
+        }),
+    )
+
+    @admin.display(description='Лимит слов')
+    def word_range(self, obj):
+        if obj.min_words or obj.max_words:
+            return f'{obj.min_words}–{obj.max_words}'
+        return '—'
+
+    @admin.display(boolean=True, description='Prompt')
+    def has_prompt(self, obj):
+        return bool((obj.prompt or '').strip())
+
+    @admin.display(boolean=True, description='Input text')
+    def has_input_text(self, obj):
+        return bool((obj.input_text or '').strip())
+
+
+@admin.register(WritingSubmission)
+class WritingSubmissionAdmin(admin.ModelAdmin):
+    list_display = ('attempt', 'task', 'word_count', 'is_graded', 'estimated_level')
+    list_filter = (
+        'is_graded',
+        ('task__test', admin.RelatedOnlyFieldListFilter),
+        'estimated_level',
+    )
+    search_fields = ('attempt__user__username', 'task__test__name')
+    ordering = ('-attempt__started_at',)
+    show_full_result_count = False
+    readonly_fields = (
+        'attempt', 'task', 'word_count', 'submitted_text',
+        'is_graded', 'estimated_level', 'feedback_text',
+        'corrections_json', 'feedback_json',
+    )
+
+    def has_add_permission(self, request):
+        return False
+
+
+# ---------------------------------------------------------------------------
+# Speaking Module Admin (read-only monitoring — managed via Speaking Builder)
+# ---------------------------------------------------------------------------
+
+class SpeakingQuestionInline(admin.TabularInline):
+    model = SpeakingQuestion
+    extra = 0
+    fields = ('question_number', 'question_text', 'has_audio')
+    readonly_fields = ('question_number', 'question_text', 'has_audio')
+    can_delete = False
+    show_change_link = True
+    ordering = ('question_number',)
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+    @admin.display(boolean=True, description='TTS Audio')
+    def has_audio(self, instance):
+        return bool(instance.audio_file)
+
+
+@admin.register(SpeakingPart)
+class SpeakingPartAdmin(admin.ModelAdmin):
+    """
+    Read-only view of Speaking parts.  Editing is done through the
+    Speaking Builder — this admin is for monitoring and data inspection only.
+    """
+    list_display = (
+        'test', 'part_number', 'is_validated', 'has_image',
+        'question_count', 'points_per_question',
+    )
+    list_filter = (
+        ('test', admin.RelatedOnlyFieldListFilter),
+        'is_validated',
+        'part_number',
+    )
+    search_fields = ('test__name', 'instructions')
+    ordering = ('test', 'part_number')
+    readonly_fields = (
+        'test', 'part_number', 'instructions', 'points_per_question',
+        'is_validated', 'alt_text', 'debate_data', 'validation_data',
+        'original_image_preview', 'cropped_image_preview',
+    )
+    inlines = [SpeakingQuestionInline]
+
+    fieldsets = (
+        (None, {
+            'fields': ('test', 'part_number', 'is_validated', 'points_per_question'),
+        }),
+        ('Инструкции', {
+            'fields': ('instructions',),
+        }),
+        ('Медиа', {
+            'fields': ('original_image_preview', 'cropped_image_preview', 'alt_text'),
+        }),
+        ('Данные для дебатов (Part 3)', {
+            'fields': ('debate_data',),
+            'classes': ('collapse',),
+        }),
+        ('OCR / Validation data', {
+            'fields': ('validation_data',),
+            'classes': ('collapse',),
+        }),
+    )
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    @admin.display(boolean=True, description='Изображение')
+    def has_image(self, obj):
+        return bool(obj.cropped_image or obj.original_image)
+
+    @admin.display(description='Вопросов')
+    def question_count(self, obj):
+        return obj.questions.count()
+
+    @admin.display(description='Оригинал')
+    def original_image_preview(self, obj):
+        if obj.original_image:
+            return format_html(
+                '<img src="{}" style="max-width:600px; max-height:450px; border-radius:6px;" />',
+                obj.original_image.url,
+            )
+        from django.utils.safestring import mark_safe
+        return mark_safe('<span style="color:#999;">Нет изображения</span>')
+
+    @admin.display(description='Обрезанное')
+    def cropped_image_preview(self, obj):
+        if obj.cropped_image:
+            return format_html(
+                '<img src="{}" style="max-width:600px; max-height:450px; border-radius:6px;" />',
+                obj.cropped_image.url,
+            )
+        from django.utils.safestring import mark_safe
+        return mark_safe('<span style="color:#999;">Нет обрезанного изображения</span>')
+
+
+@admin.register(SpeakingQuestion)
+class SpeakingQuestionAdmin(admin.ModelAdmin):
+    list_display = ('part', 'question_number', 'short_text', 'has_audio')
+    list_filter = (
+        ('part__test', admin.RelatedOnlyFieldListFilter),
+        'part__part_number',
+    )
+    search_fields = ('question_text', 'part__test__name')
+    ordering = ('part__test', 'part__part_number', 'question_number')
+    readonly_fields = ('part', 'question_number', 'question_text', 'audio_file')
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    @admin.display(description='Текст (preview)')
+    def short_text(self, obj):
+        text = (obj.question_text or '')[:80]
+        return f'{text}…' if len(obj.question_text or '') > 80 else text
+
+    @admin.display(boolean=True, description='TTS Audio')
+    def has_audio(self, obj):
+        return bool(obj.audio_file)
+
+
+# ---------------------------------------------------------------------------
+# YouTube Video Lessons
+# ---------------------------------------------------------------------------
+
+class QuizQuestionInline(admin.TabularInline):
+    model = QuizQuestion
+    extra = 0
+    fields = ('trigger_time_seconds', 'question_text', 'correct_option_index', 'options')
+    readonly_fields = ('options',)
+    ordering = ('trigger_time_seconds',)
+
+
+@admin.register(VideoLesson)
+class VideoLessonAdmin(admin.ModelAdmin):
+    list_display = ('title', 'youtube_id', 'cefr_level', 'is_public', 'created_by', 'quiz_count', 'created_at')
+    list_filter = ('cefr_level', 'is_public')
+    search_fields = ('title', 'youtube_id')
+    readonly_fields = ('youtube_id', 'transcript_json', 'thumbnail_url', 'created_at', 'quiz_count_display')
+    list_editable = ('is_public',)
+    ordering = ('-created_at',)
+    inlines = [QuizQuestionInline]
+
+    @admin.display(description='Quiz questions')
+    def quiz_count_display(self, obj):
+        return obj.quiz_questions.count()
+
+    @admin.display(description='Quizzes')
+    def quiz_count(self, obj):
+        return obj.quiz_questions.count()
+
+
+@admin.register(QuizQuestion)
+class QuizQuestionAdmin(admin.ModelAdmin):
+    list_display = ('video', 'trigger_time_seconds', 'short_question', 'correct_option_index')
+    list_filter = (('video', admin.RelatedOnlyFieldListFilter),)
+    search_fields = ('question_text', 'video__title')
+    ordering = ('video', 'trigger_time_seconds')
+
+    @admin.display(description='Question (preview)')
+    def short_question(self, obj):
+        return obj.question_text[:80] + ('…' if len(obj.question_text) > 80 else '')
+
+
+
+# ---------------------------------------------------------------------------
+# Dictionary
+# ---------------------------------------------------------------------------
+
+@admin.register(WordCache)
+class WordCacheAdmin(admin.ModelAdmin):
+    list_display = ('word', 'part_of_speech', 'register', 'transcription', 'created_at')
+    list_filter = ('register', 'part_of_speech')
+    search_fields = ('word',)
+    readonly_fields = ('created_at',)
+    ordering = ('word',)
+
+
+@admin.register(DictionaryEntry)
+class DictionaryEntryAdmin(admin.ModelAdmin):
+    list_display = ('cached_word', 'user', 'source', 'created_at')
+    list_filter = ('source',)
+    search_fields = ('cached_word__word', 'user__username', 'user__email')
+    readonly_fields = ('created_at',)
+    ordering = ('-created_at',)

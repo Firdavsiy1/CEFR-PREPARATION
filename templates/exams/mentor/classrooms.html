@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Мои классы — CEFR Prep{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12">
+
+    {% include "exams/mentor/_workspace_header.html" with title="Мои классы" subtitle="Создавайте классы, приглашайте учеников и назначайте тесты." icon="ph-fill ph-chalkboard-teacher" accent="blue" page_group="classrooms" %}
+
+    <!-- Create New Classroom -->
+    <div class="mb-8">
+        <div class="card-duo p-6">
+            <h3 class="text-base font-black text-white mb-4 flex items-center gap-2">
+                <i class="ph-fill ph-plus-circle text-duo-green text-xl"></i>
+                <span>Создать новый класс</span>
+            </h3>
+            <form method="POST" action="{% url 'exams:classroom_create' %}" class="flex flex-col sm:flex-row gap-3">
+                {% csrf_token %}
+                <div class="flex gap-2 items-center">
+                    <input type="text" name="emoji" placeholder="🎓" maxlength="8"
+                           class="input-duo !w-16 text-center text-xl !py-2.5" style="padding-left:8px!important; padding-right:8px!important;" title="Эмодзи">
+                </div>
+                <div class="flex-1">
+                    <input type="text" name="name" placeholder="Название класса (напр. B2 Вечерняя группа)" required
+                           class="input-duo w-full !pl-4" style="padding-left: 16px !important;">
+                </div>
+                <div class="flex-1">
+                    <input type="text" name="description" placeholder="Описание (необязательно)"
+                           class="input-duo w-full !pl-4" style="padding-left: 16px !important;">
+                </div>
+                <button type="submit" class="btn-duo-green whitespace-nowrap">
+                    <i class="ph-fill ph-plus"></i>
+                    Создать
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Classrooms Grid -->
+    {% if classrooms %}
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        {% for classroom in classrooms %}
+        <a href="{% url 'exams:classroom_detail' classroom_id=classroom.id %}" class="card-duo p-6 block group relative overflow-hidden">
+            <!-- Subtle accent glow -->
+            <div class="absolute -right-8 -top-8 w-28 h-28 rounded-full blur-2xl opacity-20
+                {% if classroom.color == 'green' %}bg-duo-green
+                {% elif classroom.color == 'purple' %}bg-duo-purple
+                {% elif classroom.color == 'gold' %}bg-duo-gold
+                {% elif classroom.color == 'red' %}bg-duo-red
+                {% else %}bg-duo-blue{% endif %}"></div>
+
+            <div class="relative">
+                <div class="flex items-start justify-between mb-4">
+                    <div class="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl border border-white/10 bg-white/[0.06] select-none shrink-0">
+                        {{ classroom.emoji|default:"🎓" }}
+                    </div>
+                    <div class="flex items-center gap-2">
+                        {% if classroom.is_active %}
+                        <span class="badge-duo bg-duo-green/15 text-duo-green border border-duo-green/25">Активный</span>
+                        {% else %}
+                        <span class="badge-duo bg-duo-text-muted/15 text-duo-text-muted border border-duo-text-muted/25">Архив</span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <h3 class="text-base font-black text-white mb-1 group-hover:text-duo-blue transition-colors line-clamp-1">{{ classroom.name }}</h3>
+                {% if classroom.description %}
+                <p class="text-sm text-duo-text-dim font-semibold mb-4 line-clamp-2">{{ classroom.description }}</p>
+                {% else %}
+                <div class="mb-4"></div>
+                {% endif %}
+
+                <div class="flex items-center gap-3 pt-3 border-t border-duo-border">
+                    <div class="flex items-center gap-1.5 text-xs font-bold text-duo-text-dim">
+                        <i class="ph-fill ph-users text-sm"></i>
+                        <span class="text-white font-black">{{ classroom.student_count }}</span>
+                        <span>учеников</span>
+                    </div>
+                    <div class="flex items-center gap-1.5 text-xs font-bold text-duo-text-dim">
+                        <i class="ph-fill ph-exam text-sm"></i>
+                        <span class="text-white font-black">{{ classroom.tests.count }}</span>
+                        <span>тестов</span>
+                    </div>
+                    <div class="ml-auto flex items-center gap-1 text-[11px] font-black text-duo-blue bg-duo-blue/10 border border-duo-blue/20 px-2.5 py-1 rounded-xl font-mono tracking-[0.15em]">
+                        <i class="ph-fill ph-key text-xs"></i>
+                        {{ classroom.join_code }}
+                    </div>
+                </div>
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-center py-20">
+        <div class="w-20 h-20 mx-auto mb-5 rounded-[24px] flex items-center justify-center bg-duo-blue shadow-[0_6px_0_#1899D6]">
+            <i class="ph-fill ph-chalkboard-teacher text-white text-4xl"></i>
+        </div>
+        <p class="text-xl font-black text-white mb-2">Пока нет классов</p>
+        <p class="text-sm text-duo-text-dim font-semibold max-w-sm mx-auto">Создайте свой первый класс, чтобы начать работу с учениками и назначать им тесты.</p>
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}

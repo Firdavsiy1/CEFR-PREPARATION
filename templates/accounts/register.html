@@ -17,9 +17,42 @@
                 <p class="text-duo-text-dim font-semibold text-sm" data-i18n="auth_register_subtitle">Начни подготовку к CEFR экзаменам бесплатно</p>
             </div>
 
-            <form method="POST" class="space-y-4">
+            <!-- Role Selection -->
+            <div class="mb-6">
+                <label class="block text-xs font-extrabold text-duo-text-dim mb-3 uppercase tracking-widest" data-i18n="auth_role_label">Выбери роль</label>
+                <div class="grid grid-cols-2 gap-3" id="role-selector">
+                    <!-- Student Card -->
+                    <button type="button" data-role="student" class="role-card role-card--active relative rounded-2xl p-4 text-center transition-all duration-200 cursor-pointer group border-2" id="role-student-btn">
+                        <div class="w-14 h-14 mx-auto mb-3 rounded-2xl flex items-center justify-center transition-all duration-200" id="role-student-icon-bg">
+                            <i class="ph-fill ph-student text-2xl text-white"></i>
+                        </div>
+                        <p class="font-black text-sm text-white mb-1" data-i18n="auth_role_student">Ученик</p>
+                        <p class="text-[11px] font-semibold text-duo-text-muted leading-tight" data-i18n="auth_role_student_desc">Решай тесты и учись</p>
+                        <div class="absolute top-2 right-2 w-5 h-5 rounded-full flex items-center justify-center transition-all" id="role-student-check">
+                            <i class="ph-fill ph-check-circle text-base"></i>
+                        </div>
+                    </button>
+                    <!-- Mentor Card -->
+                    <button type="button" data-role="mentor" class="role-card relative rounded-2xl p-4 text-center transition-all duration-200 cursor-pointer group border-2" id="role-mentor-btn">
+                        <div class="w-14 h-14 mx-auto mb-3 rounded-2xl flex items-center justify-center transition-all duration-200" id="role-mentor-icon-bg">
+                            <i class="ph-fill ph-chalkboard-teacher text-2xl text-white"></i>
+                        </div>
+                        <p class="font-black text-sm text-white mb-1" data-i18n="auth_role_mentor">Ментор</p>
+                        <p class="text-[11px] font-semibold text-duo-text-muted leading-tight" data-i18n="auth_role_mentor_desc">Создавай классы и тесты</p>
+                        <div class="absolute top-2 right-2 w-5 h-5 rounded-full flex items-center justify-center transition-all opacity-0" id="role-mentor-check">
+                            <i class="ph-fill ph-check-circle text-base"></i>
+                        </div>
+                    </button>
+                </div>
+            </div>
+
+            <form method="POST" class="space-y-4" id="register-form">
                 {% csrf_token %}
+                <!-- Hidden role field -->
+                <input type="hidden" name="role" id="id_role" value="student">
+
                 {% for field in form %}
+                {% if field.name != 'role' %}
                 <div>
                     <label for="{{ field.id_for_label }}" class="block text-xs font-extrabold text-duo-text-dim mb-2 uppercase tracking-widest">{{ field.label }}</label>
                     <div class="relative">
@@ -52,6 +85,7 @@
                         </div>
                     {% endif %}
                 </div>
+                {% endif %}
                 {% endfor %}
 
                 <div class="pt-3">
@@ -84,5 +118,89 @@
 <style>
 .helptext { display: none !important; }
 ul.errorlist { list-style: none; padding: 0; margin: 0; }
+
+/* Role cards */
+.role-card {
+    background: rgba(255, 255, 255, 0.03);
+    border-color: rgba(255, 255, 255, 0.1);
+}
+.role-card:hover {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.2);
+    transform: translateY(-2px);
+}
+
+.role-card--active {
+    background: rgba(88, 204, 2, 0.08) !important;
+    border-color: #58CC02 !important;
+    box-shadow: 0 0 0 1px rgba(88, 204, 2, 0.2), 0 4px 16px rgba(88, 204, 2, 0.1);
+}
+
+.role-card--active #role-student-icon-bg,
+.role-card--active #role-mentor-icon-bg {
+    background: linear-gradient(135deg, #58CC02, #46A302);
+    box-shadow: 0 3px 0 #3D8B02;
+}
+
+/* Inactive icon bg */
+.role-card:not(.role-card--active) #role-student-icon-bg,
+.role-card:not(.role-card--active) #role-mentor-icon-bg {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+/* Mentor active uses purple */
+#role-mentor-btn.role-card--active {
+    background: rgba(206, 130, 255, 0.08) !important;
+    border-color: #CE82FF !important;
+    box-shadow: 0 0 0 1px rgba(206, 130, 255, 0.2), 0 4px 16px rgba(206, 130, 255, 0.1);
+}
+#role-mentor-btn.role-card--active #role-mentor-icon-bg {
+    background: linear-gradient(135deg, #CE82FF, #A855F7) !important;
+    box-shadow: 0 3px 0 #8B45D6 !important;
+}
+#role-mentor-btn.role-card--active #role-mentor-check {
+    color: #CE82FF;
+}
+
+#role-student-btn.role-card--active #role-student-check {
+    color: #58CC02;
+}
 </style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const studentBtn = document.getElementById('role-student-btn');
+    const mentorBtn = document.getElementById('role-mentor-btn');
+    const roleInput = document.getElementById('id_role');
+    const studentCheck = document.getElementById('role-student-check');
+    const mentorCheck = document.getElementById('role-mentor-check');
+
+    function selectRole(role) {
+        roleInput.value = role;
+        
+        if (role === 'student') {
+            studentBtn.classList.add('role-card--active');
+            mentorBtn.classList.remove('role-card--active');
+            studentCheck.style.opacity = '1';
+            mentorCheck.style.opacity = '0';
+        } else {
+            mentorBtn.classList.add('role-card--active');
+            studentBtn.classList.remove('role-card--active');
+            mentorCheck.style.opacity = '1';
+            studentCheck.style.opacity = '0';
+        }
+    }
+
+    studentBtn.addEventListener('click', () => selectRole('student'));
+    mentorBtn.addEventListener('click', () => selectRole('mentor'));
+
+    // Save preferred role to cookie before Google Auth
+    const googleBtn = document.querySelector('a[href*="google"]');
+    if (googleBtn) {
+        googleBtn.addEventListener('click', function() {
+            document.cookie = "preferred_role=" + roleInput.value + "; path=/; max-age=3600";
+        });
+    }
+});
+</script>
 {% endblock %}

@@ -1,0 +1,625 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ classroom.name }} — CEFR Prep{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12">
+
+    {% include "exams/mentor/_workspace_header.html" with title=classroom.name subtitle=classroom.description icon="ph-fill ph-chalkboard-teacher" accent="blue" page_group="classrooms" %}
+
+    <!-- =====================================================================
+         STATS BANNER
+    ====================================================================== -->
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+        <div class="card-duo p-4 flex items-center gap-3">
+            <div class="w-10 h-10 rounded-2xl flex items-center justify-center bg-duo-blue/15 border border-duo-blue/25 shrink-0">
+                <i class="ph-fill ph-users text-duo-blue text-base"></i>
+            </div>
+            <div>
+                <p class="text-xl font-black text-white">{{ stats.student_count }}</p>
+                <p class="text-[11px] font-bold text-duo-text-muted">учеников</p>
+            </div>
+        </div>
+        <div class="card-duo p-4 flex items-center gap-3">
+            <div class="w-10 h-10 rounded-2xl flex items-center justify-center bg-duo-green/15 border border-duo-green/25 shrink-0">
+                <i class="ph-fill ph-exam text-duo-green text-base"></i>
+            </div>
+            <div>
+                <p class="text-xl font-black text-white">{{ stats.test_count }}</p>
+                <p class="text-[11px] font-bold text-duo-text-muted">тестов</p>
+            </div>
+        </div>
+        <div class="card-duo p-4 flex items-center gap-3">
+            <div class="w-10 h-10 rounded-2xl flex items-center justify-center bg-duo-gold/15 border border-duo-gold/25 shrink-0">
+                <i class="ph-fill ph-chart-line-up text-duo-gold text-base"></i>
+            </div>
+            <div>
+                <p class="text-xl font-black text-white">{% if stats.avg_score is not None %}{{ stats.avg_score }}%{% else %}—{% endif %}</p>
+                <p class="text-[11px] font-bold text-duo-text-muted">средний балл</p>
+            </div>
+        </div>
+        <div class="card-duo p-4 flex items-center gap-3">
+            <div class="w-10 h-10 rounded-2xl flex items-center justify-center bg-duo-purple/15 border border-duo-purple/25 shrink-0">
+                <i class="ph-fill ph-check-circle text-duo-purple text-base"></i>
+            </div>
+            <div>
+                <p class="text-xl font-black text-white">{{ stats.completion_rate }}%</p>
+                <p class="text-[11px] font-bold text-duo-text-muted">выполнено</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- =====================================================================
+         JOIN CODE + QUICK ACTIONS
+    ====================================================================== -->
+    <div class="mb-6 card-duo p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div class="flex items-center gap-4">
+            <div class="w-11 h-11 rounded-2xl flex items-center justify-center bg-duo-green/15 border border-duo-green/25 shrink-0">
+                <i class="ph-fill ph-key text-duo-green text-lg"></i>
+            </div>
+            <div>
+                <p class="text-[10px] font-black text-duo-text-dim uppercase tracking-widest mb-0.5">Код для вступления</p>
+                <p class="text-2xl font-black text-white tracking-[0.25em] select-all font-mono" id="join-code">{{ classroom.join_code }}</p>
+            </div>
+        </div>
+        <div class="flex flex-wrap gap-2">
+            <button onclick="copyJoinCode()" class="btn-duo-outline text-xs !py-2 !px-3.5" id="copy-btn">
+                <i class="ph-fill ph-copy"></i> Код
+            </button>
+            <button onclick="copyInviteLink('{{ request.scheme }}://{{ request.get_host }}{% url 'exams:classroom_invite' classroom.invite_token %}')" class="btn-duo-outline text-xs !py-2 !px-3.5" id="copy-link-btn">
+                <i class="ph-fill ph-link"></i> Ссылка
+            </button>
+            <form method="POST" action="{% url 'exams:classroom_regenerate_code' classroom_id=classroom.id %}" class="inline">
+                {% csrf_token %}
+                <button type="submit" class="btn-duo-outline text-xs !py-2 !px-3.5" title="Обновить код и ссылку">
+                    <i class="ph-fill ph-arrows-clockwise"></i>
+                </button>
+            </form>
+            <form method="POST" action="{% url 'exams:classroom_toggle_active' classroom_id=classroom.id %}" class="inline">
+                {% csrf_token %}
+                <button type="submit" class="btn-duo-outline text-xs !py-2 !px-3.5 {% if not classroom.is_active %}!border-duo-green/30 !text-duo-green{% endif %}">
+                    {% if classroom.is_active %}
+                    <i class="ph-fill ph-archive"></i> Архивировать
+                    {% else %}
+                    <i class="ph-fill ph-arrow-counter-clockwise"></i> Активировать
+                    {% endif %}
+                </button>
+            </form>
+            <button onclick="document.getElementById('edit-modal').classList.remove('hidden')" class="btn-duo-outline text-xs !py-2 !px-3.5">
+                <i class="ph-fill ph-pencil-simple-line"></i> Изменить
+            </button>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- ================================================================
+             LEFT COLUMN: Students + Announcements
+        ================================================================= -->
+        <div class="lg:col-span-1 flex flex-col gap-5">
+
+            <!-- Announcements Panel -->
+            <div class="card-duo p-5">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-base font-black text-white flex items-center gap-2">
+                        <i class="ph-fill ph-megaphone text-duo-gold text-lg"></i>
+                        Объявления
+                    </h3>
+                    <button onclick="document.getElementById('ann-form').classList.toggle('hidden')"
+                            class="text-xs font-black text-duo-gold hover:text-white transition-colors flex items-center gap-1">
+                        <i class="ph-fill ph-plus-circle"></i> Добавить
+                    </button>
+                </div>
+
+                <!-- Create form (hidden by default) -->
+                <form id="ann-form" method="POST" action="{% url 'exams:classroom_announcement_create' classroom_id=classroom.id %}"
+                      class="hidden mb-4 p-3.5 rounded-2xl border border-duo-gold/20 bg-duo-gold/[0.04] space-y-2.5">
+                    {% csrf_token %}
+                    <input type="text" name="title" placeholder="Заголовок объявления *" required
+                           class="input-duo w-full !pl-4 !text-sm" style="padding-left:16px!important">
+                    <textarea name="body" placeholder="Текст объявления (необязательно)"
+                              rows="3" class="input-duo w-full !pl-4 !text-sm resize-none" style="padding-left:16px!important"></textarea>
+                    <div class="flex items-center justify-between gap-2">
+                        <label class="flex items-center gap-2 text-xs font-bold text-duo-text-dim cursor-pointer select-none">
+                            <input type="checkbox" name="is_pinned" class="rounded border-duo-border w-3.5 h-3.5 accent-amber-400">
+                            <i class="ph-fill ph-push-pin text-duo-gold"></i> Закрепить
+                        </label>
+                        <button type="submit" class="btn-duo-green text-xs !py-1.5 !px-4">
+                            <i class="ph-fill ph-paper-plane-right"></i> Опубликовать
+                        </button>
+                    </div>
+                </form>
+
+                <!-- Existing announcements -->
+                {% if announcements %}
+                <div class="space-y-2.5 max-h-[380px] overflow-y-auto pr-1">
+                    {% for ann in announcements %}
+                    <div class="relative rounded-2xl border p-3.5
+                        {% if ann.is_pinned %}border-duo-gold/25 bg-duo-gold/[0.05]{% else %}border-duo-border bg-white/[0.02]{% endif %}">
+                        {% if ann.is_pinned %}
+                        <span class="absolute top-2.5 right-8 text-[9px] font-black uppercase tracking-widest text-duo-gold opacity-70">
+                            <i class="ph-fill ph-push-pin"></i>
+                        </span>
+                        {% endif %}
+                        <div class="flex items-start justify-between gap-2 pr-2">
+                            <div class="min-w-0">
+                                <p class="text-xs font-black text-white leading-snug">{{ ann.title }}</p>
+                                {% if ann.body %}
+                                <p class="text-xs text-duo-text-dim font-semibold mt-1 leading-relaxed whitespace-pre-line line-clamp-3">{{ ann.body }}</p>
+                                {% endif %}
+                                <p class="text-[10px] text-duo-text-muted mt-1.5">{{ ann.created_at|date:"d M, H:i" }}</p>
+                            </div>
+                            <div class="flex items-center gap-0.5 shrink-0">
+                                <form method="POST" action="{% url 'exams:classroom_announcement_pin' classroom_id=classroom.id announcement_id=ann.id %}">
+                                    {% csrf_token %}
+                                    <button type="submit" title="{% if ann.is_pinned %}Открепить{% else %}Закрепить{% endif %}"
+                                            class="p-1 rounded-lg transition text-duo-text-muted hover:text-duo-gold hover:bg-duo-gold/10">
+                                        <i class="ph-fill ph-push-pin text-xs"></i>
+                                    </button>
+                                </form>
+                                <form method="POST" action="{% url 'exams:classroom_announcement_delete' classroom_id=classroom.id announcement_id=ann.id %}"
+                                      onsubmit="return confirm('Удалить объявление?')">
+                                    {% csrf_token %}
+                                    <button type="submit" class="p-1 rounded-lg text-duo-text-muted hover:text-duo-red hover:bg-duo-red/10 transition">
+                                        <i class="ph-fill ph-trash text-xs"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="ph-fill ph-megaphone text-2xl text-duo-text-muted mb-2 block"></i>
+                    <p class="text-xs text-duo-text-muted font-semibold">Нет объявлений.</p>
+                    <p class="text-[11px] text-duo-text-muted mt-0.5">Нажмите «Добавить» выше.</p>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Students Panel -->
+            <div class="card-duo p-5">
+                <h3 class="text-base font-black text-white mb-4 flex items-center gap-2">
+                    <i class="ph-fill ph-users text-duo-blue text-lg"></i>
+                    Ученики
+                    <span class="ml-auto text-xs font-black text-duo-blue bg-duo-blue/10 border border-duo-blue/20 px-2.5 py-0.5 rounded-xl">{{ classroom.student_count }}</span>
+                </h3>
+
+                {% for membership in classroom.memberships.all %}
+                <div class="flex items-center justify-between py-2.5 border-b border-duo-border last:border-0 group">
+                    <div class="flex items-center gap-2.5">
+                        <div class="w-8 h-8 rounded-full flex items-center justify-center bg-duo-green/15 border border-duo-green/20 shrink-0">
+                            <i class="ph-fill ph-user text-duo-green text-xs"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm font-bold text-white leading-tight">
+                                {% if membership.student.first_name %}{{ membership.student.first_name }} {{ membership.student.last_name }}{% else %}{{ membership.student.username }}{% endif %}
+                            </p>
+                            <p class="text-[11px] text-duo-text-muted font-semibold">{{ membership.student.email }}</p>
+                        </div>
+                    </div>
+                    <form method="POST" action="{% url 'exams:classroom_remove_student' classroom_id=classroom.id %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="student_id" value="{{ membership.student.id }}">
+                        <button type="submit" class="opacity-0 group-hover:opacity-100 transition-opacity text-duo-text-muted hover:text-duo-red" title="Исключить">
+                            <i class="ph-fill ph-x-circle text-base"></i>
+                        </button>
+                    </form>
+                </div>
+                {% empty %}
+                <div class="text-center py-6">
+                    <i class="ph-fill ph-user-plus text-3xl text-duo-text-muted mb-2 block"></i>
+                    <p class="text-sm text-duo-text-muted font-semibold">Ещё нет учеников.</p>
+                    <p class="text-xs text-duo-text-muted mt-1">Поделитесь кодом <strong class="text-white font-mono">{{ classroom.join_code }}</strong></p>
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- Danger Zone -->
+            <div class="card-duo p-4 border-duo-red/15">
+                <p class="text-xs font-black text-duo-text-muted uppercase tracking-widest mb-3">Опасная зона</p>
+                <form method="POST" action="{% url 'exams:classroom_delete' classroom_id=classroom.id %}"
+                      onsubmit="return confirm('Удалить класс «{{ classroom.name }}»? Это действие нельзя отменить.')">
+                    {% csrf_token %}
+                    <button type="submit" class="btn-duo-red w-full text-xs">
+                        <i class="ph-fill ph-trash"></i> Удалить класс
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- ================================================================
+             RIGHT COLUMN: Progress Matrix + Tests + Videos
+        ================================================================= -->
+        <div class="lg:col-span-2 flex flex-col gap-5">
+
+            <!-- Student Progress Matrix -->
+            {% if students_progress and assigned_tests %}
+            <div class="card-duo p-5">
+                <h3 class="text-base font-black text-white mb-4 flex items-center gap-2">
+                    <i class="ph-fill ph-table text-duo-blue text-lg"></i>
+                    Прогресс учеников
+                </h3>
+                <div class="overflow-x-auto -mx-1 px-1">
+                    <table class="w-full text-xs min-w-[480px]">
+                        <thead>
+                            <tr class="border-b border-duo-border">
+                                <th class="pb-3 pr-3 text-left text-duo-text-muted font-bold uppercase tracking-wider whitespace-nowrap">Ученик</th>
+                                {% for test in assigned_tests %}
+                                <th class="pb-3 px-2 text-center text-duo-text-muted font-bold uppercase tracking-wider max-w-[80px]">
+                                    <span class="inline-block truncate max-w-[76px]" title="{{ test.name }}">{{ test.name|truncatechars:12 }}</span>
+                                </th>
+                                {% endfor %}
+                                <th class="pb-3 pl-3 text-center text-duo-text-muted font-bold uppercase tracking-wider whitespace-nowrap">Средний</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for sp in students_progress %}
+                            <tr class="border-b border-duo-border/40 last:border-0 hover:bg-white/[0.02] transition">
+                                <td class="py-2.5 pr-3 whitespace-nowrap">
+                                    <div class="font-bold text-white text-xs leading-tight">
+                                        {% if sp.student.first_name %}{{ sp.student.first_name }}{% else %}{{ sp.student.username }}{% endif %}
+                                    </div>
+                                    <div class="text-[10px] text-duo-text-muted">{{ sp.completed_count }}/{{ assigned_tests|length }} тестов</div>
+                                </td>
+                                {% for result in sp.test_results %}
+                                <td class="py-2.5 px-2 text-center">
+                                    {% if result.status == 'done' %}
+                                    <a href="{% url 'exams:test_result' result.attempt_id %}" title="{{ result.score }}%"
+                                       class="inline-flex items-center justify-center w-10 h-7 rounded-xl font-black text-[11px] transition hover:scale-110
+                                           {% if result.score >= 80 %}bg-duo-green/20 text-duo-green border border-duo-green/30 hover:bg-duo-green/30
+                                           {% elif result.score >= 60 %}bg-duo-gold/20 text-duo-gold border border-duo-gold/30 hover:bg-duo-gold/30
+                                           {% else %}bg-duo-red/20 text-duo-red border border-duo-red/30 hover:bg-duo-red/30{% endif %}">
+                                        {{ result.score }}%
+                                    </a>
+                                    {% else %}
+                                    <span class="inline-flex items-center justify-center w-10 h-7 rounded-xl border border-dashed border-duo-border text-duo-text-muted text-[10px]" title="Не сдавал">
+                                        —
+                                    </span>
+                                    {% endif %}
+                                </td>
+                                {% endfor %}
+                                <td class="py-2.5 pl-3 text-center">
+                                    {% if sp.avg_score is not None %}
+                                    <span class="font-black text-xs
+                                        {% if sp.avg_score >= 80 %}text-duo-green
+                                        {% elif sp.avg_score >= 60 %}text-duo-gold
+                                        {% else %}text-duo-red{% endif %}">
+                                        {{ sp.avg_score }}%
+                                    </span>
+                                    {% else %}
+                                    <span class="text-duo-text-muted text-[10px]">—</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Assigned Tests -->
+            <div class="card-duo p-5">
+                <h3 class="text-base font-black text-white mb-4 flex items-center gap-2">
+                    <i class="ph-fill ph-exam text-duo-green text-lg"></i>
+                    Тесты класса
+                    <span class="ml-auto text-xs font-black text-duo-green bg-duo-green/10 border border-duo-green/20 px-2.5 py-0.5 rounded-xl">{{ classroom.tests.count }}</span>
+                </h3>
+
+                {% for test in classroom.tests.all %}
+                <div class="flex items-center justify-between py-2.5 px-3 rounded-2xl bg-white/[0.03] border border-duo-border hover:border-white/15 transition mb-2 last:mb-0">
+                    <div class="flex items-center gap-3 min-w-0">
+                        <span class="badge-duo shrink-0
+                            {% if test.test_type == 'listening' %}bg-duo-green/15 text-duo-green border border-duo-green/25
+                            {% elif test.test_type == 'reading' %}bg-duo-blue/15 text-duo-blue border border-duo-blue/25
+                            {% elif test.test_type == 'writing' %}bg-duo-gold/15 text-duo-gold border border-duo-gold/25
+                            {% else %}bg-duo-purple/15 text-duo-purple border border-duo-purple/25{% endif %}">
+                            {{ test.test_type|upper }}
+                        </span>
+                        <span class="text-sm font-bold text-white truncate">{{ test.name }}</span>
+                        {% if not test.is_active %}
+                        <span class="badge-duo bg-duo-red/15 text-duo-red border border-duo-red/25 shrink-0 !text-[10px]">Черновик</span>
+                        {% endif %}
+                    </div>
+                    <div class="flex items-center gap-0.5 shrink-0 ml-2">
+                        <a href="{% url 'exams:mentor_test_preview' test.id %}" target="_blank" rel="noopener" class="p-1.5 rounded-xl text-duo-text-muted hover:text-duo-green hover:bg-duo-green/10 transition" title="Предпросмотр">
+                            <i class="ph-fill ph-eye text-base"></i>
+                        </a>
+                        {% if test.test_type == 'reading' %}
+                        <a href="{% url 'exams:mentor_reading_builder' test.id %}" class="p-1.5 rounded-xl text-duo-text-muted hover:text-duo-blue hover:bg-duo-blue/10 transition" title="Builder">
+                            <i class="ph-fill ph-pencil-simple-line text-base"></i>
+                        </a>
+                        {% else %}
+                        <a href="{% url 'exams:mentor_test_builder' test.id %}" class="p-1.5 rounded-xl text-duo-text-muted hover:text-duo-blue hover:bg-duo-blue/10 transition" title="Builder">
+                            <i class="ph-fill ph-pencil-simple-line text-base"></i>
+                        </a>
+                        {% endif %}
+                        <form method="POST" action="{% url 'exams:classroom_remove_test' classroom_id=classroom.id %}">
+                            {% csrf_token %}
+                            <input type="hidden" name="test_id" value="{{ test.id }}">
+                            <button type="submit" class="p-1.5 rounded-xl text-duo-text-muted hover:text-duo-red hover:bg-duo-red/10 transition" title="Убрать">
+                                <i class="ph-fill ph-x-circle text-base"></i>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+                {% empty %}
+                <p class="text-sm text-duo-text-muted font-semibold text-center py-4">Нет назначенных тестов.</p>
+                {% endfor %}
+
+                <!-- Add Assignment Button -->
+                <div class="mt-4 pt-4 border-t border-duo-border/50 flex flex-col gap-3">
+                    <button onclick="openAssignmentModal('test')" class="btn-duo-green text-xs w-full">
+                        <i class="ph-fill ph-plus"></i> Назначить тест
+                    </button>
+                    <a href="{% url 'exams:mentor_upload' %}" class="btn-duo-outline text-xs text-center w-full">
+                        <i class="ph-bold ph-plus"></i> Создать новый тест
+                    </a>
+                </div>
+            </div>
+
+            <!-- Assigned Video Lessons -->
+            <div class="card-duo p-5">
+                <h3 class="text-base font-black text-white mb-4 flex items-center gap-2">
+                    <i class="ph-fill ph-video text-duo-purple text-lg"></i>
+                    Видеоуроки
+                    <span class="ml-auto text-xs font-black text-duo-purple bg-duo-purple/10 border border-duo-purple/20 px-2.5 py-0.5 rounded-xl">{{ classroom.video_lessons.count }}</span>
+                </h3>
+
+                {% for lesson in classroom.video_lessons.all %}
+                <div class="flex items-center justify-between py-3 border-b border-duo-border last:border-0 group">
+                    <div class="flex items-center gap-3 min-w-0">
+                        <span class="badge-duo bg-duo-purple/15 text-duo-purple border border-duo-purple/25 shrink-0">VIDEO</span>
+                        <div class="min-w-0">
+                            <p class="text-sm font-bold text-white truncate">{{ lesson.title }}</p>
+                            {% if lesson.cefr_level %}<p class="text-[10px] text-duo-text-muted font-semibold">{{ lesson.cefr_level }} · {{ lesson.quiz_count }} вопрос{% if lesson.quiz_count != 1 %}ов{% endif %}</p>{% endif %}
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-0.5 shrink-0 ml-2">
+                        <a href="{% url 'exams:video_lesson_detail' lesson.id %}" target="_blank" class="p-1.5 rounded-xl text-duo-text-muted hover:text-duo-purple hover:bg-duo-purple/10 transition" title="Смотреть">
+                            <i class="ph-fill ph-play-circle text-base"></i>
+                        </a>
+                        <form method="POST" action="{% url 'exams:classroom_remove_video_lesson' classroom_id=classroom.id %}">
+                            {% csrf_token %}
+                            <input type="hidden" name="lesson_id" value="{{ lesson.id }}">
+                            <button type="submit" class="p-1.5 rounded-xl text-duo-text-muted hover:text-duo-red hover:bg-duo-red/10 transition" title="Убрать">
+                                <i class="ph-fill ph-x-circle text-base"></i>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+                {% empty %}
+                <p class="text-sm text-duo-text-muted font-semibold text-center py-4">Нет назначенных видеоуроков.</p>
+                {% endfor %}
+
+                <!-- Add Video Button -->
+                <div class="mt-4 pt-4 border-t border-duo-border/50 flex flex-col gap-3">
+                    <button onclick="openAssignmentModal('video')" class="btn-duo-purple text-xs w-full">
+                        <i class="ph-fill ph-plus"></i> Назначить видеоурок
+                    </button>
+                    <a href="{% url 'exams:mentor_video_lessons' %}" class="btn-duo-outline text-xs text-center w-full">
+                        <i class="ph-bold ph-plus"></i> Загрузить новое видео
+                    </a>
+                </div>
+            </div>
+
+            <!-- Recent Attempts (quick log) -->
+            {% if recent_attempts %}
+            <div class="card-duo p-5">
+                <h3 class="text-base font-black text-white mb-4 flex items-center gap-2">
+                    <i class="ph-fill ph-clock-counter-clockwise text-duo-text-dim text-lg"></i>
+                    Последние результаты
+                </h3>
+                <div class="space-y-2 max-h-60 overflow-y-auto">
+                    {% for attempt in recent_attempts %}
+                    <div class="flex items-center gap-3 py-2 border-b border-duo-border/40 last:border-0">
+                        <div class="w-7 h-7 rounded-full flex items-center justify-center bg-white/[0.06] border border-duo-border shrink-0">
+                            <i class="ph-fill ph-user text-duo-text-dim text-xs"></i>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-xs font-bold text-white truncate">{% if attempt.user.first_name %}{{ attempt.user.first_name }}{% else %}{{ attempt.user.username }}{% endif %}</p>
+                            <p class="text-[10px] text-duo-text-muted truncate">{{ attempt.test.name|truncatechars:28 }}</p>
+                        </div>
+                        <div class="flex items-center gap-2 shrink-0">
+                            <span class="text-xs font-black
+                                {% if attempt.score_percentage >= 80 %}text-duo-green
+                                {% elif attempt.score_percentage >= 60 %}text-duo-gold
+                                {% else %}text-duo-red{% endif %}">
+                                {{ attempt.score_percentage }}%
+                            </span>
+                            {% if attempt.test.test_type == 'writing' or attempt.test.test_type == 'speaking' %}
+                            <a href="{% url 'exams:mentor_grade_submissions' attempt.id %}"
+                               class="inline-flex items-center gap-1 px-2 py-0.5 rounded-xl text-[10px] font-extrabold
+                                      {% if attempt.test.test_type == 'writing' %}bg-duo-gold/10 text-duo-gold border border-duo-gold/25 hover:bg-duo-gold/20
+                                      {% else %}bg-duo-purple/10 text-duo-purple border border-duo-purple/25 hover:bg-duo-purple/20{% endif %} transition">
+                                <i class="ph-fill ph-chalkboard-teacher text-xs"></i> Проверить
+                            </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- ======================================================================
+     EDIT CLASSROOM MODAL
+====================================================================== -->
+<div id="edit-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+    <div class="w-full max-w-md card-duo p-6 sm:p-8 animate-slide-up">
+        <div class="flex items-center justify-between mb-6">
+            <h3 class="text-lg font-black text-white">Настройки класса</h3>
+            <button onclick="document.getElementById('edit-modal').classList.add('hidden')"
+                    class="text-duo-text-muted hover:text-white transition-colors">
+                <i class="ph-fill ph-x text-xl"></i>
+            </button>
+        </div>
+        <form method="POST" action="{% url 'exams:classroom_edit' classroom_id=classroom.id %}" class="space-y-4">
+            {% csrf_token %}
+            <div>
+                <label class="block text-xs font-extrabold text-duo-text-dim mb-1.5 uppercase tracking-widest">Название *</label>
+                <input type="text" name="name" value="{{ classroom.name }}" required
+                       class="input-duo w-full !pl-4" style="padding-left:16px!important">
+            </div>
+            <div>
+                <label class="block text-xs font-extrabold text-duo-text-dim mb-1.5 uppercase tracking-widest">Описание</label>
+                <textarea name="description" rows="2"
+                          class="input-duo w-full !pl-4 resize-none" style="padding-left:16px!important">{{ classroom.description }}</textarea>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-xs font-extrabold text-duo-text-dim mb-1.5 uppercase tracking-widest">Эмодзи</label>
+                    <input type="text" name="emoji" value="{{ classroom.emoji }}" maxlength="8"
+                           class="input-duo w-full text-center text-2xl !py-2" style="padding-left:16px!important">
+                </div>
+                <div>
+                    <label class="block text-xs font-extrabold text-duo-text-dim mb-1.5 uppercase tracking-widest">Цвет</label>
+                    <select name="color" class="input-duo w-full !pl-4" style="padding-left:16px!important">
+                        <option value="blue" {% if classroom.color == 'blue' %}selected{% endif %}>🔵 Синий</option>
+                        <option value="green" {% if classroom.color == 'green' %}selected{% endif %}>🟢 Зелёный</option>
+                        <option value="purple" {% if classroom.color == 'purple' %}selected{% endif %}>🟣 Фиолетовый</option>
+                        <option value="gold" {% if classroom.color == 'gold' %}selected{% endif %}>🟡 Золотой</option>
+                        <option value="red" {% if classroom.color == 'red' %}selected{% endif %}>🔴 Красный</option>
+                        <option value="teal" {% if classroom.color == 'teal' %}selected{% endif %}>🩵 Бирюзовый</option>
+                    </select>
+                </div>
+            </div>
+            <div class="flex gap-3 pt-2">
+                <button type="button" onclick="document.getElementById('edit-modal').classList.add('hidden')"
+                        class="btn-duo-outline flex-1 text-sm">Отмена</button>
+                <button type="submit" class="btn-duo-blue flex-1 text-sm">
+                    <i class="ph-fill ph-floppy-disk"></i> Сохранить
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ======================================================================
+     ADD ASSIGNMENT MODAL
+====================================================================== -->
+<div id="assignment-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+    <div class="w-full max-w-md card-duo p-6 sm:p-8 animate-slide-up relative">
+        <div class="flex items-center justify-between mb-6">
+            <h3 class="text-lg font-black text-white" id="assignment-modal-title">Назначить задание</h3>
+            <button onclick="document.getElementById('assignment-modal').classList.add('hidden')"
+                    class="text-duo-text-muted hover:text-white transition-colors">
+                <i class="ph-fill ph-x text-xl"></i>
+            </button>
+        </div>
+        
+        <form method="POST" action="{% url 'exams:classroom_add_assignment' classroom_id=classroom.id %}" class="space-y-4">
+            {% csrf_token %}
+            <input type="hidden" name="target_type" id="assignment-target-type">
+            
+            <!-- Target Selection -->
+            <div>
+                <label class="block text-xs font-extrabold text-duo-text-dim mb-1.5 uppercase tracking-widest" id="assignment-target-label">Выберите материал *</label>
+                
+                <!-- Test Select -->
+                <select name="target_id" id="assignment-test-select" class="input-duo w-full !pl-4 hidden" style="padding-left:16px!important">
+                    {% for test in mentor_tests %}
+                    <option value="{{ test.id }}">[{{ test.test_type|upper }}] {{ test.name }} {% if not test.is_active %}(Черновик){% endif %}</option>
+                    {% endfor %}
+                </select>
+                
+                <!-- Video Select -->
+                <select name="target_id" id="assignment-video-select" class="input-duo w-full !pl-4 hidden" style="padding-left:16px!important">
+                    {% for lesson in mentor_video_lessons %}
+                    <option value="{{ lesson.id }}">{{ lesson.title }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <!-- Custom Title -->
+            <div>
+                <label class="block text-xs font-extrabold text-duo-text-dim mb-1.5 uppercase tracking-widest">Свой заголовок (необязательно)</label>
+                <input type="text" name="title" placeholder="Напр. Домашка неделя 3"
+                       class="input-duo w-full !pl-4" style="padding-left:16px!important">
+            </div>
+            
+            <!-- Instructions -->
+            <div>
+                <label class="block text-xs font-extrabold text-duo-text-dim mb-1.5 uppercase tracking-widest">Инструкция (необязательно)</label>
+                <textarea name="instructions" rows="2" placeholder="Напишите пару слов ученикам..."
+                          class="input-duo w-full !pl-4 resize-none" style="padding-left:16px!important"></textarea>
+            </div>
+            
+            <!-- Deadline -->
+            <div>
+                <label class="block text-xs font-extrabold text-duo-text-dim mb-1.5 uppercase tracking-widest flex items-center justify-between">
+                    <span>Дедлайн (необязательно)</span>
+                </label>
+                <input type="datetime-local" name="due_date" class="input-duo w-full !pl-4 cursor-pointer" style="padding-left:16px!important">
+                <p class="text-[10px] text-duo-text-muted mt-1 font-semibold">Оставьте пустым, если время на выполнение не ограничено.</p>
+            </div>
+
+            <div class="pt-2">
+                <button type="submit" class="btn-duo-green w-full text-sm">
+                    <i class="ph-fill ph-paper-plane-right"></i> Назначить классу
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    function copyJoinCode() {
+        const code = document.getElementById('join-code').textContent.trim();
+        navigator.clipboard.writeText(code).then(() => {
+            const btn = document.getElementById('copy-btn');
+            btn.innerHTML = '<i class="ph-fill ph-check text-duo-green"></i> Скопировано';
+            setTimeout(() => { btn.innerHTML = '<i class="ph-fill ph-copy"></i> Код'; }, 2000);
+        });
+    }
+
+    function copyInviteLink(link) {
+        navigator.clipboard.writeText(link).then(() => {
+            const btn = document.getElementById('copy-link-btn');
+            btn.innerHTML = '<i class="ph-fill ph-check text-duo-green"></i> Скопировано';
+            setTimeout(() => { btn.innerHTML = '<i class="ph-fill ph-link"></i> Ссылка'; }, 2000);
+        });
+    }
+
+    function openAssignmentModal(type) {
+        document.getElementById('assignment-target-type').value = type;
+        
+        const testSelect = document.getElementById('assignment-test-select');
+        const videoSelect = document.getElementById('assignment-video-select');
+        
+        if (type === 'test') {
+            document.getElementById('assignment-modal-title').textContent = 'Назначить тест';
+            document.getElementById('assignment-target-label').textContent = 'Выберите тест *';
+            testSelect.classList.remove('hidden');
+            testSelect.name = 'target_id';
+            videoSelect.classList.add('hidden');
+            videoSelect.name = '';
+        } else {
+            document.getElementById('assignment-modal-title').textContent = 'Назначить видеоурок';
+            document.getElementById('assignment-target-label').textContent = 'Выберите видеоурок *';
+            videoSelect.classList.remove('hidden');
+            videoSelect.name = 'target_id';
+            testSelect.classList.add('hidden');
+            testSelect.name = '';
+        }
+        
+        document.getElementById('assignment-modal').classList.remove('hidden');
+    }
+
+    document.addEventListener('click', e => {
+        const editModal = document.getElementById('edit-modal');
+        if (editModal && e.target === editModal) editModal.classList.add('hidden');
+        
+        const assignModal = document.getElementById('assignment-modal');
+        if (assignModal && e.target === assignModal) assignModal.classList.add('hidden');
+    });
+</script>
+{% endblock %}

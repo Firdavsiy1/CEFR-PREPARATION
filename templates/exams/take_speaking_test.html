@@ -1,0 +1,1123 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Speaking Test — {{ test.name }}{% endblock %}
+
+{% block extra_head %}
+<style>
+@keyframes barWave {
+    0%, 100% { height: 4px; }
+    50%       { height: 14px; }
+}
+.bar-wave {
+    display: inline-block;
+    width: 3px;
+    border-radius: 99px;
+    animation: barWave 0.75s ease-in-out infinite;
+}
+
+@keyframes stageIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px) scale(0.995);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.motion-stage-enter {
+    animation: stageIn 260ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+.motion-card {
+    transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+}
+
+.motion-card:hover {
+    transform: translateY(-1px);
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 flex flex-col" style="height:calc(100vh - 5rem);">
+    {% if preview_mode %}
+    <div class="flex items-center justify-between gap-3 mb-4 rounded-2xl border-2 border-duo-blue/30 bg-duo-blue/10 px-4 py-3">
+        <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-xl bg-duo-blue/20 border border-duo-blue/30 flex items-center justify-center flex-shrink-0">
+                <i class="ph-fill ph-eye text-duo-blue text-sm"></i>
+            </div>
+            <div>
+                <p class="text-xs font-extrabold uppercase tracking-widest text-duo-blue">Preview Mode</p>
+                <p class="text-sm font-semibold text-duo-text-dim">Полный flow без записи аудио и submit. Таймеры работают.</p>
+            </div>
+        </div>
+        <a href="{% url 'exams:mentor_speaking_builder' test.id %}"
+           class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-white/5 text-white border border-white/15 hover:bg-white/10 transition-all flex-shrink-0">
+            <i class="ph-bold ph-arrow-left"></i>
+            <span class="hidden sm:inline">Назад в Builder</span>
+        </a>
+    </div>
+    {% endif %}
+
+    <!-- Top Bar -->
+    <div class="flex items-center justify-between py-3 border-b-2 border-duo-border flex-shrink-0">
+        <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-xl bg-duo-purple/20 border-2 border-duo-purple/30 flex items-center justify-center">
+                <i class="ph-fill ph-microphone text-duo-purple"></i>
+            </div>
+            <div>
+                <p class="font-black text-white text-sm leading-tight">{{ test.name }}</p>
+                <p class="text-xs text-duo-text-muted font-semibold">Speaking Test</p>
+            </div>
+        </div>
+        <div class="flex items-center gap-4">
+            <div class="hidden sm:flex items-center gap-1.5" id="part-pills"></div>
+            <div class="flex items-center gap-2 bg-duo-surface-2 border-2 border-duo-border rounded-xl px-3 py-1.5 min-w-[130px] justify-center">
+                <i class="ph-fill ph-waveform text-duo-gold text-sm"></i>
+                <span id="phase-chip-label" class="text-xs font-black text-white uppercase tracking-wide">Ready</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div id="content-grid" class="flex flex-1 min-h-0 py-4 transition-all duration-200">
+
+        <!-- Main: Questions + Recording -->
+        <div id="question-column" class="w-full flex flex-col overflow-y-auto transition-all duration-200">
+            <div class="card-duo w-full p-5 sm:p-6 flex flex-col" id="questions-container">
+                <div class="rounded-2xl border-2 border-duo-purple/20 bg-gradient-to-br from-duo-surface to-duo-surface-2/50 p-6 sm:p-8 text-center">
+                    <div class="w-16 h-16 mx-auto rounded-2xl bg-duo-purple/15 border border-duo-purple/30 flex items-center justify-center mb-5">
+                        <i class="ph-fill ph-microphone text-duo-purple text-3xl"></i>
+                    </div>
+                    <h2 class="text-xl font-black text-white mb-2">Automatic Speaking Flow</h2>
+                    <p class="text-sm font-semibold text-duo-text-dim max-w-xl mx-auto mb-6">
+                        Each prompt will be narrated automatically. The system will give preparation time, start recording your answer, and then move to the next question or topic on its own.
+                    </p>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-2xl mx-auto mb-6 text-left">
+                        <div class="rounded-xl border border-duo-border bg-duo-surface/60 p-4">
+                            <p class="text-xs font-extrabold uppercase tracking-widest text-duo-blue mb-2">Part 1.1 / 1.2</p>
+                            <p class="text-sm font-semibold text-white">5 seconds to think, 30 seconds to answer each question.</p>
+                        </div>
+                        <div class="rounded-xl border border-duo-border bg-duo-surface/60 p-4">
+                            <p class="text-xs font-extrabold uppercase tracking-widest text-duo-gold mb-2">Part 2 / 3</p>
+                            <p class="text-sm font-semibold text-white">1 minute to think, 2 minutes to answer the whole topic.</p>
+                        </div>
+                    </div>
+                    <button class="btn-duo-green {% if preview_mode %}opacity-70 cursor-default{% endif %}" onclick="beginSpeakingFlow()">
+                        {% if preview_mode %}Preview Speaking Flow{% else %}Start Speaking Flow{% endif %} <i class="ph-bold ph-play"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Flow Status Bar -->
+    <div class="flex-shrink-0 pt-3">
+        <div class="rounded-2xl border-2 border-duo-border bg-duo-surface/90 backdrop-blur px-3 sm:px-4 py-3 flex items-center justify-between gap-3 shadow-[0_8px_24px_rgba(0,0,0,0.25)]">
+                    <div class="min-w-0">
+                        <p class="text-[10px] font-extrabold text-duo-text-muted uppercase tracking-widest">Flow</p>
+                        <p id="flow-status-title" class="text-sm font-black text-white leading-tight">Ready to begin</p>
+                        <p id="flow-status-copy" class="text-xs text-duo-text-dim font-semibold mt-0.5">The narrator will read each prompt automatically.</p>
+                    </div>
+                    <div class="text-right flex-shrink-0">
+                        <p class="text-[10px] font-extrabold text-duo-text-muted uppercase tracking-widest">Countdown</p>
+                        <p id="phase-countdown" class="text-lg font-black text-white tabular-nums">--:--</p>
+                    </div>
+                </div>
+    </div>
+
+    <!-- Submit Footer -->
+    <div id="submit-bar" class="hidden flex-shrink-0 py-3">
+        <div class="rounded-2xl border-2 border-duo-green/25 bg-gradient-to-r from-duo-surface to-duo-green/5 px-4 py-3 sm:py-3.5 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-[0_10px_28px_rgba(0,0,0,0.28)]">
+            <div class="min-w-0">
+                <p class="text-[10px] font-extrabold text-duo-green uppercase tracking-widest">Final Step</p>
+                <p class="text-sm text-duo-text-dim font-semibold">
+                    <i class="ph-fill ph-check-circle text-duo-green mr-1"></i>
+                    All parts done — ready to submit?
+                </p>
+            </div>
+            <button id="submit-btn"
+                    class="btn-duo bg-duo-purple hover:bg-duo-purple/90 border-0 shadow-[0_4px_0_#A855F7] h-[48px] px-8 text-white font-extrabold rounded-xl flex items-center gap-2 active:translate-y-1 active:shadow-none"
+                    onclick="submitTest()">
+                <i class="ph-bold ph-paper-plane-tilt text-xl"></i>
+                {% if preview_mode %}Preview mode{% else %}Submit Speaking Test{% endif %}
+            </button>
+        </div>
+    </div>
+
+    {% if preview_mode %}
+    <!-- Preview Skip Bar -->
+    <div id="preview-skip-bar" class="hidden flex-shrink-0 py-2">
+        <div class="rounded-2xl border-2 border-duo-blue/30 bg-duo-blue/5 backdrop-blur px-4 py-2.5 flex items-center justify-between gap-3 shadow-[0_4px_16px_rgba(0,0,0,0.25)]">
+            <div class="flex items-center gap-2">
+                <i class="ph-fill ph-eye text-duo-blue text-sm"></i>
+                <span class="text-[10px] font-extrabold text-duo-blue uppercase tracking-widest">Preview controls</span>
+            </div>
+            <div class="flex items-center gap-2">
+                <button onclick="skipCurrentQuestion()" title="Пропустить вопрос"
+                        class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-white/5 border border-white/15 text-white hover:bg-white/10 transition-all">
+                    <i class="ph-bold ph-skip-forward"></i>
+                    <span class="hidden sm:inline">Вопрос</span>
+                </button>
+                <button onclick="skipCurrentPart()" title="Пропустить часть"
+                        class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-duo-purple/10 border border-duo-purple/30 text-duo-purple hover:bg-duo-purple/20 transition-all">
+                    <i class="ph-bold ph-fast-forward"></i>
+                    <span class="hidden sm:inline">Часть</span>
+                </button>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+        </div>
+    </div>
+</div>
+
+{{ parts_data|json_script:"parts-data" }}
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+const PREVIEW_MODE = {% if preview_mode %}true{% else %}false{% endif %};
+const ATTEMPT_ID = {{ attempt.id }};
+const CSRF = '{{ csrf_token }}';
+const SUBMIT_URL = '{% url "exams:finalize_speaking_test" attempt.id %}';
+const ANSWER_URL = '{% url "exams:api_submit_speaking_answer" attempt.id %}';
+const PARTS = JSON.parse(document.getElementById('parts-data').textContent)
+    .slice()
+    .sort((a, b) => Number(a.part_number) - Number(b.part_number))
+    .map((p) => ({ ...p, display_label: getPartDisplayLabel(p) }));
+
+const flowState = {
+    started: false,
+    partIdx: 0,
+    questionIdx: 0,
+    phase: 'ready',
+    secondsRemaining: 0,
+    runToken: 0,
+    stream: null,
+    mediaRecorder: null,
+    audioChunks: [],
+    recorderStartedAt: 0,
+    completedAnswers: new Set(),
+    activeAudio: null,
+    lastRenderKey: '',
+};
+
+function normalizePartLabel(rawValue) {
+    return String(rawValue ?? '').trim().replace(',', '.');
+}
+
+function getPartDisplayLabel(part) {
+    const legacyMap = {
+        1: '1.1',
+        2: '1.2',
+        3: '2',
+        4: '3',
+    };
+    const byNumber = legacyMap[Number(part.part_number)];
+    if (byNumber) return byNumber;
+
+    const raw = normalizePartLabel(part.ocr_label);
+    if (raw === '1' || raw === '1.0') return '1.1';
+    if (raw === '4' || raw === '4.0') return '3';
+    return raw || String(part.part_number || '');
+}
+
+function canShowImageForPart(part) {
+    const label = getPartDisplayLabel(part);
+    return label === '1.2' || label === '2';
+}
+
+function getPartTiming(label) {
+    if (label === '1.1' || label === '1.2') {
+        return { mode: 'per-question', thinkSeconds: 5, answerSeconds: 30 };
+    }
+    return { mode: 'topic', thinkSeconds: 60, answerSeconds: 120 };
+}
+
+function getPartBriefing(part) {
+    const label = String(part.display_label || getPartDisplayLabel(part));
+    const map = {
+        '1.1': {
+            title: 'Part 1.1 Briefing',
+            summary: 'You will answer short personal questions. For each question you get 5 seconds to think and 30 seconds to answer.',
+            speech: 'Part one point one. Personal interview. You will answer short personal questions. For each question, you have 5 seconds to think and 30 seconds to answer.',
+        },
+        '1.2': {
+            title: 'Part 1.2 Briefing',
+            summary: 'You will answer picture-based questions. Use the reference image on the left. For each question: 5 seconds to think and 30 seconds to answer.',
+            speech: 'Part one point two. Picture discussion. Use the reference image on the left. For each question, you have 5 seconds to think and 30 seconds to answer.',
+        },
+        '2': {
+            title: 'Part 2 Briefing',
+            summary: 'This is a long turn. First, listen to the topic prompts. Then you get 1 minute to prepare and 2 minutes to speak for the whole topic.',
+            speech: 'Part two. Long turn. Listen to the topic prompts first. Then you have 1 minute to prepare and 2 minutes to answer for the whole topic.',
+        },
+        '3': {
+            title: 'Part 3 Briefing',
+            summary: 'This is a discussion task. Listen to all prompts first. Then you get 1 minute to prepare and 2 minutes to present your full response.',
+            speech: 'Part three. Discussion. Listen to all prompts first. Then you have 1 minute to prepare and 2 minutes for your full response.',
+        },
+    };
+    return map[label] || {
+        title: `Part ${label} Briefing`,
+        summary: 'Listen to the instructions and follow the narrator to complete this section.',
+        speech: `Part ${label}. Listen to the instructions and follow the narrator to complete this section.`,
+    };
+}
+
+function getPartUiMeta(label) {
+    const map = {
+        '1.1': {
+            title: 'Personal Interview',
+            subtitle: 'Short personal questions to warm up and speak naturally.',
+            accentBg: 'bg-duo-blue/10',
+            accentBorder: 'border-duo-blue/25',
+            accentText: 'text-duo-blue',
+        },
+        '1.2': {
+            title: 'Picture Discussion',
+            subtitle: 'Describe what you see and compare ideas from the visuals.',
+            accentBg: 'bg-duo-purple/10',
+            accentBorder: 'border-duo-purple/25',
+            accentText: 'text-duo-purple',
+        },
+        '2': {
+            title: 'Long Turn',
+            subtitle: 'Speak continuously and cover all prompt points in one response.',
+            accentBg: 'bg-duo-purple/10',
+            accentBorder: 'border-duo-purple/25',
+            accentText: 'text-duo-purple',
+        },
+        '3': {
+            title: 'Discussion',
+            subtitle: 'Express and defend your opinion using clear arguments.',
+            accentBg: 'bg-duo-gold/10',
+            accentBorder: 'border-duo-gold/25',
+            accentText: 'text-duo-gold',
+        },
+    };
+    return map[label] || {
+        title: 'Speaking Part',
+        subtitle: 'Respond clearly and confidently.',
+        accentBg: 'bg-duo-purple/10',
+        accentBorder: 'border-duo-purple/25',
+        accentText: 'text-duo-purple',
+    };
+}
+
+function buildPills() {
+    const c = document.getElementById('part-pills');
+    c.innerHTML = '';
+    PARTS.forEach((p, i) => {
+        const pill = document.createElement('span');
+        pill.className = 'part-pill min-w-9 h-8 px-2 rounded-lg text-xs font-black border-2 transition-all inline-flex items-center justify-center shadow-sm ' +
+            (i === flowState.partIdx ? 'bg-duo-purple border-duo-purple text-white' : 'bg-duo-surface-2 border-duo-border text-duo-text-muted');
+        pill.textContent = p.display_label;
+        c.appendChild(pill);
+    });
+}
+
+function escHtml(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+function formatSeconds(totalSeconds) {
+    const minutes = Math.floor(totalSeconds / 60).toString().padStart(2, '0');
+    const seconds = (totalSeconds % 60).toString().padStart(2, '0');
+    return `${minutes}:${seconds}`;
+}
+
+function getCurrentPart() {
+    return PARTS[flowState.partIdx] || null;
+}
+
+function getCurrentQuestion(part) {
+    return part?.questions?.[flowState.questionIdx] || null;
+}
+
+function getNarrationText(part, question) {
+    if (part.display_label === '3' && part.debate_data && part.debate_data.topic) {
+        const forPoints = (part.debate_data.for_points || []).join('. ');
+        const againstPoints = (part.debate_data.against_points || []).join('. ');
+        return `Discussion topic: ${part.debate_data.topic}. Arguments for: ${forPoints}. Arguments against: ${againstPoints}. ${question.text || ''}`;
+    }
+    return question?.text || '';
+}
+
+function showNarrationBadge(visible) {
+    const badge = document.getElementById('narration-badge');
+    if (badge) badge.classList.toggle('hidden', !visible);
+}
+
+function stopNarration() {
+    showNarrationBadge(false);
+    if (flowState.activeAudio) {
+        flowState.activeAudio.pause();
+        flowState.activeAudio.currentTime = 0;
+        flowState.activeAudio = null;
+    }
+    if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+    }
+}
+
+async function fetchAndPlayTTS(text) {
+    if (!text) return Promise.resolve();
+    try {
+        const resp = await fetch('/api/tts/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+            body: JSON.stringify({ text: text, lang: 'en-US' })
+        });
+        const data = await resp.json();
+        if (data.status === 'ok' && data.audio_base64) {
+            return new Promise((resolve) => {
+                const audio = new Audio('data:audio/mp3;base64,' + data.audio_base64);
+                flowState.activeAudio = audio;
+                audio.onended = () => {
+                    if (flowState.activeAudio === audio) flowState.activeAudio = null;
+                    resolve();
+                };
+                audio.onerror = () => {
+                    if (flowState.activeAudio === audio) flowState.activeAudio = null;
+                    resolve();
+                };
+                audio.play().catch(e => {
+                    console.error("TTS playback error:", e);
+                    if (flowState.activeAudio === audio) flowState.activeAudio = null;
+                    resolve();
+                });
+            });
+        }
+    } catch (e) {
+        console.error("TTS fetch error:", e);
+    }
+    return Promise.resolve();
+}
+
+function playQuestionNarration(question, part) {
+    stopNarration();
+    showNarrationBadge(true);
+
+    if (question.audio_url) {
+        return new Promise((resolve) => {
+            const audio = new Audio(question.audio_url);
+            flowState.activeAudio = audio;
+            const finish = () => {
+                if (flowState.activeAudio === audio) flowState.activeAudio = null;
+                showNarrationBadge(false);
+                resolve();
+            };
+            audio.onended = finish;
+            audio.onerror = () => {
+                if (flowState.activeAudio === audio) flowState.activeAudio = null;
+                showNarrationBadge(false);
+                playQuestionNarration({ ...question, audio_url: '' }, part).then(resolve);
+            };
+            audio.play().catch(() => {
+                if (flowState.activeAudio === audio) flowState.activeAudio = null;
+                showNarrationBadge(false);
+                playQuestionNarration({ ...question, audio_url: '' }, part).then(resolve);
+            });
+        });
+    }
+
+    const text = getNarrationText(part, question);
+    if (!text) {
+        showNarrationBadge(false);
+        return Promise.resolve();
+    }
+
+    return fetchAndPlayTTS(text).then(() => {
+        showNarrationBadge(false);
+    });
+}
+
+async function ensureMicrophone() {
+    if (flowState.stream) return flowState.stream;
+    flowState.stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    return flowState.stream;
+}
+
+function setChrome(phaseLabel, helperText, seconds = null) {
+    document.getElementById('flow-status-title').textContent = phaseLabel;
+    document.getElementById('flow-status-copy').textContent = helperText;
+    document.getElementById('phase-chip-label').textContent = phaseLabel;
+    const countdown = document.getElementById('phase-countdown');
+    countdown.textContent = (seconds === null || seconds === undefined) ? '--:--' : formatSeconds(seconds);
+}
+
+function getPromptProgressText(part) {
+    if (!part?.questions?.length) return '';
+    if (getPartTiming(part.display_label).mode === 'per-question') {
+        return `Question ${flowState.questionIdx + 1} of ${part.questions.length}`;
+    }
+    return `Prompt ${flowState.questionIdx + 1} of ${part.questions.length}`;
+}
+
+function renderInlineReferenceCard(part) {
+    if (!canShowImageForPart(part)) return '';
+    if (!part.image_url) {
+        return `
+            <div class="rounded-2xl border border-duo-border bg-duo-surface/60 p-5 text-center">
+                <p class="text-[10px] font-extrabold uppercase tracking-widest text-duo-purple mb-3">Reference Image</p>
+                <div class="rounded-xl border border-white/10 bg-duo-surface/30 min-h-[220px] flex items-center justify-center">
+                    <div class="flex flex-col items-center gap-3 text-duo-text-muted text-center p-6">
+                        <i class="ph-fill ph-image text-5xl opacity-15"></i>
+                        <p class="text-xs font-semibold">No reference image</p>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+    return `
+        <div class="rounded-2xl border border-duo-border bg-duo-surface/60 p-3 sm:p-4 shadow-[0_2px_0_rgba(0,0,0,0.2)]">
+            <div class="flex items-center justify-between gap-3 mb-3 px-1">
+                <div class="flex items-center gap-2 text-xs font-extrabold uppercase tracking-widest text-duo-purple">
+                    <i class="ph-fill ph-image"></i>
+                    Reference Image
+                </div>
+                <span class="text-[10px] font-extrabold uppercase tracking-widest text-duo-text-muted">Keep this visual in mind</span>
+            </div>
+            <div class="relative rounded-2xl overflow-hidden border border-white/10 bg-duo-surface/20 min-h-[240px] sm:min-h-[280px] lg:min-h-[320px]">
+                <img id="part-image" src="${escHtml(part.image_url)}" alt="Speaking reference image" class="absolute inset-0 w-full h-full object-contain" />
+                <div id="narration-badge" class="absolute bottom-3 left-3 right-3 z-10 hidden">
+                    <div class="flex items-center gap-2 bg-duo-purple/90 backdrop-blur-sm rounded-xl px-3 py-2.5 border border-duo-purple/50 shadow-lg">
+                        <span class="flex gap-[3px] items-end h-4 flex-shrink-0">
+                            <span class="bar-wave bg-white" style="animation-delay:0s"></span>
+                            <span class="bar-wave bg-white" style="animation-delay:0.15s"></span>
+                            <span class="bar-wave bg-white" style="animation-delay:0.3s"></span>
+                            <span class="bar-wave bg-white" style="animation-delay:0.45s"></span>
+                            <span class="bar-wave bg-white" style="animation-delay:0.6s"></span>
+                        </span>
+                        <span class="text-xs font-extrabold text-white uppercase tracking-wider">Narrator speaking...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function renderBasePartHeader(part) {
+    const label = String(part.display_label || getPartDisplayLabel(part));
+    const meta = getPartUiMeta(label);
+    return `
+        <div class="rounded-2xl border-2 border-duo-border bg-gradient-to-r from-duo-surface to-duo-surface-2/70 p-4 sm:p-5">
+            <div class="flex items-start sm:items-center justify-between gap-3">
+                <div class="min-w-0">
+                    <p class="text-[10px] font-extrabold uppercase tracking-widest text-duo-text-muted">Part ${label}</p>
+                    <h2 class="text-base sm:text-lg font-black text-white leading-tight mt-0.5">${escHtml(meta.title)}</h2>
+                    <p class="text-xs text-duo-text-dim font-semibold mt-1">${escHtml(meta.subtitle)}</p>
+                </div>
+                <div class="w-9 h-9 rounded-xl border-2 ${meta.accentBorder} ${meta.accentBg} flex items-center justify-center flex-shrink-0">
+                    <span class="text-xs font-black ${meta.accentText}">${label}</span>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function renderPromptCard(question, part) {
+    return `
+        <div class="motion-card bg-gradient-to-r from-duo-surface to-duo-surface-2/40 border-2 border-duo-border rounded-2xl p-5 shadow-[0_2px_0_rgba(0,0,0,0.2)]">
+            <div class="flex items-center justify-between gap-3 mb-4">
+                <div class="flex items-center gap-2 text-xs font-extrabold uppercase tracking-widest text-duo-purple">
+                    <i class="ph-fill ph-speaker-high"></i>
+                    Narrator Prompt
+                </div>
+                <span class="text-[10px] font-extrabold uppercase tracking-widest text-duo-text-muted">${getPromptProgressText(part)}</span>
+            </div>
+            <div class="flex items-start gap-3">
+                <div class="w-8 h-8 rounded-xl bg-duo-purple/20 border border-duo-purple/30 flex items-center justify-center flex-shrink-0 mt-0.5 shadow-sm">
+                    <span class="text-xs font-black text-duo-purple">${question.number}</span>
+                </div>
+                <p class="text-base font-black text-white leading-relaxed flex-1">${escHtml(question.text || 'Prompt')}</p>
+            </div>
+        </div>
+    `;
+}
+
+function renderPrepOrAnswerPanel(title, copy, seconds, accentClass = 'duo-gold') {
+    const bgMap = {
+        'duo-gold': 'bg-duo-gold/10 border-duo-gold/25 text-duo-gold',
+        'duo-red': 'bg-duo-red/10 border-duo-red/25 text-duo-red',
+        'duo-blue': 'bg-duo-blue/10 border-duo-blue/25 text-duo-blue',
+        'duo-green': 'bg-duo-green/10 border-duo-green/25 text-duo-green',
+    };
+    const classes = bgMap[accentClass] || bgMap['duo-gold'];
+    return `
+        <div class="motion-card rounded-2xl border-2 ${classes.split(' ')[1]} ${classes.split(' ')[0]} p-5 text-center shadow-[0_2px_0_rgba(0,0,0,0.2)]">
+            <p class="text-[10px] font-extrabold uppercase tracking-widest ${classes.split(' ')[2]}">${escHtml(title)}</p>
+            <p class="text-4xl font-black text-white tabular-nums mt-2" id="phase-panel-timer">${formatSeconds(seconds)}</p>
+            <p class="text-sm font-semibold text-duo-text-dim mt-2">${escHtml(copy)}</p>
+        </div>
+    `;
+}
+
+function renderTopicSummary(part) {
+    if (part.display_label === '3' && part.debate_data && part.debate_data.topic) {
+        const forItems = (part.debate_data.for_points || []).map((item) => `
+            <li class="flex items-start gap-2 text-sm text-white font-semibold">
+                <i class="ph-fill ph-check-circle text-duo-green mt-0.5 flex-shrink-0"></i>
+                <span>${escHtml(item)}</span>
+            </li>
+        `).join('');
+        const againstItems = (part.debate_data.against_points || []).map((item) => `
+            <li class="flex items-start gap-2 text-sm text-white font-semibold">
+                <i class="ph-fill ph-x-circle text-duo-red mt-0.5 flex-shrink-0"></i>
+                <span>${escHtml(item)}</span>
+            </li>
+        `).join('');
+        return `
+            <div class="motion-card bg-duo-surface border-2 border-duo-gold/20 rounded-2xl p-5 flex flex-col gap-4 shadow-[0_2px_0_rgba(0,0,0,0.2)]">
+                <div class="flex items-center gap-2">
+                    <i class="ph-fill ph-scales text-duo-gold text-lg"></i>
+                    <span class="text-xs font-extrabold text-duo-gold uppercase tracking-widest">Discussion Topic</span>
+                </div>
+                <div class="bg-duo-gold/10 border-2 border-duo-gold/20 rounded-xl px-4 py-3">
+                    <p class="text-base font-black text-white text-center leading-relaxed">${escHtml(part.debate_data.topic)}</p>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div class="bg-duo-green/5 border-2 border-duo-green/15 rounded-xl p-4">
+                        <p class="text-xs font-extrabold text-duo-green uppercase tracking-widest mb-3">FOR</p>
+                        <ul class="space-y-2">${forItems || '<li class="text-sm text-duo-text-muted font-semibold">—</li>'}</ul>
+                    </div>
+                    <div class="bg-duo-red/5 border-2 border-duo-red/15 rounded-xl p-4">
+                        <p class="text-xs font-extrabold text-duo-red uppercase tracking-widest mb-3">AGAINST</p>
+                        <ul class="space-y-2">${againstItems || '<li class="text-sm text-duo-text-muted font-semibold">—</li>'}</ul>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    const prompts = (part.questions || []).map((question) => `
+        <li class="flex items-start gap-2.5 text-sm text-white font-semibold">
+            <i class="ph-fill ph-chat-dots text-duo-purple mt-0.5 flex-shrink-0"></i>
+            <span>${escHtml(question.text)}</span>
+        </li>
+    `).join('');
+    return `
+        <div class="motion-card bg-gradient-to-r from-duo-surface to-duo-surface-2/50 border-2 border-duo-purple/20 rounded-2xl p-5 flex flex-col gap-4 shadow-[0_2px_0_rgba(0,0,0,0.2)]">
+            <div class="flex items-center gap-2">
+                <i class="ph-fill ph-chats-circle text-duo-purple text-lg"></i>
+                <span class="text-xs font-extrabold text-duo-purple uppercase tracking-widest">Speaking Topic</span>
+            </div>
+            <div class="bg-duo-purple/5 border-2 border-duo-purple/15 rounded-xl p-4">
+                <p class="text-xs font-extrabold text-duo-text-muted uppercase tracking-widest mb-3">Talk about the following:</p>
+                <ul class="space-y-2.5">${prompts}</ul>
+            </div>
+        </div>
+    `;
+}
+
+function renderPartBriefingPanel(part) {
+    const briefing = getPartBriefing(part);
+    return `
+        <div class="motion-card rounded-2xl border-2 border-duo-blue/25 bg-duo-blue/10 p-5 text-center shadow-[0_2px_0_rgba(0,0,0,0.2)]">
+            <p class="text-[10px] font-extrabold uppercase tracking-widest text-duo-blue">Narrator Instructions</p>
+            <h3 class="text-base sm:text-lg font-black text-white mt-1">${escHtml(briefing.title)}</h3>
+            <p class="text-sm font-semibold text-duo-text-dim mt-2 max-w-2xl mx-auto">${escHtml(briefing.summary)}</p>
+        </div>
+    `;
+}
+
+function renderStageCanvas(contentHtml, maxWidth = 'max-w-5xl') {
+    return `
+        <div class="w-full ${maxWidth} mx-auto flex flex-col gap-3 py-2 sm:py-3">
+            ${contentHtml}
+        </div>
+    `;
+}
+
+function setQuestionsContent(html, renderKey) {
+    const container = document.getElementById('questions-container');
+    if (flowState.lastRenderKey === renderKey) {
+        // Same phase — only patch the timer display to avoid DOM churn
+        const panelTimer = container.querySelector('#phase-panel-timer');
+        if (panelTimer) panelTimer.textContent = formatSeconds(flowState.secondsRemaining);
+        return;
+    }
+    // Phase changed — full swap with entrance animation
+    container.style.opacity = '0';
+    container.style.transform = 'translateY(6px)';
+    container.style.transition = 'none';
+    // rAF to let the browser paint the faded state before swapping content
+    requestAnimationFrame(() => {
+        container.innerHTML = html;
+        requestAnimationFrame(() => {
+            container.style.transition = 'opacity 280ms cubic-bezier(0.2,0.7,0.2,1), transform 280ms cubic-bezier(0.2,0.7,0.2,1)';
+            container.style.opacity = '1';
+            container.style.transform = 'translateY(0)';
+        });
+    });
+    flowState.lastRenderKey = renderKey;
+}
+
+function playPartBriefingNarration(part) {
+    stopNarration();
+    const briefing = getPartBriefing(part);
+    if (!briefing.speech) {
+        return Promise.resolve();
+    }
+
+    showNarrationBadge(true);
+    return fetchAndPlayTTS(briefing.speech).then(() => {
+        showNarrationBadge(false);
+    });
+}
+
+function renderStartScreen() {
+    setQuestionsContent(renderStageCanvas(`
+        <div class="rounded-2xl border-2 border-duo-purple/20 bg-gradient-to-br from-duo-surface to-duo-surface-2/50 p-6 sm:p-8 text-center">
+            <div class="w-16 h-16 mx-auto rounded-2xl bg-duo-purple/15 border border-duo-purple/30 flex items-center justify-center mb-5">
+                <i class="ph-fill ph-microphone text-duo-purple text-3xl"></i>
+            </div>
+            <h2 class="text-xl font-black text-white mb-2">Automatic Speaking Flow</h2>
+            <p class="text-sm font-semibold text-duo-text-dim max-w-xl mx-auto mb-6">
+                ${PREVIEW_MODE
+                    ? 'Preview mode: таймеры, нарратор и визуал работают. Запрос микрофона и отправка аудио отключены.'
+                    : 'Each prompt will be narrated automatically. The system will give preparation time, start recording your answer, and then move to the next question or topic on its own.'}
+            </p>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-2xl mx-auto mb-6 text-left">
+                <div class="rounded-xl border border-duo-border bg-duo-surface/60 p-4">
+                    <p class="text-xs font-extrabold uppercase tracking-widest text-duo-blue mb-2">Part 1.1 / 1.2</p>
+                    <p class="text-sm font-semibold text-white">5 seconds to think, 30 seconds to answer each question.</p>
+                </div>
+                <div class="rounded-xl border border-duo-border bg-duo-surface/60 p-4">
+                    <p class="text-xs font-extrabold uppercase tracking-widest text-duo-gold mb-2">Part 2 / 3</p>
+                    <p class="text-sm font-semibold text-white">1 minute to think, 2 minutes to answer the whole topic.</p>
+                </div>
+            </div>
+            <button class="btn-duo-green" onclick="beginSpeakingFlow()">
+                ${PREVIEW_MODE ? 'Preview Speaking Flow' : 'Start Speaking Flow'} <i class="ph-bold ph-play"></i>
+            </button>
+        </div>
+    `, 'max-w-4xl'), 'start-screen');
+    setChrome('Ready', PREVIEW_MODE ? 'Preview: нарратор и таймеры активны, запись отключена.' : 'Allow microphone access and begin the guided speaking flow.');
+}
+
+function renderCurrentState() {
+    const part = getCurrentPart();
+    if (!part) {
+        showCompletionScreen();
+        return;
+    }
+
+    const label = String(part.display_label || getPartDisplayLabel(part));
+    const timing = getPartTiming(label);
+    const question = getCurrentQuestion(part);
+    const base = [renderBasePartHeader(part)];
+
+    if (canShowImageForPart(part)) {
+        base.push(renderInlineReferenceCard(part));
+    }
+
+    if (flowState.phase === 'part_intro') {
+        base.push(renderPartBriefingPanel(part));
+        setQuestionsContent(renderStageCanvas(base.join('')), `part-${part.id}-intro`);
+        setChrome('Part instructions', 'Listen to the narrator instructions for this part.');
+        return;
+    }
+
+    if (timing.mode === 'per-question' && question) {
+        base.push(renderPromptCard(question, part));
+        if (flowState.phase === 'thinking') {
+            base.push(renderPrepOrAnswerPanel('Preparation Time', 'Think about your answer before the recording starts.', flowState.secondsRemaining, 'duo-gold'));
+        } else if (flowState.phase === 'answering') {
+            base.push(renderPrepOrAnswerPanel('Answer Time', 'Recording is in progress. Keep speaking until time runs out.', flowState.secondsRemaining, 'duo-red'));
+        } else if (flowState.phase === 'narrating') {
+            base.push(renderPrepOrAnswerPanel('Narrator', 'Listen carefully to the question being read aloud.', 0, 'duo-blue').replace('00:00', 'LIVE'));
+        }
+    } else {
+        if (flowState.phase === 'narrating' && question) {
+            base.push(renderPromptCard(question, part));
+            base.push(renderPrepOrAnswerPanel('Narrator', 'Listen to each prompt before the topic response begins.', 0, 'duo-blue').replace('00:00', 'LIVE'));
+        } else {
+            base.push(renderTopicSummary(part));
+            if (flowState.phase === 'thinking') {
+                base.push(renderPrepOrAnswerPanel('Preparation Time', 'Use this minute to organize your ideas for the whole topic.', flowState.secondsRemaining, 'duo-gold'));
+            } else if (flowState.phase === 'answering') {
+                base.push(renderPrepOrAnswerPanel('Answer Time', 'Recording is in progress for the whole topic.', flowState.secondsRemaining, 'duo-red'));
+            }
+        }
+    }
+
+    setQuestionsContent(
+        renderStageCanvas(base.join('')),
+        `part-${part.id}-q-${flowState.questionIdx}-phase-${flowState.phase}`
+    );
+
+    const flowTitleMap = {
+        ready: 'Ready to begin',
+        part_intro: 'Part instructions',
+        narrating: 'Narrator is speaking',
+        thinking: 'Preparation time',
+        answering: 'Answer recording in progress',
+        complete: 'Flow complete',
+    };
+    const helperMap = {
+        ready: 'The narrator will read each prompt automatically.',
+        part_intro: 'Listen to the narrator instructions for this part.',
+        narrating: timing.mode === 'per-question' ? 'Listen to the current question before the timer starts.' : 'Listen to each topic prompt in order.',
+        thinking: timing.mode === 'per-question' ? 'Get ready to answer this question.' : 'Prepare one response for the whole topic.',
+        answering: timing.mode === 'per-question' ? 'Your answer is being recorded automatically.' : 'Your topic response is being recorded automatically.',
+        complete: 'All speaking sections are finished. Submit your test.',
+    };
+    setChrome(flowTitleMap[flowState.phase] || 'Speaking Flow', helperMap[flowState.phase] || '', ['thinking', 'answering'].includes(flowState.phase) ? flowState.secondsRemaining : null);
+    updatePreviewControls();
+}
+
+function showCompletionScreen() {
+    if (PREVIEW_MODE) {
+        setQuestionsContent(renderStageCanvas(`
+            <div class="rounded-2xl border-2 border-duo-blue/20 bg-duo-blue/10 p-8 text-center">
+                <div class="w-16 h-16 mx-auto rounded-2xl bg-duo-blue/20 border border-duo-blue/30 flex items-center justify-center mb-5">
+                    <i class="ph-fill ph-eye text-duo-blue text-3xl"></i>
+                </div>
+                <h2 class="text-xl font-black text-white mb-2">Preview завершён</h2>
+                <p class="text-sm font-semibold text-duo-text-dim max-w-xl mx-auto mb-5">Все части просмотрены. В боевом режиме здесь появится кнопка Submit.</p>
+                <button class="btn-duo-outline text-sm" onclick="window.history.back()">
+                    <i class="ph-bold ph-arrow-left"></i> Назад в Builder
+                </button>
+            </div>
+        `, 'max-w-4xl'), 'completion');
+        setChrome('Preview завершён', 'Все части просмотрены.');
+        return;
+    }
+    setQuestionsContent(renderStageCanvas(`
+        <div class="rounded-2xl border-2 border-duo-green/20 bg-gradient-to-br from-duo-surface to-duo-green/5 p-8 text-center">
+            <div class="w-16 h-16 mx-auto rounded-2xl bg-duo-green/15 border border-duo-green/30 flex items-center justify-center mb-5">
+                <i class="ph-fill ph-check-circle text-duo-green text-3xl"></i>
+            </div>
+            <h2 class="text-xl font-black text-white mb-2">Speaking flow completed</h2>
+            <p class="text-sm font-semibold text-duo-text-dim max-w-xl mx-auto">All questions and topics have been processed. Review is not needed here because progression is automatic. Submit your speaking test when you are ready.</p>
+        </div>
+    `, 'max-w-4xl'), 'completion');
+    setChrome('Complete', 'All speaking sections are finished. Submit your test.');
+    document.getElementById('submit-bar').classList.remove('hidden');
+}
+
+function sleep(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function runCountdown(seconds, phase) {
+    const token = flowState.runToken;
+    flowState.phase = phase;
+    flowState.secondsRemaining = seconds;
+    renderCurrentState();
+    while (flowState.secondsRemaining > 0 && token === flowState.runToken) {
+        await sleep(1000);
+        if (token !== flowState.runToken) return false;
+        flowState.secondsRemaining -= 1;
+        renderCurrentState();
+    }
+    return token === flowState.runToken;
+}
+
+function getSupportedMimeType() {
+    const types = ['audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus', 'audio/mp4'];
+    for (const t of types) {
+        try {
+            if (MediaRecorder.isTypeSupported(t)) return t;
+        } catch (e) {}
+    }
+    return '';
+}
+
+async function uploadAnswer(questionId, blob, duration, mimeType) {
+    const ext = mimeType.includes('ogg') ? 'ogg' : mimeType.includes('mp4') ? 'mp4' : 'webm';
+    const fd = new FormData();
+    fd.append('question_id', questionId);
+    fd.append('duration', duration);
+    fd.append('audio', blob, `answer_${questionId}.${ext}`);
+    return fetch(ANSWER_URL, { method: 'POST', headers: { 'X-CSRFToken': CSRF }, body: fd });
+}
+
+async function recordTimedAnswer(questionIds, answerSeconds) {
+    // In preview mode skip all microphone / upload logic — just run the timer.
+    if (PREVIEW_MODE) {
+        return await runCountdown(answerSeconds, 'answering');
+    }
+
+    const token = flowState.runToken;
+    const stream = await ensureMicrophone();
+    flowState.audioChunks = [];
+    const mimeType = getSupportedMimeType();
+    flowState.mediaRecorder = new MediaRecorder(stream, mimeType ? { mimeType } : {});
+    flowState.recorderStartedAt = Date.now();
+    flowState.mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+            flowState.audioChunks.push(event.data);
+        }
+    };
+
+    const stopPromise = new Promise((resolve) => {
+        flowState.mediaRecorder.onstop = async () => {
+            const duration = (Date.now() - flowState.recorderStartedAt) / 1000;
+            const usedMime = flowState.mediaRecorder.mimeType || 'audio/webm';
+            const blob = new Blob(flowState.audioChunks, { type: usedMime });
+            flowState.audioChunks = [];
+            await Promise.all(questionIds.map((questionId) => uploadAnswer(questionId, blob, duration, usedMime)));
+            questionIds.forEach((questionId) => flowState.completedAnswers.add(questionId));
+            resolve();
+        };
+    });
+
+    flowState.mediaRecorder.start();
+    const stillActive = await runCountdown(answerSeconds, 'answering');
+    if (token === flowState.runToken && flowState.mediaRecorder.state === 'recording') {
+        flowState.mediaRecorder.stop();
+    }
+    await stopPromise;
+    return stillActive;
+}
+
+async function processPerQuestionPart(part) {
+    const timing = getPartTiming(part.display_label);
+    while (flowState.questionIdx < part.questions.length) {
+        const token = flowState.runToken;
+        if (token < 0) return;
+        const question = part.questions[flowState.questionIdx];
+        flowState.phase = 'narrating';
+        flowState.secondsRemaining = 0;
+        renderCurrentState();
+        await playQuestionNarration(question, part);
+        if (flowState.runToken !== token) return;
+        const prepOk = await runCountdown(timing.thinkSeconds, 'thinking');
+        if (!prepOk) return;
+        const answerOk = await recordTimedAnswer([question.id], timing.answerSeconds);
+        if (!answerOk) return;
+        flowState.questionIdx++;
+    }
+    await advanceToNextPart();
+}
+
+async function processTopicPart(part) {
+    const timing = getPartTiming(part.display_label);
+    for (let idx = 0; idx < part.questions.length; idx++) {
+        flowState.questionIdx = idx;
+        flowState.phase = 'narrating';
+        flowState.secondsRemaining = 0;
+        renderCurrentState();
+        await playQuestionNarration(part.questions[idx], part);
+        if (flowState.runToken < 0) return;
+        await sleep(300);
+        if (flowState.runToken < 0) return;
+    }
+
+    flowState.questionIdx = Math.max(0, part.questions.length - 1);
+    const prepOk = await runCountdown(timing.thinkSeconds, 'thinking');
+    if (!prepOk) return;
+    const answerOk = await recordTimedAnswer(part.questions.map((question) => question.id), timing.answerSeconds);
+    if (!answerOk) return;
+    await advanceToNextPart();
+}
+
+async function advanceToNextPart() {
+    flowState.partIdx += 1;
+    flowState.questionIdx = 0;
+    if (flowState.partIdx >= PARTS.length) {
+        flowState.phase = 'complete';
+        showCompletionScreen();
+        return;
+    }
+    await processCurrentPart();
+}
+
+function updatePreviewControls() {
+    if (!PREVIEW_MODE) return;
+    const bar = document.getElementById('preview-skip-bar');
+    if (!bar) return;
+    const showSkip = flowState.started && flowState.phase !== 'complete' && flowState.phase !== 'ready';
+    bar.classList.toggle('hidden', !showSkip);
+}
+
+async function skipCurrentQuestion() {
+    if (!flowState.started) return;
+    stopNarration();
+    const part = getCurrentPart();
+    if (!part) return;
+    const timing = getPartTiming(part.display_label);
+    flowState.runToken++;
+    if (timing.mode === 'per-question') {
+        flowState.questionIdx++;
+        if (flowState.questionIdx >= part.questions.length) {
+            flowState.partIdx++;
+            flowState.questionIdx = 0;
+            if (flowState.partIdx >= PARTS.length) {
+                flowState.phase = 'complete';
+                updatePreviewControls();
+                showCompletionScreen();
+                return;
+            }
+        }
+    } else {
+        flowState.partIdx++;
+        flowState.questionIdx = 0;
+        if (flowState.partIdx >= PARTS.length) {
+            flowState.phase = 'complete';
+            updatePreviewControls();
+            showCompletionScreen();
+            return;
+        }
+    }
+    await processCurrentPart();
+}
+
+async function skipCurrentPart() {
+    if (!flowState.started) return;
+    stopNarration();
+    flowState.runToken++;
+    flowState.partIdx++;
+    flowState.questionIdx = 0;
+    if (flowState.partIdx >= PARTS.length) {
+        flowState.phase = 'complete';
+        updatePreviewControls();
+        showCompletionScreen();
+        return;
+    }
+    await processCurrentPart();
+}
+
+async function processCurrentPart() {
+    const part = getCurrentPart();
+    if (!part) {
+        showCompletionScreen();
+        return;
+    }
+    buildPills();
+    document.getElementById('submit-bar').classList.add('hidden');
+    flowState.phase = 'part_intro';
+    flowState.secondsRemaining = 0;
+    flowState.questionIdx = 0;
+    renderCurrentState();
+    await playPartBriefingNarration(part);
+    if (flowState.runToken < 0) return;
+    await sleep(300);
+    if (flowState.runToken < 0) return;
+    if (getPartTiming(part.display_label).mode === 'per-question') {
+        await processPerQuestionPart(part);
+    } else {
+        await processTopicPart(part);
+    }
+}
+
+function playIntroNarration() {
+    const text = 'Welcome to the Speaking test. Each prompt will be narrated automatically. ' +
+        'The system will give you preparation time, start recording your answer, ' +
+        'and then move to the next question or topic on its own. Good luck!';
+    
+    showNarrationBadge(true);
+    return fetchAndPlayTTS(text).then(() => {
+        showNarrationBadge(false);
+    });
+}
+
+async function beginSpeakingFlow() {
+    if (flowState.started) return;
+    if (!PREVIEW_MODE) {
+        try {
+            await ensureMicrophone();
+        } catch (error) {
+            alert('Microphone access is required for the automatic speaking flow. Please allow microphone access and try again.');
+            return;
+        }
+    }
+    flowState.started = true;
+    flowState.runToken = Date.now();
+    flowState.partIdx = 0;
+    flowState.questionIdx = 0;
+    updatePreviewControls();
+    setChrome('Welcome', 'Listen to the introduction before the test begins.');
+    await playIntroNarration();
+    await processCurrentPart();
+}
+
+async function submitTest() {
+    if (PREVIEW_MODE) {
+        setQuestionsContent(renderStageCanvas(`
+            <div class="rounded-2xl border-2 border-duo-blue/20 bg-duo-blue/10 p-8 text-center">
+                <div class="w-14 h-14 mx-auto rounded-2xl bg-duo-blue/20 border border-duo-blue/30 flex items-center justify-center mb-4">
+                    <i class="ph-fill ph-eye text-duo-blue text-2xl"></i>
+                </div>
+                <h2 class="text-lg font-black text-white mb-2">Preview завершён</h2>
+                <p class="text-sm font-semibold text-duo-text-dim mb-5">В боевом режиме здесь происходит отправка записей. В preview режиме submit отключён.</p>
+                <a href="/mentor/speaking-test/${PARTS[0] ? '' : ''}/builder/" onclick="window.history.back(); return false;"
+                   class="btn-duo-outline text-sm">
+                    <i class="ph-bold ph-arrow-left"></i> Назад в Builder
+                </a>
+            </div>
+        `, 'max-w-3xl'), 'preview-done');
+        setChrome('Preview', 'Просмотр завершён.');
+        return;
+    }
+    if (flowState.mediaRecorder && flowState.mediaRecorder.state === 'recording') {
+        flowState.mediaRecorder.stop();
+        await new Promise(r => setTimeout(r, 700));
+    }
+    stopNarration();
+    if (flowState.stream) {
+        flowState.stream.getTracks().forEach((track) => track.stop());
+    }
+    const btn = document.getElementById('submit-btn');
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="ph-bold ph-spinner animate-spin text-xl"></i> Submitting...'; }
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = SUBMIT_URL;
+    const csrf = document.createElement('input');
+    csrf.type = 'hidden'; csrf.name = 'csrfmiddlewaretoken'; csrf.value = CSRF;
+    form.appendChild(csrf);
+    document.body.appendChild(form);
+    form.submit();
+}
+
+function bootSpeakingFlow() {
+    try {
+        if (PARTS.length === 0) {
+            document.getElementById('questions-container').innerHTML =
+                '<div class="text-center text-duo-text-muted py-12 flex flex-col items-center gap-3"><i class="ph-fill ph-warning text-4xl opacity-40"></i><p class="font-bold">No parts found for this test.</p></div>';
+            setChrome('Unavailable', 'No speaking parts were found for this test.');
+            return;
+        }
+
+        buildPills();
+        renderStartScreen();
+    } catch (error) {
+        console.error('Speaking flow boot failed', error);
+        const container = document.getElementById('questions-container');
+        if (container) {
+            container.innerHTML = `
+                <div class="rounded-2xl border-2 border-duo-red/20 bg-duo-red/5 p-6 text-center">
+                    <div class="w-14 h-14 mx-auto rounded-2xl bg-duo-red/15 border border-duo-red/30 flex items-center justify-center mb-4">
+                        <i class="ph-fill ph-warning-circle text-duo-red text-2xl"></i>
+                    </div>
+                    <h2 class="text-lg font-black text-white mb-2">Speaking flow failed to initialize</h2>
+                    <p class="text-sm font-semibold text-duo-text-dim mb-4">The page recovered into a safe fallback state. Reload the page and try again.</p>
+                    <button class="btn-duo-outline text-sm" onclick="window.location.reload()">Reload Page</button>
+                </div>
+            `;
+        }
+        setChrome('Error', 'The speaking flow failed to initialize.');
+    }
+}
+
+// Tab blur tracking (skipped in preview mode)
+if (!PREVIEW_MODE) {
+    document.addEventListener('visibilitychange', () => {
+        if (document.hidden) {
+            fetch(`/api/tab-blur/{{ attempt.id }}/`, {
+                method: 'POST',
+                headers: { 'X-CSRFToken': CSRF, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ count: 1 }),
+            }).catch(() => {});
+        }
+    });
+}
+
+bootSpeakingFlow();
+</script>
+{% endblock %}

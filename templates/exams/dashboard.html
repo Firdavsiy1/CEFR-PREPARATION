@@ -96,6 +96,21 @@
             {% else %}<i class="ph-fill ph-microphone-stage text-duo-gold"></i>{% endif %}
             {{ category_name }}
         </h2>
+
+        <!-- Search -->
+        <form method="get" action="" class="flex items-center gap-2">
+            <div class="relative">
+                <i class="ph-bold ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-duo-text-muted text-sm"></i>
+                <input type="search" name="q" value="{{ search_q }}"
+                       placeholder="Поиск теста..."
+                       class="bg-duo-surface border-2 border-duo-border rounded-xl pl-9 pr-4 py-2 text-sm text-white placeholder-duo-text-muted focus:outline-none focus:border-duo-green transition-colors w-44">
+            </div>
+            {% if search_q %}
+            <a href="?q=" class="text-duo-text-muted hover:text-duo-red transition-colors" title="Сбросить">
+                <i class="ph-bold ph-x-circle text-lg"></i>
+            </a>
+            {% endif %}
+        </form>
     </div>
 
     <!-- Tab Toggles -->

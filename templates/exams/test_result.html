@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load exam_filters %}
 
 {% block title %}Результаты — {{ attempt.test.name }}{% endblock %}
 
@@ -13,7 +14,7 @@
         </a>
     </div>
 
-    {% if not writing_submissions %}
+    {% if not writing_submissions and not speaking_submissions %}
     <!-- Main Score Card (Listening/Reading only) -->
     <div class="card-duo p-8 sm:p-12 mb-10 text-center relative overflow-hidden !border-duo-green/30">
         <!-- Decorative elements -->
@@ -66,6 +67,19 @@
         </div>
     </div>
 
+    {% if tab_blur_count > 0 %}
+    <!-- Anti-Cheat: Tab Blur Warning -->
+    <div class="card-duo p-5 mb-10 flex items-center gap-4 !border-duo-red/30 bg-duo-red/5">
+        <div class="w-12 h-12 rounded-2xl bg-duo-red/15 border-2 border-duo-red/30 flex items-center justify-center flex-shrink-0">
+            <i class="ph-fill ph-eye-slash text-duo-red text-xl"></i>
+        </div>
+        <div>
+            <span class="block text-[10px] font-extrabold text-duo-red uppercase tracking-widest mb-0.5" data-i18n="res_tab_blur">Tab Switches Detected</span>
+            <span class="block text-lg font-black text-white">{{ tab_blur_count }} <span class="text-sm text-duo-text-dim font-bold" data-i18n="res_tab_blur_desc">time(s) the student left the test tab</span></span>
+        </div>
+    </div>
+    {% endif %}
+
     <!-- Stats Breakdown by Part -->
     <div class="mb-12">
         <h2 class="text-xl font-black text-white mb-5 flex items-center gap-2">
@@ -93,6 +107,20 @@
     {% endif %}
 
     {% if writing_submissions %}
+
+    {% if tab_blur_count > 0 %}
+    <!-- Anti-Cheat: Tab Blur Warning -->
+    <div class="card-duo p-5 mb-10 flex items-center gap-4 !border-duo-red/30 bg-duo-red/5">
+        <div class="w-12 h-12 rounded-2xl bg-duo-red/15 border-2 border-duo-red/30 flex items-center justify-center flex-shrink-0">
+            <i class="ph-fill ph-eye-slash text-duo-red text-xl"></i>
+        </div>
+        <div>
+            <span class="block text-[10px] font-extrabold text-duo-red uppercase tracking-widest mb-0.5" data-i18n="res_tab_blur">Tab Switches Detected</span>
+            <span class="block text-lg font-black text-white">{{ tab_blur_count }} <span class="text-sm text-duo-text-dim font-bold" data-i18n="res_tab_blur_desc">time(s) the student left the test tab</span></span>
+        </div>
+    </div>
+    {% endif %}
+
     <!-- Writing-specific score card -->
     <div class="card-duo p-8 sm:p-12 mb-10 text-center relative overflow-hidden !border-duo-purple/30">
         <div class="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-duo-purple via-duo-blue to-duo-green"></div>
@@ -162,6 +190,11 @@
                     {% else %}
                         <span class="badge-duo bg-duo-gold/15 text-duo-gold border border-duo-gold/30"><i class="ph-bold ph-spinner spin mr-1"></i> <span data-i18n="res_grading">Grading...</span></span>
                     {% endif %}
+                    {% if sub.mentor_score is not None %}
+                    <span class="badge-duo bg-duo-purple/15 text-duo-purple border border-duo-purple/30 font-black">
+                        <i class="ph-fill ph-chalkboard-teacher mr-1"></i>{{ sub.mentor_score }}/100
+                    </span>
+                    {% endif %}
                 </div>
             </div>
             
@@ -179,7 +212,7 @@
                             <i class="ph-fill ph-lightbulb text-duo-gold"></i>
                             <span class="text-[10px] font-extrabold text-duo-blue uppercase tracking-widest" data-i18n="res_examiner_feedback">Examiner Feedback</span>
                         </div>
-                        <p class="text-sm text-duo-text-dim leading-relaxed font-semibold whitespace-pre-wrap">{{ sub.feedback_text }}</p>
+                        <p class="text-sm text-duo-text-dim leading-relaxed font-semibold whitespace-pre-wrap">{{ sub.feedback_json|feedback_lang:current_language|default:sub.feedback_text }}</p>
                     </div>
                     {% endif %}
                     
@@ -207,7 +240,7 @@
                                         <i class="ph-fill ph-lightbulb-filament text-duo-gold text-sm"></i> 
                                         <span data-i18n="res_why">WHY</span>
                                     </h4>
-                                    <p class="text-[15px] leading-relaxed text-white/90 font-semibold">{{ corr.explanation }}</p>
+                                    <p class="text-[15px] leading-relaxed text-white/90 font-semibold">{{ corr|explanation_lang:current_language }}</p>
                                 </div>
                             </div>
                             {% endfor %}
@@ -220,6 +253,21 @@
                         <p class="text-duo-text-dim font-bold text-sm" data-i18n="res_ai_evaluating">AI is evaluating your writing...</p>
                     </div>
                 {% endif %}
+
+                {% if sub.mentor_score is not None or sub.mentor_feedback %}
+                <div class="mt-4 p-5 rounded-2xl bg-duo-purple/5 border-2 border-duo-purple/20">
+                    <div class="flex items-center gap-2 mb-2">
+                        <i class="ph-fill ph-chalkboard-teacher text-duo-purple"></i>
+                        <span class="text-[10px] font-extrabold text-duo-purple uppercase tracking-widest">Оценка ментора</span>
+                        {% if sub.mentor_score is not None %}
+                        <span class="ml-auto badge-duo bg-duo-purple/15 text-duo-purple border border-duo-purple/25 font-black">{{ sub.mentor_score }}/100</span>
+                        {% endif %}
+                    </div>
+                    {% if sub.mentor_feedback %}
+                    <p class="text-sm text-duo-text-dim font-semibold leading-relaxed whitespace-pre-wrap">{{ sub.mentor_feedback }}</p>
+                    {% endif %}
+                </div>
+                {% endif %}
             </div>
         </div>
     {% endfor %}
@@ -229,9 +277,10 @@
     <script>
         (function() {
             const container = document.getElementById('writing-results-container');
+            if (!container) return;
             const ungradedCards = container.querySelectorAll('[data-graded="false"]');
             if (ungradedCards.length > 0) {
-                const pollInterval = setInterval(() => {
+                setInterval(() => {
                     // Simple reload — will show latest state
                     window.location.reload();
                 }, 6000);
@@ -239,7 +288,7 @@
         })();
     </script>
 
-    {% else %}
+    {% elif not speaking_submissions %}
 
     <!-- Detailed Question Review -->
     <h2 class="text-xl font-black text-white mb-5 flex items-center gap-2">
@@ -414,11 +463,197 @@
 
     </div>
     {% endif %}
+
+    {% if speaking_submissions %}
+    {% regroup speaking_submissions by question.part as speaking_parts %}
+
+    {% if tab_blur_count > 0 %}
+    <div class="card-duo p-5 mb-10 flex items-center gap-4 !border-duo-red/30 bg-duo-red/5">
+        <div class="w-12 h-12 rounded-2xl bg-duo-red/15 border-2 border-duo-red/30 flex items-center justify-center flex-shrink-0">
+            <i class="ph-fill ph-eye-slash text-duo-red text-xl"></i>
+        </div>
+        <div>
+            <span class="block text-[10px] font-extrabold text-duo-red uppercase tracking-widest mb-0.5">Tab Switches Detected</span>
+            <span class="block text-lg font-black text-white">{{ tab_blur_count }} <span class="text-sm text-duo-text-dim font-bold">time(s) the student left the test tab</span></span>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="card-duo p-8 sm:p-12 mb-10 text-center relative overflow-hidden !border-duo-purple/30">
+        <div class="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-duo-purple via-duo-blue to-duo-green"></div>
+        <div class="relative">
+            <div class="w-20 h-20 mx-auto mb-6 rounded-2xl flex items-center justify-center bg-duo-purple shadow-[0_4px_0_#A855F7] animate-bounce-in">
+                <i class="ph-fill ph-microphone text-white text-4xl"></i>
+            </div>
+            <h1 class="text-3xl font-black text-white mb-1">Результаты Speaking</h1>
+            <p class="text-duo-text-dim font-bold text-sm mb-8 uppercase tracking-wider">{{ attempt.test.name }} · {{ attempt.completed_at|date:"d F Y" }}</p>
+            <p class="text-sm text-duo-text-dim font-semibold max-w-lg mx-auto">
+                Записи получены. AI оценка обрабатывается в реальном времени — подробный разбор появится автоматически.
+            </p>
+        </div>
+    </div>
+
+    <div class="mb-12">
+        <h2 class="text-xl font-black text-white mb-5 flex items-center gap-2">
+            <i class="ph-fill ph-chart-bar text-duo-purple"></i>
+            <span>Результаты по секциям</span>
+        </h2>
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {% for part in speaking_part_results %}
+            <div id="sp-section-card-{{ part.part_number }}" class="speaking-part-card card-duo p-5 text-center !hover:transform-none" data-part-number="{{ part.part_number }}">
+                <h3 class="text-xs font-extrabold text-duo-text-muted uppercase tracking-widest mb-3">Часть {{ part.part_number }}</h3>
+                <div class="mb-2">
+                    <span class="text-2xl text-white font-black speaking-part-score-text">{{ part.weighted_score_earned|default:"—" }}</span><span class="text-sm font-bold text-duo-text-muted">/{{ part.max_weighted_score }}</span>
+                </div>
+                <div class="h-2 rounded-full bg-duo-surface-2 overflow-hidden mb-2">
+                    <div class="h-full rounded-full speaking-part-progress-bar {% if part.submitted_count == part.total_questions %}bg-duo-green{% elif part.submitted_count > 0 %}bg-duo-gold{% else %}bg-duo-red{% endif %}" style="width: {% widthratio part.submitted_count part.total_questions 100 %}%"></div>
+                </div>
+                <p class="speaking-part-status-text text-[11px] font-extrabold uppercase tracking-wide {% if part.weighted_score_earned %}text-duo-gold{% else %}text-duo-blue{% endif %}">
+                    {% if part.weighted_score_earned %}{{ part.weighted_score_earned }}/{{ part.max_weighted_score }} бл.{% else %}в процессе...{% endif %}
+                </p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <h2 class="text-xl font-black text-white mb-5 flex items-center gap-2">
+        <i class="ph-fill ph-list-checks text-duo-green"></i>
+        <span>Подробный разбор</span>
+    </h2>
+
+    <div class="flex flex-col lg:flex-row gap-6 items-start">
+        <aside class="w-full lg:w-60 flex-shrink-0 lg:sticky lg:top-20 hidden lg:block card-duo p-5 z-10">
+            <h3 class="text-[10px] font-extrabold text-duo-text-muted uppercase tracking-widest mb-4">Навигация</h3>
+            <nav class="space-y-1">
+                <a href="#overview" class="block px-3 py-2.5 text-sm font-bold text-duo-text-dim hover:text-white hover:bg-duo-surface-2 rounded-xl transition-all">
+                    <i class="ph-fill ph-chart-donut mr-2"></i><span>Обзор</span>
+                </a>
+                {% for part in speaking_part_results %}
+                <a href="#sp-part-{{ part.part_number }}" class="flex items-center justify-between px-3 py-2.5 text-sm font-semibold text-duo-text-dim hover:text-white hover:bg-duo-surface-2 rounded-xl transition-all group">
+                    <span>Секция {{ part.part_number }}</span>
+                    <span class="text-[10px] font-extrabold text-duo-text-muted group-hover:text-duo-text-dim tracking-wider">{{ part.evaluated_count }}/{{ part.total_questions }}</span>
+                </a>
+                {% endfor %}
+            </nav>
+        </aside>
+
+        <div class="flex-1 w-full min-w-0 space-y-6">
+        {% for part_entry in speaking_parts %}
+        <div id="sp-part-{{ part_entry.grouper.part_number }}" class="card-duo overflow-hidden">
+            <div class="bg-duo-surface-2/50 px-6 py-4 border-b-2 border-duo-border flex items-center gap-3">
+                <div class="w-9 h-9 rounded-xl bg-duo-purple/15 border border-duo-purple/30 flex items-center justify-center font-black text-duo-purple text-sm">
+                    {{ part_entry.grouper.part_number }}
+                </div>
+                <h3 class="font-black text-white">Часть {{ part_entry.grouper.part_number }}</h3>
+                {% if part_entry.grouper.instructions %}
+                <p class="text-xs text-duo-text-muted font-semibold ml-2">{{ part_entry.grouper.instructions|truncatechars:80 }}</p>
+                {% endif %}
+            </div>
+            <div class="divide-y-2 divide-duo-border/30">
+                {% for sub in part_entry.list %}
+                <div class="p-5 flex flex-col gap-3 speaking-submission-card" data-submission-id="{{ sub.id }}" data-evaluated="{{ sub.is_evaluated|yesno:'true,false' }}" data-part-number="{{ sub.question.part.part_number }}" data-max-score="{{ sub.question.part.points_per_question }}">
+                    <div class="flex items-start gap-3">
+                        <div class="w-7 h-7 rounded-lg bg-duo-purple/15 border border-duo-purple/30 flex items-center justify-center flex-shrink-0">
+                            <span class="text-xs font-black text-duo-purple">{{ sub.question.question_number }}</span>
+                        </div>
+                        <p class="text-sm font-bold text-white">{{ sub.question.question_text }}</p>
+                    </div>
+                    {% if sub.audio_file %}
+                    <div class="audio-player-container w-full mt-2 mb-2">
+                        <div class="flex items-center gap-4 bg-duo-surface-2/20 p-3 rounded-2xl border border-duo-border shadow-inner">
+                            <button type="button" class="result-play-btn w-12 h-12 rounded-xl bg-duo-purple shadow-[0_4px_0_#9333EA] flex items-center justify-center flex-shrink-0 hover:translate-y-[-2px] hover:shadow-[0_6px_0_#9333EA] active:translate-y-[4px] active:shadow-none transition-all outline-none">
+                                <i class="ph-fill ph-play text-white text-xl result-play-icon"></i>
+                            </button>
+                            <div class="flex-1 flex flex-col justify-center cursor-pointer relative group result-progress-container hover:brightness-110 transition-all">
+                                <div class="flex justify-between items-center text-[10px] font-black text-duo-text-dim mb-1.5 px-0.5 uppercase tracking-wide">
+                                    <span class="result-current-time">0:00</span>
+                                    <div class="flex items-center gap-1.5 text-duo-purple">
+                                        <i class="ph-fill ph-waveform"></i>
+                                        <span>Audio Recording</span>
+                                    </div>
+                                    <span class="result-duration">0:00</span>
+                                </div>
+                                <div class="h-3 bg-[#1A2F35] rounded-full overflow-hidden border border-[#2B4D56] relative group-hover:border-duo-purple/50 transition-colors">
+                                    <div class="result-progress-bar h-full bg-duo-purple absolute top-0 left-0 rounded-full transition-all duration-100 ease-linear shadow-[0_0_10px_rgba(168,85,247,0.5)]" style="width: 0%;"></div>
+                                </div>
+                            </div>
+                            <audio class="result-part-audio" preload="metadata">
+                                <source src="{{ sub.audio_file.url }}" type="audio/mpeg">
+                            </audio>
+                        </div>
+                    </div>
+                    {% else %}
+                    <p class="text-xs text-duo-text-muted font-semibold italic">No recording submitted</p>
+                    {% endif %}
+                    <div class="speaking-feedback-block flex items-start gap-4 bg-duo-purple/5 border border-duo-purple/20 rounded-2xl p-5 {% if not sub.is_evaluated %}hidden{% endif %}">
+                        <i class="ph-fill ph-robot text-duo-purple text-2xl mt-0.5"></i>
+                        <div class="w-full">
+                            <p class="text-xs font-extrabold text-duo-purple uppercase tracking-widest mb-2">AI Feedback</p>
+                            <p class="text-sm text-duo-text-dim font-bold leading-relaxed mb-4 speaking-feedback-text">{{ sub.feedback_json|feedback_lang:current_language|default:sub.feedback_text }}</p>
+
+                            <details class="speaking-transcript-details group bg-duo-surface-2/30 border border-duo-border rounded-xl mb-4 cursor-pointer overflow-hidden transition-all {% if not sub.transcript %}hidden{% endif %}">
+                                <summary class="flex items-center gap-3 p-3 list-none outline-none">
+                                    <i class="ph-fill ph-text-aa text-duo-blue"></i>
+                                    <span class="text-[10px] font-extrabold text-white uppercase tracking-widest">Transcript</span>
+                                    <span class="transition duration-300 group-open:rotate-180 text-duo-text-dim ml-auto">
+                                        <i class="ph-bold ph-caret-down text-lg"></i>
+                                    </span>
+                                </summary>
+                                <div class="p-4 pt-0 border-t border-duo-border/50">
+                                    <p class="speaking-transcript-text text-sm text-duo-text-dim font-semibold italic">{{ sub.transcript }}</p>
+                                </div>
+                            </details>
+
+                            <div class="flex items-center gap-3 mt-2">
+                                <span class="speaking-level-badge inline-flex items-center gap-1.5 badge-duo bg-duo-purple/15 text-duo-purple border border-duo-purple/30 font-black {% if not sub.estimated_level %}hidden{% endif %}">
+                                    <i class="ph-fill ph-check-circle"></i> <span class="speaking-level-text">{{ sub.estimated_level }}</span>
+                                </span>
+                                <span class="speaking-score-badge inline-flex items-center gap-1.5 badge-duo bg-duo-gold/15 text-duo-gold border border-duo-gold/30 font-black {% if not sub.is_evaluated %}hidden{% endif %}">
+                                    <i class="ph-fill ph-star"></i>
+                                    <span class="speaking-score-text">{% if sub.is_evaluated %}{{ sub.score | floatformat:1 }}{% endif %}</span>/<span class="speaking-max-score-text">{{ sub.question.part.points_per_question | floatformat:0 }}</span>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <p class="speaking-pending-block text-xs text-duo-gold font-semibold flex items-center gap-1.5 {% if sub.is_evaluated %}hidden{% endif %}">
+                        <i class="ph-bold ph-spinner animate-spin"></i> AI evaluation in progress...
+                    </p>
+
+                    {% if sub.mentor_score is not None or sub.mentor_feedback %}
+                    <div class="mt-2 p-4 rounded-2xl bg-duo-purple/5 border border-duo-purple/20 flex items-start gap-3">
+                        <i class="ph-fill ph-chalkboard-teacher text-duo-purple text-lg mt-0.5"></i>
+                        <div class="flex-1">
+                            <div class="flex items-center gap-2 mb-1">
+                                <span class="text-[10px] font-extrabold text-duo-purple uppercase tracking-widest">Оценка ментора</span>
+                                {% if sub.mentor_score is not None %}
+                                <span class="badge-duo bg-duo-purple/15 text-duo-purple border border-duo-purple/25 font-black text-xs">{{ sub.mentor_score|floatformat:1 }}/10</span>
+                                {% endif %}
+                            </div>
+                            {% if sub.mentor_feedback %}
+                            <p class="text-sm text-duo-text-dim font-semibold leading-relaxed whitespace-pre-wrap">{{ sub.mentor_feedback }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endif %}
+                    </p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
 </div>
 {% endblock %}
 
 {% block extra_scripts %}
 <script>
+    // Current interface language for AI feedback translation
+    const currentLang = '{{ current_language|default:"ru" }}';
+
     document.addEventListener('DOMContentLoaded', () => {
         const formatTime = (time) => {
             if (isNaN(time)) return "0:00";
@@ -485,6 +720,173 @@
                 }
             });
         });
+
+        const speakingCards = Array.from(document.querySelectorAll('.speaking-submission-card'));
+
+        const renderSpeakingUpdate = (card, update) => {
+            if (!card || !update || !update.is_evaluated) return;
+
+            card.dataset.evaluated = 'true';
+
+            const pendingBlock = card.querySelector('.speaking-pending-block');
+            const feedbackBlock = card.querySelector('.speaking-feedback-block');
+            const feedbackText = card.querySelector('.speaking-feedback-text');
+            const transcriptDetails = card.querySelector('.speaking-transcript-details');
+            const transcriptText = card.querySelector('.speaking-transcript-text');
+            const levelBadge = card.querySelector('.speaking-level-badge');
+            const levelText = card.querySelector('.speaking-level-text');
+            const scoreBadge = card.querySelector('.speaking-score-badge');
+            const scoreText = card.querySelector('.speaking-score-text');
+
+            if (pendingBlock) pendingBlock.classList.add('hidden');
+            if (feedbackBlock) feedbackBlock.classList.remove('hidden');
+            if (feedbackText) {
+                // Pick feedback in the current interface language; fall back to English, then legacy text
+                const fbJson = update.feedback_json || {};
+                feedbackText.textContent = fbJson[currentLang] || fbJson['en'] || fbJson['ru'] || update.feedback_text || 'AI feedback is unavailable.';
+            }
+
+            if (transcriptDetails && transcriptText) {
+                if (update.transcript) {
+                    transcriptText.textContent = update.transcript;
+                    transcriptDetails.classList.remove('hidden');
+                } else {
+                    transcriptDetails.classList.add('hidden');
+                    transcriptText.textContent = '';
+                }
+            }
+
+            if (levelBadge && levelText) {
+                if (update.estimated_level) {
+                    levelText.textContent = update.estimated_level;
+                    levelBadge.classList.remove('hidden');
+                } else {
+                    levelBadge.classList.add('hidden');
+                }
+            }
+
+            if (scoreBadge && scoreText) {
+                const maxScore = parseFloat(card.dataset.maxScore) || 10;
+                if (typeof update.weighted_score === 'number' && !Number.isNaN(update.weighted_score)) {
+                    scoreText.textContent = update.weighted_score.toFixed(1);
+                    const maxScoreEl = card.querySelector('.speaking-max-score-text');
+                    if (maxScoreEl) maxScoreEl.textContent = maxScore.toFixed(0);
+                    scoreBadge.classList.remove('hidden');
+                } else {
+                    scoreBadge.classList.add('hidden');
+                }
+            }
+        };
+
+        const renderPartSummaries = (partSummaries) => {
+            if (!partSummaries) return;
+            Object.entries(partSummaries).forEach(([partNum, summary]) => {
+                const card = document.querySelector(`#sp-section-card-${partNum}`);
+                if (!card) return;
+                const scoreEl = card.querySelector('.speaking-part-score-text');
+                const statusEl = card.querySelector('.speaking-part-status-text');
+                const barEl = card.querySelector('.speaking-part-progress-bar');
+
+                if (summary.evaluated > 0) {
+                    const earned = summary.weighted_earned.toFixed(1);
+                    const max = summary.max_weighted.toFixed(1);
+                    if (scoreEl) scoreEl.textContent = earned;
+                    if (statusEl) {
+                        statusEl.textContent = `${earned}/${max} бл.`;
+                        statusEl.classList.remove('text-duo-blue');
+                        statusEl.classList.add('text-duo-gold');
+                    }
+                }
+                if (barEl && summary.total > 0) {
+                    const pct = Math.round((summary.evaluated / summary.total) * 100);
+                    barEl.style.width = `${pct}%`;
+                    if (summary.evaluated === summary.total) {
+                        barEl.classList.remove('bg-duo-gold', 'bg-duo-red');
+                        barEl.classList.add('bg-duo-green');
+                    } else if (summary.evaluated > 0) {
+                        barEl.classList.remove('bg-duo-red');
+                        barEl.classList.add('bg-duo-gold');
+                    }
+                }
+            });
+        };
+
+        const hasPendingSpeaking = () => speakingCards.some(card => card.dataset.evaluated !== 'true');
+
+        const pollSpeakingStatus = async () => {
+            try {
+                const response = await fetch('{% url "exams:api_speaking_result_status" attempt.id %}', {
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                    credentials: 'same-origin',
+                });
+                if (!response.ok) return;
+
+                const payload = await response.json();
+                const updatesById = new Map((payload.submissions || []).map(item => [String(item.id), item]));
+
+                speakingCards.forEach(card => {
+                    const update = updatesById.get(card.dataset.submissionId);
+                    if (update) renderSpeakingUpdate(card, update);
+                });
+
+                renderPartSummaries(payload.part_summaries);
+
+                return payload.all_evaluated === true;
+            } catch (error) {
+                console.error('Speaking status polling failed:', error);
+                return false;
+            }
+        };
+
+        if (speakingCards.length && hasPendingSpeaking()) {
+            const intervalId = setInterval(async () => {
+                const finished = await pollSpeakingStatus();
+                if (finished || !hasPendingSpeaking()) {
+                    clearInterval(intervalId);
+                }
+            }, 4000);
+
+            pollSpeakingStatus().then(finished => {
+                if (finished || !hasPendingSpeaking()) {
+                    clearInterval(intervalId);
+                }
+            });
+        }
     });
+
+    // ---------------------------------------------------------------------------
+    // AI feedback language switcher (runs on page load + when language changes)
+    // ---------------------------------------------------------------------------
+    function applyAIFeedbackTranslations(lang) {
+        // Speaking feedback elements have data-feedback-json (set by polling JS)
+        // Writing feedback elements are server-rendered; for already-loaded pages
+        // without feedback_json attrs we fall back to textContent.
+        document.querySelectorAll('[data-feedback-json]').forEach(el => {
+            try {
+                const json = JSON.parse(el.dataset.feedbackJson);
+                if (json && typeof json === 'object') {
+                    el.textContent = json[lang] || json['en'] || json['ru'] || el.textContent;
+                }
+            } catch (e) { /* ignore bad JSON */ }
+        });
+        document.querySelectorAll('[data-explanation-json]').forEach(el => {
+            try {
+                const json = JSON.parse(el.dataset.explanationJson);
+                if (json && typeof json === 'object') {
+                    el.textContent = json[lang] || json['en'] || json['ru'] || el.textContent;
+                }
+            } catch (e) { /* ignore bad JSON */ }
+        });
+    }
+
+    // Hook into the global language switcher so AI feedback updates instantly
+    // when language is changed on this page (before page reloads).
+    if (typeof window.applyGlobalTranslations === 'function') {
+        const _origApplyGlobal = window.applyGlobalTranslations;
+        window.applyGlobalTranslations = function(lang) {
+            _origApplyGlobal.call(this, lang);
+            applyAIFeedbackTranslations(lang);
+        };
+    }
 </script>
 {% endblock %}

@@ -1,0 +1,252 @@
+{% extends "base.html" %}
+
+{% block title %}Session Ended — CEFR Prep{% endblock %}
+
+{% block extra_head %}
+<style>
+    body {
+        background:
+            radial-gradient(700px 380px at 20% -5%, rgba(88, 204, 2, 0.15), transparent 65%),
+            radial-gradient(780px 420px at 85% 105%, rgba(28, 176, 246, 0.12), transparent 70%),
+            linear-gradient(135deg, #131F24, #0B1316);
+    }
+
+    body::after {
+        content: '';
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        z-index: 0;
+        background:
+            linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+        background-size: 24px 24px;
+        mask-image: radial-gradient(circle at center, black 22%, transparent 95%);
+    }
+
+    @keyframes slideInDown {
+        from {
+            opacity: 0;
+            transform: translateY(-30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @keyframes iconPulse {
+        0%, 100% {
+            transform: scale(1);
+        }
+        50% {
+            transform: scale(1.08);
+        }
+    }
+
+    .session-ended-container {
+        position: relative;
+        z-index: 2;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        padding: 24px;
+        box-sizing: border-box;
+    }
+
+    .session-ended-card {
+        max-width: 500px;
+        background: linear-gradient(180deg, rgba(30, 53, 59, 0.9), rgba(21, 37, 42, 0.92));
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 28px;
+        padding: 48px 32px;
+        backdrop-filter: blur(12px);
+        text-align: center;
+        box-shadow: 0 26px 60px rgba(0, 0, 0, 0.42), inset 0 1px 0 rgba(255, 255, 255, 0.09);
+        animation: fadeInUp 0.5s ease-out;
+    }
+
+    .session-ended-card::before {
+        content: '';
+        position: absolute;
+        left: 32px;
+        right: 32px;
+        top: 16px;
+        height: 3px;
+        border-radius: 999px;
+        background: linear-gradient(90deg, #58CC02, #1CB0F6);
+        opacity: 0.8;
+    }
+
+    .icon-wrapper {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 100px;
+        height: 100px;
+        background: linear-gradient(135deg, rgba(88, 204, 2, 0.2), rgba(28, 176, 246, 0.2));
+        border-radius: 24px;
+        margin-bottom: 24px;
+        border: 2px solid rgba(88, 204, 2, 0.3);
+        animation: iconPulse 2s ease-in-out infinite;
+    }
+
+    .icon-wrapper i {
+        font-size: 48px;
+        color: #58CC02;
+    }
+
+    h1 {
+        font-size: 2rem;
+        font-weight: 900;
+        color: #ffffff;
+        margin-bottom: 12px;
+        animation: slideInDown 0.5s ease-out 0.1s both;
+    }
+
+    .subtitle {
+        font-size: 1.1rem;
+        color: #9bb5bc;
+        margin-bottom: 32px;
+        font-weight: 700;
+        animation: slideInDown 0.5s ease-out 0.2s both;
+    }
+
+    .info-box {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 16px;
+        padding: 20px;
+        margin-bottom: 32px;
+        animation: slideInDown 0.5s ease-out 0.3s both;
+    }
+
+    .info-box p {
+        color: #d7f3ff;
+        font-size: 0.95rem;
+        line-height: 1.6;
+        margin: 0;
+        font-weight: 600;
+    }
+
+    .action-buttons {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        animation: slideInDown 0.5s ease-out 0.4s both;
+    }
+
+    .btn {
+        padding: 14px 24px;
+        border: none;
+        border-radius: 12px;
+        font-weight: 900;
+        font-size: 1rem;
+        cursor: pointer;
+        transition: transform 0.2s, filter 0.2s;
+        text-decoration: none;
+        display: inline-block;
+    }
+
+    .btn:hover {
+        transform: translateY(-2px);
+    }
+
+    .btn:active {
+        transform: translateY(0);
+    }
+
+    .btn-primary {
+        background: linear-gradient(110deg, #27bcff 0%, #1CB0F6 40%, #33cbff 60%, #1CB0F6 100%);
+        background-size: 220% 220%;
+        color: white;
+        box-shadow: 0 6px 0 #1899D6, 0 12px 24px rgba(28, 176, 246, 0.28);
+    }
+
+    .btn-primary:active {
+        box-shadow: 0 0 0 #1899D6, 0 6px 12px rgba(28, 176, 246, 0.14);
+    }
+
+    .btn-secondary {
+        background: rgba(255, 255, 255, 0.08);
+        color: #d7f3ff;
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .btn-secondary:hover {
+        background: rgba(255, 255, 255, 0.12);
+    }
+
+    @media (max-width: 640px) {
+        .session-ended-card {
+            padding: 32px 20px;
+        }
+
+        h1 {
+            font-size: 1.5rem;
+        }
+
+        .icon-wrapper {
+            width: 80px;
+            height: 80px;
+        }
+
+        .icon-wrapper i {
+            font-size: 40px;
+        }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .session-ended-card,
+        h1,
+        .subtitle,
+        .info-box,
+        .action-buttons,
+        .icon-wrapper {
+            animation: none;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="session-ended-container">
+    <div class="session-ended-card">
+        <div class="icon-wrapper">
+            <i class="ph-fill ph-check-circle"></i>
+        </div>
+
+        <h1>Session Ended</h1>
+        <p class="subtitle">The host has ended the collective video session.</p>
+
+        <div class="info-box">
+            <p>
+                <i class="ph-fill ph-info text-duo-blue mr-2"></i>
+                Thank you for participating! You can now return to the main menu and select another session.
+            </p>
+        </div>
+
+        <div class="action-buttons">
+            <a href="{% url 'exams:video_lessons' %}" class="btn btn-primary">
+                <i class="ph-fill ph-arrow-left mr-2"></i> Back to Video Lessons
+            </a>
+            <a href="{% url 'exams:video_room_join' %}" class="btn btn-secondary">
+                <i class="ph-fill ph-users-three mr-2"></i> Join Another Session
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

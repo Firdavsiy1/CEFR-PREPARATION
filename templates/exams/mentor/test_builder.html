@@ -126,29 +126,76 @@
 
 {% block content %}
 <div class="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
+    {% include "exams/mentor/_workspace_header.html" with icon="ph-fill ph-sliders-horizontal" accent="green" title="Конструктор теста" subtitle="Редактируйте структуру частей, вопросы и материалы, затем публикуйте тест без выхода из рабочего потока." page_group="builder" %}
 
-    <!-- Header -->
-    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 animate-fade-in">
-        <div class="flex items-center gap-4">
-            <a href="{% url 'exams:mentor_dashboard' %}" class="w-10 h-10 rounded-xl flex items-center justify-center border-2 border-duo-border bg-duo-surface hover:bg-duo-surface-2 text-duo-text-dim hover:text-white transition-all">
-                <i class="ph-bold ph-arrow-left text-lg"></i>
-            </a>
-            <div>
-                <div class="flex items-center gap-3">
-                    <h1 class="text-2xl font-black text-white tracking-tight" id="test-title">{{ test.name }}</h1>
-                    <button onclick="editTestName()" class="text-duo-text-muted hover:text-duo-green transition-colors" title="Переименовать">
-                        <i class="ph-fill ph-pencil-simple text-sm"></i>
-                    </button>
+    <div class="mb-6 grid gap-4 lg:grid-cols-[1.15fr,0.85fr] animate-slide-up">
+        <div class="card-duo p-5">
+            <div class="flex items-start justify-between gap-4">
+                <div>
+                    <p class="text-xs font-extrabold uppercase tracking-[0.16em] text-duo-text-muted">Редактируемый тест</p>
+                    <div class="mt-2 flex items-center gap-3">
+                        <h2 class="text-2xl font-black text-white tracking-tight" id="test-title">{{ test.name }}</h2>
+                        <button onclick="editTestName()" class="flex h-8 w-8 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-duo-text-muted transition hover:text-duo-green" title="Переименовать">
+                            <i class="ph-fill ph-pencil-simple text-sm"></i>
+                        </button>
+                    </div>
+                    <p class="mt-2 text-sm font-semibold text-duo-text-dim" data-i18n="mnt_bld_subtitle">Конструктор тестов — редактируйте части, вопросы и варианты</p>
                 </div>
-                <p class="text-sm text-duo-text-dim font-semibold" data-i18n="mnt_bld_subtitle">Конструктор тестов — редактируйте части, вопросы и варианты</p>
+
+                <a href="{% url 'exams:mentor_dashboard' %}" class="btn-duo-outline text-xs !py-2.5 !px-4">
+                    <i class="ph-bold ph-arrow-left"></i>
+                    К списку
+                </a>
             </div>
         </div>
-        <div class="flex items-center gap-3">
-            <span class="text-xs text-duo-text-muted font-bold" id="autosave-status" data-i18n="mnt_bld_saved">Все изменения сохранены</span>
-            <button onclick="toggleActive()" id="toggle-active-btn"
-                    class="badge-duo cursor-pointer transition-all text-xs {{ test.is_active|yesno:'bg-duo-green/15 text-duo-green border border-duo-green/30 hover:bg-duo-green/25,bg-duo-surface-2 text-duo-text-muted border border-duo-border hover:bg-duo-surface-2' }}">
-                {% if test.is_active %}<span data-i18n="mnt_status_active">Активен</span>{% else %}<span data-i18n="mnt_status_draft">Черновик</span>{% endif %}
-            </button>
+
+        <div class="card-duo p-5">
+            <div class="flex h-full flex-col justify-between gap-4">
+                <div>
+                    <p class="text-xs font-extrabold uppercase tracking-[0.16em] text-duo-text-muted">Состояние редактирования</p>
+                    <div class="mt-3 flex flex-wrap items-center gap-3">
+                        <span class="rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-xs font-black uppercase tracking-[0.16em] text-duo-text-dim" id="autosave-status" data-i18n="mnt_bld_saved">Все изменения сохранены</span>
+                        <button onclick="toggleActive()" id="toggle-active-btn"
+                                class="badge-duo cursor-pointer transition-all text-xs {{ test.is_active|yesno:'bg-duo-green/15 text-duo-green border border-duo-green/30 hover:bg-duo-green/25,bg-duo-surface-2 text-duo-text-muted border border-duo-border hover:bg-duo-surface-2' }}">
+                            {% if test.is_active %}<span data-i18n="mnt_status_active">Активен</span>{% else %}<span data-i18n="mnt_status_draft">Черновик</span>{% endif %}
+                        </button>
+                        <a href="{% url 'exams:mentor_test_preview' test.id %}" target="_blank" rel="noopener" class="btn-duo-outline text-xs !py-2 !px-3">
+                            <i class="ph-bold ph-eye"></i>
+                            Student preview
+                        </a>
+                        <button type="button" onclick="loadValidationReport(true)" class="btn-duo-outline text-xs !py-2 !px-3">
+                            <i class="ph-bold ph-shield-check"></i>
+                            Проверить publish
+                        </button>
+                    </div>
+                </div>
+
+                <p class="text-sm font-semibold leading-relaxed text-duo-text-dim">
+                    Рекомендуемый порядок: структура частей, корректные ответы, аудио/материалы, затем публикация и, при необходимости, split на микро-тесты.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <div class="mb-8 card-duo p-5 animate-slide-up" style="animation-delay: 0.08s;" id="validation-panel">
+        <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+                <p class="text-xs font-extrabold uppercase tracking-[0.16em] text-duo-text-muted">Pre-publish validator</p>
+                <h3 class="mt-2 text-lg font-black text-white">Красные и жёлтые флаги перед публикацией</h3>
+                <p class="mt-2 text-sm font-semibold text-duo-text-dim">Красные блокируют publish. Жёлтые не блокируют, но показывают слабые места в инструкциях, медиа и данных.</p>
+            </div>
+            <div class="flex flex-wrap gap-2 text-[11px] font-black uppercase tracking-[0.16em]">
+                <span class="rounded-full border border-red-400/20 bg-red-500/10 px-3 py-1 text-red-300" id="validation-blockers-chip">0 blockers</span>
+                <span class="rounded-full border border-yellow-300/20 bg-yellow-400/10 px-3 py-1 text-yellow-200" id="validation-warnings-chip">0 warnings</span>
+                <span class="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-duo-text-dim" id="validation-publishable-chip">Проверка...</span>
+            </div>
+        </div>
+        <div class="mt-4 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+            <div class="flex items-center justify-between gap-3">
+                <p class="text-sm font-black text-white" id="validation-summary-text">Загружаем статус публикации...</p>
+                <button type="button" onclick="loadValidationReport(true)" class="text-xs font-black uppercase tracking-[0.16em] text-duo-green hover:text-white transition-colors">Обновить</button>
+            </div>
+            <div class="mt-4 space-y-2" id="validation-issues"></div>
         </div>
     </div>
 
@@ -186,11 +233,20 @@
     <div class="mt-8 mb-12 p-6 bg-duo-surface-2 border-2 border-duo-border rounded-2xl flex flex-col md:flex-row items-center justify-between gap-6 relative overflow-hidden" id="publish-panel">
         <div class="absolute -right-20 -top-20 w-64 h-64 bg-duo-green/5 rounded-full blur-3xl pointer-events-none"></div>
         <div class="relative z-10 w-full md:w-auto">
-            <h3 class="text-xl font-black text-white mb-1" id="publish-title" data-i18n="mnt_bld_publish_title">Ready to Publish?</h3>
-            <p class="text-duo-text-dim text-sm font-bold" data-i18n="mnt_bld_publish_desc">Review your changes. Making this test active will allow students to see and solve it.</p>
+            <h3 class="text-xl font-black text-white mb-1" id="publish-title">Публикация и выдача студентам</h3>
+            <p class="text-duo-text-dim text-sm font-bold">Перед публикацией проверьте инструкции, правильные ответы и наличие материалов. После активации тест появится в студенческом каталоге.</p>
+            <div class="mt-3 flex flex-wrap gap-2 text-[11px] font-black uppercase tracking-[0.16em]">
+                <span class="rounded-full border border-duo-green/20 bg-duo-green/10 px-3 py-1 text-duo-green">1. Data check</span>
+                <span class="rounded-full border border-duo-blue/20 bg-duo-blue/10 px-3 py-1 text-duo-blue">2. Activate</span>
+                <span class="rounded-full border border-duo-gold/20 bg-duo-gold/10 px-3 py-1 text-duo-gold">3. Optional split</span>
+            </div>
         </div>
         
         <div class="flex flex-col sm:flex-row items-center gap-6 relative z-10 w-full md:w-auto">
+            <button type="button" class="btn-duo-outline text-sm w-full sm:w-auto" onclick="loadValidationReport(true)">
+                <i class="ph-bold ph-seal-warning"></i>
+                Запустить validator
+            </button>
             <label class="flex items-center gap-3 cursor-pointer group">
                 <input type="checkbox" id="split-parts-toggle" class="appearance-none w-12 h-6 min-w-[3rem] border-2 border-duo-border rounded-full bg-duo-surface 
                     checked:bg-duo-blue checked:border-duo-blue outline-none transition-colors relative 
@@ -199,7 +255,7 @@
                 <span class="text-sm font-bold text-white group-hover:text-duo-blue transition-colors" data-i18n="mnt_split_title">Выложить все части отдельно</span>
             </label>
             <button class="btn-duo-green px-8 py-4 text-lg flex items-center justify-center gap-2 w-full sm:w-auto hover:-translate-y-1 shadow-[0_4px_0_#46A302] hover:shadow-[0_6px_0_#46A302] active:translate-y-1 active:shadow-none transition-all" onclick="publishTest(this)">
-                <i class="ph-bold ph-check text-xl"></i> <span data-i18n="mnt_wrt_ready" class="uppercase tracking-wide font-black">READY TO PUBLISH</span>
+                <i class="ph-bold ph-check text-xl"></i> <span class="uppercase tracking-wide font-black">Опубликовать тест</span>
             </button>
         </div>
     </div>
@@ -231,6 +287,7 @@ function getDict() {
 // ---- Init ----
 document.addEventListener('DOMContentLoaded', () => {
     loadTestData();
+    loadValidationReport();
 });
 
 // ---- API Helpers ----
@@ -278,6 +335,73 @@ function showSave(state, textKey) {
 
     if (state !== 'saving') {
         setTimeout(() => { el.classList.remove('show'); }, 2000);
+    }
+}
+
+function renderValidationReport(report) {
+    const blockers = report?.summary?.blockers || 0;
+    const warnings = report?.summary?.warnings || 0;
+    const isPublishable = !!report?.is_publishable;
+    const issues = report?.issues || [];
+
+    document.getElementById('validation-blockers-chip').textContent = `${blockers} blockers`;
+    document.getElementById('validation-warnings-chip').textContent = `${warnings} warnings`;
+
+    const publishableChip = document.getElementById('validation-publishable-chip');
+    publishableChip.textContent = isPublishable ? 'Можно публиковать' : 'Публикация заблокирована';
+    publishableChip.className = isPublishable
+        ? 'rounded-full border border-duo-green/20 bg-duo-green/10 px-3 py-1 text-duo-green'
+        : 'rounded-full border border-red-400/20 bg-red-500/10 px-3 py-1 text-red-300';
+
+    document.getElementById('validation-summary-text').textContent = isPublishable
+        ? 'Критичных проблем не найдено. Можно публиковать после финального визуального просмотра.'
+        : `Найдены критичные проблемы: ${blockers} blocker(s). Сначала исправьте красные флаги.`;
+
+    const issuesWrap = document.getElementById('validation-issues');
+    if (!issues.length) {
+        issuesWrap.innerHTML = '<div class="rounded-xl border border-duo-green/20 bg-duo-green/10 px-4 py-3 text-sm font-bold text-duo-green">Пока проблем не найдено.</div>';
+    } else {
+        issuesWrap.innerHTML = issues.map((issue) => {
+            const isBlocker = issue.severity === 'blocker';
+            const classes = isBlocker
+                ? 'border-red-400/20 bg-red-500/10 text-red-100'
+                : 'border-yellow-300/20 bg-yellow-400/10 text-yellow-100';
+            const badge = isBlocker ? 'BLOCKER' : 'WARNING';
+            return `
+                <div class="rounded-xl border px-4 py-3 ${classes}">
+                    <div class="flex items-start justify-between gap-3">
+                        <div>
+                            <p class="text-xs font-black uppercase tracking-[0.16em]">${badge}</p>
+                            <p class="mt-1 text-sm font-black">${issue.message}</p>
+                            <p class="mt-1 text-xs font-semibold opacity-80">${issue.location || 'Test level'}</p>
+                        </div>
+                        <span class="text-[10px] font-black uppercase tracking-[0.16em] opacity-70">${issue.code}</span>
+                    </div>
+                </div>`;
+        }).join('');
+    }
+
+    const publishButton = document.querySelector('#publish-panel button[onclick="publishTest(this)"]');
+    if (publishButton) {
+        publishButton.disabled = !isPublishable;
+        publishButton.classList.toggle('opacity-60', !isPublishable);
+        publishButton.classList.toggle('pointer-events-none', !isPublishable);
+    }
+}
+
+async function loadValidationReport(forceToast = false) {
+    try {
+        const response = await fetch(`/api/mentor/test/${TEST_ID}/validate/`);
+        const report = await response.json();
+        renderValidationReport(report);
+        if (forceToast) {
+            showSave(report.is_publishable ? 'saved' : 'error', report.is_publishable ? 'Проверка пройдена' : 'Есть blocker-ошибки');
+        }
+        return report;
+    } catch (error) {
+        console.error('Validation failed', error);
+        showSave('error', 'validator unavailable');
+        return null;
     }
 }
 
@@ -1181,6 +1305,11 @@ window.initManualWritingTasks = async function() {
 // Publish Logic
 // =========================================================================
 async function publishTest(btn) {
+    const report = await loadValidationReport(true);
+    if (!report || !report.is_publishable) {
+        return;
+    }
+
     const originalHtml = btn.innerHTML;
     btn.innerHTML = '<i class="ph ph-spinner spin"></i> <span data-i18n="mnt_bld_saving">PUBLISHING...</span>';
     btn.disabled = true;

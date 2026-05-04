@@ -1,0 +1,1274 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Speaking Builder — {{ test.name }}{% endblock %}
+
+{% block extra_head %}
+<style>
+    .builder-layout {
+        display: grid;
+        grid-template-columns: 240px 1fr;
+        gap: 1.5rem;
+        min-height: calc(100vh - 200px);
+    }
+    @media (max-width: 1024px) { .builder-layout { grid-template-columns: 1fr; } }
+
+    .part-nav-btn { transition: all 0.15s ease; }
+    .part-nav-btn.active {
+        background: rgba(165,85,247,0.1);
+        border-color: rgba(165,85,247,0.3) !important;
+        color: #A855F7;
+    }
+    .part-nav-btn:hover:not(.active) {
+        background: rgba(255,255,255,0.03);
+        border-color: #2B4D56;
+    }
+
+    .q-card { transition: border-color 0.15s ease; }
+    .q-card:hover { border-color: #2B4D56; }
+
+    .editable-field {
+        background: #1A2F35;
+        border: 2px solid #2B4D56;
+        border-radius: 10px;
+        padding: 0.45rem 0.65rem;
+        color: #fff;
+        font-size: 0.8rem;
+        font-weight: 600;
+        font-family: 'Nunito', sans-serif;
+        width: 100%;
+        transition: border-color 0.15s;
+    }
+    .editable-field:focus { outline: none; border-color: #A855F7; box-shadow: 0 0 0 3px rgba(165,85,247,0.1); }
+    .editable-textarea    { min-height: 70px;  resize: vertical; }
+    .editable-textarea-lg { min-height: 140px; resize: vertical; }
+
+    .save-indicator {
+        position: fixed; bottom: 24px; right: 24px; z-index: 100;
+        padding: 10px 18px; border-radius: 14px; font-size: 0.75rem; font-weight: 800;
+        display: flex; align-items: center; gap: 8px; backdrop-filter: blur(12px);
+        transition: all 0.25s ease; opacity: 0; transform: translateY(8px);
+        pointer-events: none; text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .save-indicator.show  { opacity: 1; transform: translateY(0); }
+    .save-indicator.saving{ background: rgba(165,85,247,0.15); border: 2px solid rgba(165,85,247,0.3); color: #A855F7; }
+    .save-indicator.saved { background: rgba(88,204,2,0.15);   border: 2px solid rgba(88,204,2,0.3);   color: #58CC02; }
+    .save-indicator.error { background: rgba(255,75,75,0.15);  border: 2px solid rgba(255,75,75,0.3);  color: #FF4B4B; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
+    {% include "exams/mentor/_workspace_header.html" with icon="ph-fill ph-microphone" accent="green" title="Speaking Builder" subtitle="Валидируйте OCR-результат, обрезки изображений и логику speaking parts до публикации. Этот экран должен закрывать весь пост-OCR workflow." page_group="builder" %}
+
+    <div class="mb-6 grid gap-4 lg:grid-cols-[1.1fr,0.9fr] animate-slide-up">
+        <div class="card-duo p-5">
+            <div class="flex items-start justify-between gap-4">
+                <div>
+                    <p class="text-xs font-extrabold uppercase tracking-[0.16em] text-duo-text-muted">Текущий speaking test</p>
+                    <div class="mt-2 flex items-center gap-3">
+                        <h2 class="text-2xl font-black text-white tracking-tight" id="test-title">{{ test.name }}</h2>
+                        <button onclick="editTestName()"
+                                class="flex h-8 w-8 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-duo-text-muted transition hover:text-duo-green"
+                                title="Переименовать">
+                            <i class="ph-bold ph-pencil text-sm"></i>
+                        </button>
+                        <span class="badge-duo bg-duo-purple/15 text-duo-purple border border-duo-purple/30 text-xs font-bold">Speaking</span>
+                    </div>
+                    <p class="mt-2 text-sm font-semibold text-duo-text-dim">Конструктор Speaking тестов — части, инструкции, вопросы</p>
+                </div>
+
+                <a href="{% url 'exams:mentor_dashboard' %}" class="btn-duo-outline text-xs !py-2.5 !px-4">
+                    <i class="ph-bold ph-arrow-left"></i>
+                    К списку
+                </a>
+            </div>
+        </div>
+
+        <div class="card-duo p-5">
+            <p class="text-xs font-extrabold uppercase tracking-[0.16em] text-duo-text-muted">Operational check</p>
+            <div class="mt-3 flex flex-wrap items-center gap-3">
+                <span class="rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-xs font-black uppercase tracking-[0.16em] text-duo-text-dim" id="autosave-status">Все изменения сохранены</span>
+                <button onclick="toggleActive()" id="toggle-active-btn"
+                        class="badge-duo cursor-pointer transition-all text-xs {% if test.is_active %}bg-duo-green/15 text-duo-green border border-duo-green/30 hover:bg-duo-green/25{% else %}bg-duo-surface-2 text-duo-text-muted border border-duo-border{% endif %}">
+                    {% if test.is_active %}Активен{% else %}Черновик{% endif %}
+                </button>
+                <a href="{% url 'exams:mentor_test_preview' test.id %}" target="_blank" rel="noopener" class="btn-duo-outline text-xs !py-2 !px-3">
+                    <i class="ph-bold ph-eye"></i>
+                    Student preview
+                </a>
+                <button type="button" onclick="loadValidationReport(true)" class="btn-duo-outline text-xs !py-2 !px-3">
+                    <i class="ph-bold ph-shield-check"></i>
+                    Проверить publish
+                </button>
+            </div>
+            <p class="mt-4 text-sm font-semibold leading-relaxed text-duo-text-dim">Обязательная проверка: crop только для нужных частей, инструкции не пустые, а вопросы читаются естественно для TTS.</p>
+        </div>
+    </div>
+
+    <div class="mb-8 card-duo p-5 animate-slide-up" style="animation-delay: 0.08s;" id="validation-panel">
+        <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+                <p class="text-xs font-extrabold uppercase tracking-[0.16em] text-duo-text-muted">Pre-publish validator</p>
+                <h3 class="mt-2 text-lg font-black text-white">Флаги качества Speaking теста</h3>
+                <p class="mt-2 text-sm font-semibold text-duo-text-dim">Проверка инструкций, вопросов, post-OCR validation и медиа before publish.</p>
+            </div>
+            <div class="flex flex-wrap gap-2 text-[11px] font-black uppercase tracking-[0.16em]">
+                <span class="rounded-full border border-red-400/20 bg-red-500/10 px-3 py-1 text-red-300" id="validation-blockers-chip">0 blockers</span>
+                <span class="rounded-full border border-yellow-300/20 bg-yellow-400/10 px-3 py-1 text-yellow-200" id="validation-warnings-chip">0 warnings</span>
+                <span class="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-duo-text-dim" id="validation-publishable-chip">Проверка...</span>
+            </div>
+        </div>
+        <div class="mt-4 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+            <div class="flex items-center justify-between gap-3">
+                <p class="text-sm font-black text-white" id="validation-summary-text">Загружаем статус публикации...</p>
+                <button type="button" onclick="loadValidationReport(true)" class="text-xs font-black uppercase tracking-[0.16em] text-duo-purple hover:text-white transition-colors">Обновить</button>
+            </div>
+            <div class="mt-4 space-y-2" id="validation-issues"></div>
+        </div>
+    </div>
+
+    <!-- Builder Layout -->
+    <div class="builder-layout">
+
+        <!-- Sidebar -->
+        <aside>
+            <div class="card-duo !p-4 sticky top-4">
+                <div class="flex items-center justify-between mb-3">
+                    <p class="text-xs font-extrabold text-duo-text-dim uppercase tracking-widest">Части</p>
+                    <button onclick="createPart()"
+                            class="w-7 h-7 rounded-lg flex items-center justify-center bg-duo-purple/15 border border-duo-purple/30 text-duo-purple hover:bg-duo-purple/25 transition-colors"
+                            title="Добавить часть вручную">
+                        <i class="ph-bold ph-plus text-sm"></i>
+                    </button>
+                </div>
+                <nav class="space-y-1.5" id="parts-nav"></nav>
+                <div class="mt-4 pt-3 border-t border-duo-border">
+                    <button onclick="openOcrModal()"
+                            class="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl border-2 border-dashed border-duo-purple/30 text-duo-purple text-xs font-extrabold hover:bg-duo-purple/5 transition-colors">
+                        <i class="ph-fill ph-camera"></i> Сканировать через OCR
+                    </button>
+                </div>
+                <div class="mt-3 pt-3 border-t border-duo-border">
+                    <p class="text-xs text-duo-text-muted font-semibold text-center" id="stats-text">Загрузка...</p>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main>
+            <div id="loading-state" class="card-duo p-12 text-center">
+                <i class="ph-fill ph-spinner animate-spin text-duo-purple text-3xl"></i>
+                <p class="text-duo-text-muted font-bold mt-3 text-sm">Загрузка теста...</p>
+            </div>
+            <div id="empty-state" class="card-duo p-12 text-center hidden">
+                <div class="w-16 h-16 mx-auto mb-4 rounded-2xl flex items-center justify-center bg-duo-purple/10 border-2 border-duo-purple/20">
+                    <i class="ph-fill ph-microphone text-duo-purple text-3xl"></i>
+                </div>
+                <p class="text-white font-extrabold mb-2">Нет частей</p>
+                <p class="text-duo-text-muted text-sm font-semibold mb-4">Добавьте часть вручную или загрузите фото через OCR</p>
+                <div class="flex items-center gap-3 justify-center">
+                    <button onclick="createPart()" class="btn-duo-outline text-sm">
+                        <i class="ph-bold ph-plus"></i> Добавить вручную
+                    </button>
+                    <button onclick="openOcrModal()"
+                            class="btn-duo text-sm border-0 shadow-[0_4px_0_#7E22CE] text-white font-extrabold"
+                            style="background:#A855F7">
+                        <i class="ph-fill ph-camera"></i> Сканировать OCR
+                    </button>
+                </div>
+            </div>
+            <div id="part-editor" class="hidden space-y-5"></div>
+        </main>
+    </div>
+
+    <!-- Publish Action Panel -->
+    <div class="mt-8 mb-12 p-6 bg-duo-surface-2 border-2 border-duo-border rounded-2xl flex flex-col md:flex-row items-center justify-between gap-6 relative overflow-hidden" id="publish-panel">
+        <div class="absolute -right-20 -top-20 w-64 h-64 bg-duo-green/5 rounded-full blur-3xl pointer-events-none"></div>
+        <div class="relative z-10 w-full md:w-auto">
+            <h3 class="text-xl font-black text-white mb-1">Публикация speaking test</h3>
+            <p class="text-duo-text-dim text-sm font-bold">Перед активацией убедитесь, что OCR-части прошли validation, а вопросы и изображения распределены по правильным speaking sections.</p>
+            <div class="mt-3 flex flex-wrap gap-2 text-[11px] font-black uppercase tracking-[0.16em]">
+                <span class="rounded-full border border-duo-purple/20 bg-duo-purple/10 px-3 py-1 text-duo-purple">1. OCR check</span>
+                <span class="rounded-full border border-duo-blue/20 bg-duo-blue/10 px-3 py-1 text-duo-blue">2. Crop validation</span>
+                <span class="rounded-full border border-duo-green/20 bg-duo-green/10 px-3 py-1 text-duo-green">3. Publish</span>
+            </div>
+        </div>
+        
+        <div class="flex flex-col sm:flex-row items-center gap-6 relative z-10 w-full md:w-auto">
+            <button type="button" class="btn-duo-outline text-sm w-full sm:w-auto" onclick="loadValidationReport(true)">
+                <i class="ph-bold ph-seal-warning"></i>
+                Запустить validator
+            </button>
+            <label class="flex items-center gap-3 cursor-pointer group">
+                <input type="checkbox" id="split-parts-toggle" class="appearance-none w-12 h-6 min-w-[3rem] border-2 border-duo-border rounded-full bg-duo-surface 
+                    checked:bg-duo-blue checked:border-duo-blue outline-none transition-colors relative 
+                    before:content-[''] before:absolute before:w-4 before:h-4 before:bg-white before:rounded-full before:top-[2px] before:left-[2px] 
+                    checked:before:translate-x-6 before:transition-transform shadow-inner">
+                <span class="text-sm font-bold text-white group-hover:text-duo-blue transition-colors" data-i18n="mnt_split_title">Выложить все части отдельно</span>
+            </label>
+            <button class="btn-duo-green px-8 py-4 text-lg flex items-center justify-center gap-2 w-full sm:w-auto hover:-translate-y-1 shadow-[0_4px_0_#46A302] hover:shadow-[0_6px_0_#46A302] active:translate-y-1 active:shadow-none transition-all" onclick="publishTest(this)">
+                <i class="ph-bold ph-check text-xl"></i> <span class="uppercase tracking-wide font-black">Опубликовать speaking test</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Save Indicator -->
+<div class="save-indicator" id="save-indicator">
+    <i class="ph-fill ph-floppy-disk"></i>
+    <span id="save-text">Сохранено</span>
+</div>
+
+<!-- Confirm Delete Modal -->
+<div id="confirm-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4">
+    <div class="card-duo max-w-sm w-full p-6 animate-fade-in">
+        <div class="w-12 h-12 rounded-xl bg-red-500/15 flex items-center justify-center mb-4">
+            <i class="ph-fill ph-trash text-red-400 text-xl"></i>
+        </div>
+        <h3 class="text-lg font-black text-white mb-1" id="modal-title">Удалить?</h3>
+        <p class="text-sm text-duo-text-muted font-semibold mb-5" id="modal-msg">Это действие нельзя отменить.</p>
+        <div class="flex gap-3">
+            <button onclick="closeModal()" class="btn-duo-outline text-sm flex-1">Отмена</button>
+            <button onclick="confirmDelete()"
+                    class="flex-1 py-2 px-4 rounded-xl bg-red-500/15 border-2 border-red-500/30 text-red-400 font-extrabold text-sm hover:bg-red-500/25 transition-colors">
+                Удалить
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     OCR Modal — fullscreen overlay: upload → crop box → validate
+     ═══════════════════════════════════════════════════════════════ -->
+<div id="ocr-modal" class="hidden fixed inset-0 z-50 flex flex-col bg-duo-bg overflow-y-auto">
+    <div class="max-w-5xl mx-auto w-full px-4 py-6">
+
+        <!-- OCR Header -->
+        <div class="flex items-center justify-between mb-6">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-duo-purple/20 border border-duo-purple/30 flex items-center justify-center">
+                    <i class="ph-fill ph-camera text-duo-purple"></i>
+                </div>
+                <div>
+                    <h2 class="text-lg font-black text-white">OCR — Сканирование страницы</h2>
+                    <p class="text-xs text-duo-text-dim font-semibold">Загрузите фото учебника для автоматического распознавания</p>
+                </div>
+            </div>
+            <button onclick="closeOcrModal()"
+                    class="w-10 h-10 rounded-xl flex items-center justify-center border-2 border-duo-border text-duo-text-dim hover:text-white hover:bg-duo-surface-2 transition-all">
+                <i class="ph-bold ph-x"></i>
+            </button>
+        </div>
+
+        <!-- Step 1: Upload -->
+        <div id="ocr-step-1" class="card-duo p-6 mb-6">
+            <div class="flex items-center gap-3 mb-4">
+                <div class="w-9 h-9 rounded-xl bg-duo-purple/20 border border-duo-purple/30 flex items-center justify-center text-sm font-black text-duo-purple">1</div>
+                <h3 class="text-base font-extrabold text-white">Загрузите фото страницы</h3>
+            </div>
+            <input type="file" id="ocr-image-input" accept="image/*"
+                   class="block w-full text-sm text-duo-text-dim
+                          file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-[2px] file:border-duo-border
+                          file:text-sm file:font-extrabold file:bg-duo-surface-2 file:text-white
+                          hover:file:bg-duo-border mb-4 transition-colors cursor-pointer outline-none" />
+            <div class="flex items-center gap-4">
+                <button id="ocr-process-btn" onclick="processOcr()"
+                        class="btn-duo border-0 shadow-[0_4px_0_#7E22CE] text-white font-extrabold px-6"
+                        style="background:#A855F7">
+                    <i class="ph-fill ph-magic-wand"></i> Обработать через ИИ
+                </button>
+                <span id="ocr-status" class="text-sm font-semibold text-duo-text-muted"></span>
+            </div>
+        </div>
+
+        <!-- Step 2: Crop + Validate (hidden until OCR done) -->
+        <div id="ocr-step-2" class="hidden max-w-4xl mx-auto">
+            <div class="card-duo p-5">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="w-9 h-9 rounded-xl bg-duo-purple/20 border border-duo-purple/30 flex items-center justify-center text-sm font-black text-duo-purple">2</div>
+                    <h3 class="text-base font-extrabold text-white" id="ocr-crop-title">Разметка области</h3>
+                </div>
+                <div class="relative w-full border-2 border-duo-border rounded-xl bg-duo-surface overflow-hidden"
+                     id="ocr-canvas-container">
+                    <img id="ocr-original-image" class="w-full object-contain pointer-events-none" alt="" />
+                    <div id="ocr-crop-box"
+                         class="absolute border-2 border-duo-purple bg-duo-purple/20 cursor-move hidden shadow-[0_0_0_9999px_rgba(15,23,42,0.6)] touch-none select-none">
+                        <div data-handle="nw" class="absolute -top-1.5 -left-1.5  w-4 h-4 rounded-full bg-duo-purple shadow-sm cursor-nwse-resize touch-none"></div>
+                        <div data-handle="ne" class="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-duo-purple shadow-sm cursor-nesw-resize touch-none"></div>
+                        <div data-handle="sw" class="absolute -bottom-1.5 -left-1.5  w-4 h-4 rounded-full bg-duo-purple shadow-sm cursor-nesw-resize touch-none"></div>
+                        <div data-handle="se" class="absolute -bottom-1.5 -right-1.5 w-4 h-4 rounded-full bg-duo-purple shadow-sm cursor-nwse-resize touch-none"></div>
+                    </div>
+                </div>
+                <p class="text-xs text-duo-text-dim font-medium mt-3 bg-duo-surface-2 p-3 rounded-xl mb-5" id="ocr-crop-instruction">
+                    <i class="ph-fill ph-info text-duo-blue mr-1"></i>Выберите область для текущей части. Потяните за углы для коррекции.
+                </p>
+
+                <div class="pt-5 border-t-2 border-duo-border flex gap-3">
+                    <button onclick="skipCropOcr()" id="ocr-skip-btn"
+                            class="btn-duo-outline w-1/3 text-sm flex items-center justify-center">
+                        Пропустить (без картинки)
+                    </button>
+                    <button onclick="saveCurrentCropOcr()" id="ocr-save-btn"
+                            class="btn-duo w-2/3 border-0 shadow-[0_4px_0_#16a34a] text-gray-900 font-extrabold flex items-center justify-center gap-2"
+                            style="background:#58CC02">
+                        Далее <i class="ph-bold ph-arrow-right text-lg"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+const TEST_ID = {{ test.id }};
+const CSRF    = '{{ csrf_token }}';
+
+// ─── State ────────────────────────────────────────────────────────────────────
+let state     = { parts: [], activePartId: null };
+let saveTimer = null;
+let pendingDelete = null;
+let ocrData   = null;
+let cropInteractionsInitialized = false;
+const cropState   = { left: 0.2, top: 0.2, width: 0.6, height: 0.4 };
+const qSaveTimers = {};
+let partSaveTimer = null;
+
+function normalizePartLabel(partNumber) {
+    return String(partNumber ?? '').trim().replace(',', '.');
+}
+
+// Extract the original OCR-detected part label from validation_data.
+// This is crucial because _coerce_speaking_part_number remaps labels
+// (e.g. OCR "2" → DB part_number 3 when 1 and 2 are already taken),
+// so we must use the RAW OCR label for crop wizard decisions.
+function getOcrPartLabel(partObj) {
+    return partObj?.validation_data?.parts?.[0]?.part_number
+        ?? partObj?.part_number;
+}
+
+function isOnePointTwoMode(allPartNumbers) {
+    return allPartNumbers.some(n => normalizePartLabel(n) === '1.2');
+}
+
+function shouldIncludeInCropWizard(partNumber, index, total, allPartNumbers = []) {
+    const raw = normalizePartLabel(partNumber);
+    const num = Number(raw);
+
+    // If OCR detects subtask labels (1.1 / 1.2 / 2), crop only 1.2 and 2.
+    if (isOnePointTwoMode(allPartNumbers)) {
+        return raw === '1.2' || raw === '2' || raw === '2.0' || num === 2;
+    }
+
+    // Default speaking mode: crop images ONLY for parts 1.2 and 2. NEVER 3.
+    // We strictly enforce that 1.2 and 2 get images, but others (1, 3) do not.
+    if (raw === '1.2' || raw === '2' || raw === '2.0' || num === 2) {
+        return true;
+    }
+
+    // In no scenario does part 3 need an image crop. 
+    return false;
+}
+
+// ─── Boot ─────────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', loadData);
+document.addEventListener('DOMContentLoaded', () => loadValidationReport());
+
+async function loadData() {
+    try {
+        const r    = await fetch(`/api/mentor/speaking-test/${TEST_ID}/data/`);
+        const data = await r.json();
+        state.parts = data.parts || [];
+
+        // Auto-resume OCR wizard if coming from upload
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('start_wizard')) {
+            const drafts = state.parts.filter(p => !p.is_validated && p.validation_data && p.original_image_url);
+            if (drafts.length > 0) {
+                const allPartNumbers = drafts.map(d => getOcrPartLabel(d));
+                const wizardDrafts = drafts.filter((d, index, arr) => {
+                    const partNumber = getOcrPartLabel(d);
+                    return shouldIncludeInCropWizard(partNumber, index, arr.length, allPartNumbers);
+                });
+                if (!wizardDrafts.length) {
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                    return;
+                }
+
+                // hide step 1, show modal and step 2
+                document.getElementById('ocr-modal').classList.remove('hidden');
+                document.getElementById('ocr-step-1').classList.add('hidden');
+                
+                ocrWizardState.parts = wizardDrafts.map(d => ({
+                    id: d.id,
+                    data: (d.validation_data && d.validation_data.parts && d.validation_data.parts[0]) || {}
+                }));
+                ocrWizardState.currentIdx = 0;
+                showOcrCropWizard(wizardDrafts[0].original_image_url);
+                
+                // Clear URL param so refresh doesn't trigger it again
+                window.history.replaceState({}, document.title, window.location.pathname);
+            }
+        }
+        renderSidebar();
+        if (state.parts.length) {
+            const sel = state.activePartId && state.parts.find(p => p.id === state.activePartId);
+            selectPart(sel ? sel.id : state.parts[0].id);
+        } else {
+            showEmptyState();
+        }
+        updateStats();
+    } catch (e) { console.error('loadData failed', e); }
+}
+
+// ─── Sidebar ──────────────────────────────────────────────────────────────────
+function renderSidebar() {
+    const nav = document.getElementById('parts-nav');
+    nav.innerHTML = '';
+    state.parts.forEach(p => {
+        const btn = document.createElement('button');
+        btn.id        = `nav-part-${p.id}`;
+        btn.className = 'part-nav-btn w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl border-2 border-duo-border text-left';
+        const dot = p.is_validated
+            ? `<span class="ml-auto w-2 h-2 rounded-full bg-duo-green flex-shrink-0" title="Валидировано"></span>`
+            : `<span class="ml-auto w-2 h-2 rounded-full bg-duo-gold  flex-shrink-0" title="Черновик"></span>`;
+        btn.innerHTML = `
+            <div class="w-7 h-7 rounded-lg flex items-center justify-center bg-duo-purple/10 border border-duo-purple/20 flex-shrink-0">
+                <span class="text-xs font-black text-duo-purple">${p.part_number}</span>
+            </div>
+            <div class="flex-1 min-w-0">
+                <p class="text-xs font-extrabold text-white truncate">Часть ${p.part_number}</p>
+                <p class="text-[10px] text-duo-text-muted font-semibold">${p.questions.length} вопр.</p>
+            </div>${dot}`;
+        btn.onclick = () => selectPart(p.id);
+        nav.appendChild(btn);
+    });
+}
+
+function selectPart(partId) {
+    state.activePartId = partId;
+    document.querySelectorAll('.part-nav-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById(`nav-part-${partId}`)?.classList.add('active');
+    renderPartEditor(partId);
+}
+
+// ─── Part Editor ──────────────────────────────────────────────────────────────
+function renderPartEditor(partId) {
+    const part = state.parts.find(p => p.id === partId);
+    if (!part) return;
+
+    document.getElementById('loading-state').classList.add('hidden');
+    document.getElementById('empty-state').classList.add('hidden');
+    const editor = document.getElementById('part-editor');
+    editor.classList.remove('hidden');
+
+    const validatedBadge = part.is_validated
+        ? `<span class="badge-duo bg-duo-green/10 text-duo-green border border-duo-green/30 text-[10px]"><i class="ph-fill ph-check-circle"></i> Валидировано</span>`
+        : `<span class="badge-duo bg-duo-gold/10  text-duo-gold  border border-duo-gold/30  text-[10px]"><i class="ph-fill ph-clock"></i> Черновик</span>`;
+
+    const imageBlock = part.image_url
+        ? `<div class="rounded-xl overflow-hidden border-2 border-duo-border bg-duo-surface mb-2">
+               <img src="${escHtml(part.image_url)}" alt="Часть ${part.part_number}" class="w-full object-contain max-h-72" />
+           </div>
+           ${part.alt_text ? `<p class="text-xs text-duo-text-muted font-medium italic">${escHtml(part.alt_text)}</p>` : ''}`
+        : `<div class="h-32 flex items-center justify-center rounded-xl border-2 border-dashed border-duo-border bg-duo-surface/50">
+               <div class="text-center text-duo-text-muted">
+                   <i class="ph-fill ph-image text-3xl block mb-1 opacity-30"></i>
+                   <p class="text-xs font-semibold">Нет изображения — загрузите через OCR</p>
+               </div>
+           </div>`;
+
+    editor.innerHTML = `
+    <!-- Part header -->
+    <div class="card-duo !p-5">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-xl flex items-center justify-center bg-duo-purple/15 border-2 border-duo-purple/25">
+                    <span class="text-sm font-black text-duo-purple">${part.part_number}</span>
+                </div>
+                <div>
+                    <h2 class="text-base font-black text-white">Часть ${part.part_number}</h2>
+                    <div class="mt-0.5">${validatedBadge}</div>
+                </div>
+            </div>
+            <button onclick="deletePart(${part.id})"
+                    class="w-8 h-8 rounded-lg flex items-center justify-center text-duo-text-muted hover:text-red-400 hover:bg-red-500/10 transition-colors border border-duo-border"
+                    title="Удалить часть">
+                <i class="ph-bold ph-trash text-sm"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Reference Image -->
+    <div class="card-duo !p-5">
+        <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center gap-2">
+                <i class="ph-fill ph-image text-duo-purple"></i>
+                <h3 class="text-sm font-extrabold text-white">Reference Material</h3>
+            </div>
+            <button onclick="openOcrModal()"
+                    class="flex items-center gap-1.5 py-1.5 px-3 rounded-xl bg-duo-purple/15 border border-duo-purple/30 text-duo-purple text-xs font-extrabold hover:bg-duo-purple/25 transition-colors">
+                <i class="ph-fill ph-camera"></i> ${part.image_url ? 'Обновить OCR' : 'Загрузить через OCR'}
+            </button>
+        </div>
+        ${imageBlock}
+    </div>
+
+    <!-- Instructions -->
+    <div class="card-duo !p-5">
+        <div class="flex items-center gap-2 mb-3">
+            <i class="ph-fill ph-text-aa text-duo-purple"></i>
+            <h3 class="text-sm font-extrabold text-white">Инструкция</h3>
+        </div>
+        <textarea id="part-instructions" class="editable-field editable-textarea"
+                  oninput="schedulePartSave(${part.id})"
+                  placeholder="Describe the picture / Answer the following questions...">${escHtml(part.instructions)}</textarea>
+    </div>
+
+    <!-- Debate Table (Part 3) -->
+    ${renderDebateBlock(part)}
+
+    <!-- Questions -->
+    <div class="card-duo !p-5">
+        <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center gap-2">
+                <i class="ph-fill ph-microphone text-duo-purple"></i>
+                <h3 class="text-sm font-extrabold text-white">
+                    ${part.part_number === 4 ? 'Топик (TTS — вся таблица)' : 'Вопросы (TTS)'}
+                    <span class="text-duo-text-muted font-bold text-xs" id="q-count">(${part.questions.length})</span>
+                </h3>
+            </div>
+            <div class="flex items-center gap-2">
+                ${part.questions.some(q => !q.has_audio) ? `
+                <button onclick="generateAllTts(${part.id})" id="gen-all-tts-btn-${part.id}"
+                        class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-extrabold text-duo-gold border border-duo-gold/30 bg-duo-gold/5 hover:bg-duo-gold/15 transition-colors">
+                    <i class="ph-bold ph-speaker-high text-xs"></i> Все TTS
+                </button>` : ''}
+                <button onclick="createQuestion(${part.id})" class="btn-duo-outline text-xs !py-1.5 !px-3">
+                    <i class="ph-bold ph-plus"></i> Добавить
+                </button>
+            </div>
+        </div>
+        <div class="space-y-3" id="questions-list">
+            ${part.questions.map(q => renderQuestionCard(q)).join('')}
+        </div>
+        ${part.questions.length === 0 ? `
+        <div class="text-center py-6 text-duo-text-muted">
+            <i class="ph-fill ph-microphone text-3xl mb-2 block opacity-30"></i>
+            <p class="text-xs font-bold">Нет вопросов. Нажмите «Добавить».</p>
+        </div>` : ''}
+    </div>`;
+    initAudioPlayers(editor);
+}
+
+function buildCustomPlayer(audioUrl, qId) {
+    return `<div class="audio-player-container mt-2">
+        <div class="flex items-center gap-3 bg-duo-surface-2/30 p-3 rounded-2xl border border-duo-border">
+            <button type="button" class="result-play-btn w-10 h-10 rounded-xl bg-duo-purple shadow-[0_3px_0_#9333EA] flex items-center justify-center flex-shrink-0 hover:-translate-y-px hover:shadow-[0_5px_0_#9333EA] active:translate-y-[3px] active:shadow-none transition-all outline-none">
+                <i class="ph-fill ph-play text-white text-base result-play-icon"></i>
+            </button>
+            <div class="flex-1 flex flex-col justify-center cursor-pointer relative result-progress-container">
+                <div class="flex justify-between items-center text-[10px] font-black text-duo-text-dim mb-1 px-0.5 uppercase tracking-wide">
+                    <span class="result-current-time">0:00</span>
+                    <span class="flex items-center gap-1 text-duo-purple"><i class="ph-fill ph-waveform text-xs"></i> TTS</span>
+                    <span class="result-duration">0:00</span>
+                </div>
+                <div class="h-3 bg-[#1A2F35] rounded-full overflow-hidden border border-[#2B4D56] relative">
+                    <div class="result-progress-bar h-full bg-duo-purple absolute top-0 left-0 rounded-full transition-none shadow-[0_0_8px_rgba(168,85,247,0.5)]" style="width:0%"></div>
+                </div>
+            </div>
+            <audio class="result-part-audio" preload="metadata" id="qaudio-${qId}">
+                <source src="${audioUrl}" type="audio/mpeg">
+            </audio>
+            <button onclick="generateTts(${qId})" id="tts-btn-${qId}"
+                    title="Перегенерировать TTS"
+                    class="w-7 h-7 flex-shrink-0 rounded-lg flex items-center justify-center text-duo-text-muted hover:text-duo-purple hover:bg-duo-purple/10 border border-duo-border transition-colors">
+                <i class="ph-bold ph-arrows-clockwise text-xs"></i>
+            </button>
+        </div>
+    </div>`;
+}
+
+function initAudioPlayers(container) {
+    (container || document).querySelectorAll('.audio-player-container').forEach(cont => {
+        if (cont.dataset.inited) return;
+        cont.dataset.inited = '1';
+        const audio = cont.querySelector('.result-part-audio');
+        const playBtn = cont.querySelector('.result-play-btn');
+        const playIcon = cont.querySelector('.result-play-icon');
+        const progCont = cont.querySelector('.result-progress-container');
+        const progBar = cont.querySelector('.result-progress-bar');
+        const curTime = cont.querySelector('.result-current-time');
+        const durEl = cont.querySelector('.result-duration');
+        if (!audio || !playBtn) return;
+        const fmt = t => isNaN(t) ? '0:00' : `${Math.floor(t/60)}:${String(Math.floor(t%60)).padStart(2,'0')}`;
+        audio.addEventListener('loadedmetadata', () => { if (durEl) durEl.textContent = fmt(audio.duration); });
+        const sync = () => {
+            if (audio.paused) { playIcon.classList.remove('ph-pause'); playIcon.classList.add('ph-play'); }
+            else { playIcon.classList.remove('ph-play'); playIcon.classList.add('ph-pause'); }
+        };
+        playBtn.addEventListener('click', () => {
+            document.querySelectorAll('.result-part-audio').forEach(a => { if (a !== audio && !a.paused) a.pause(); });
+            audio.paused ? audio.play() : audio.pause();
+        });
+        audio.addEventListener('play', sync);
+        audio.addEventListener('pause', sync);
+        audio.addEventListener('ended', sync);
+        audio.addEventListener('timeupdate', () => {
+            if (curTime) curTime.textContent = fmt(audio.currentTime);
+            if (audio.duration && progBar) progBar.style.width = `${(audio.currentTime / audio.duration) * 100}%`;
+        });
+        if (progCont) {
+            progCont.addEventListener('click', e => {
+                const r = progCont.getBoundingClientRect();
+                const ratio = Math.min(1, Math.max(0, (e.clientX - r.left) / r.width));
+                if (audio.duration) audio.currentTime = ratio * audio.duration;
+            });
+        }
+    });
+}
+
+function renderQuestionCard(q) {
+    const audioBlock = q.has_audio
+        ? buildCustomPlayer(escHtml(q.audio_url), q.id)
+        : `<div class="flex items-center gap-2 mt-1">
+               <p class="text-[10px] text-duo-text-muted font-semibold flex items-center gap-1 flex-1" id="qaudio-status-${q.id}">
+                   <i class="ph-fill ph-speaker-slash opacity-40"></i> TTS аудио не сгенерировано
+               </p>
+               <button onclick="generateTts(${q.id})" id="tts-btn-${q.id}"
+                       title="Сгенерировать TTS"
+                       class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-extrabold text-duo-purple border border-duo-purple/30 bg-duo-purple/5 hover:bg-duo-purple/15 transition-colors flex-shrink-0">
+                   <i class="ph-bold ph-speaker-high text-xs"></i> Генерировать TTS
+               </button>
+           </div>`;
+    return `
+    <div class="q-card border-2 border-duo-border rounded-2xl p-4 bg-duo-surface/50" id="qcard-${q.id}">
+        <div class="flex items-start gap-3">
+            <div class="w-8 h-8 rounded-lg flex items-center justify-center bg-duo-surface-2 border border-duo-border flex-shrink-0 mt-0.5">
+                <span class="text-xs font-black text-duo-text-muted">${q.question_number}</span>
+            </div>
+            <div class="flex-1 min-w-0">
+                <textarea class="editable-field editable-textarea text-xs"
+                          placeholder="Текст вопроса для TTS (напр. Describe what you see in the picture.)"
+                          oninput="scheduleQSave(${q.id})"
+                          id="qt-${q.id}">${escHtml(q.question_text)}</textarea>
+                ${audioBlock}
+            </div>
+            <button onclick="deleteQuestion(${q.id})"
+                    class="w-8 h-8 flex-shrink-0 rounded-lg flex items-center justify-center text-duo-text-muted hover:text-red-400 hover:bg-red-500/10 border border-duo-border transition-colors mt-0.5">
+                <i class="ph-bold ph-trash text-sm"></i>
+            </button>
+        </div>
+    </div>`;
+}
+
+function renderDebateBlock(part) {
+    const dd = part.debate_data;
+    if (!dd || (!dd.topic && !(dd.for_points || []).length && !(dd.against_points || []).length)) {
+        return '';
+    }
+    const forItems = (dd.for_points || []).map(p => `<li class="text-xs text-white font-semibold flex items-start gap-1.5"><i class="ph-fill ph-dot text-duo-green mt-0.5 flex-shrink-0"></i>${escHtml(p)}</li>`).join('');
+    const againstItems = (dd.against_points || []).map(p => `<li class="text-xs text-white font-semibold flex items-start gap-1.5"><i class="ph-fill ph-dot text-duo-red mt-0.5 flex-shrink-0"></i>${escHtml(p)}</li>`).join('');
+    return `
+    <div class="card-duo !p-5">
+        <div class="flex items-center gap-2 mb-3">
+            <i class="ph-fill ph-scales text-duo-gold"></i>
+            <h3 class="text-sm font-extrabold text-white">Debate Table (Part 3)</h3>
+        </div>
+        ${dd.topic ? `<div class="bg-duo-gold/10 border-2 border-duo-gold/20 rounded-xl px-4 py-3 mb-4">
+            <p class="text-sm font-bold text-duo-gold text-center">${escHtml(dd.topic)}</p>
+        </div>` : ''}
+        <div class="grid grid-cols-2 gap-3">
+            <div class="bg-duo-green/5 border-2 border-duo-green/15 rounded-xl p-3">
+                <p class="text-xs font-extrabold text-duo-green uppercase tracking-widest mb-2">FOR</p>
+                <ul class="space-y-1.5">${forItems || '<li class="text-xs text-duo-text-muted font-semibold">—</li>'}</ul>
+            </div>
+            <div class="bg-duo-red/5 border-2 border-duo-red/15 rounded-xl p-3">
+                <p class="text-xs font-extrabold text-duo-red uppercase tracking-widest mb-2">AGAINST</p>
+                <ul class="space-y-1.5">${againstItems || '<li class="text-xs text-duo-text-muted font-semibold">—</li>'}</ul>
+            </div>
+        </div>
+    </div>`;
+}
+
+// ─── Part Save ────────────────────────────────────────────────────────────────
+function schedulePartSave(partId) {
+    clearTimeout(partSaveTimer);
+    partSaveTimer = setTimeout(() => savePartData(partId), 800);
+}
+async function savePartData(partId) {
+    const instructions = document.getElementById('part-instructions')?.value || '';
+    showSaving();
+    try {
+        const r = await apiFetch(`/api/mentor/speaking-part/${partId}/update/`, 'POST', { instructions });
+        if (r.ok) { const p = state.parts.find(p => p.id === partId); if (p) p.instructions = instructions; showSaved(); }
+        else showError();
+    } catch { showError(); }
+}
+
+// ─── Question Save ────────────────────────────────────────────────────────────
+function scheduleQSave(qId) {
+    clearTimeout(qSaveTimers[qId]);
+    qSaveTimers[qId] = setTimeout(() => saveQuestion(qId), 800);
+}
+async function saveQuestion(qId) {
+    const text = document.getElementById(`qt-${qId}`)?.value || '';
+    showSaving();
+    try {
+        const r = await apiFetch(`/api/mentor/speaking-question/${qId}/update/`, 'POST', { question_text: text });
+        if (r.ok) showSaved(); else showError();
+    } catch { showError(); }
+}
+
+// ─── TTS Generate ─────────────────────────────────────────────────────────────
+async function generateTts(qId) {
+    const btn = document.getElementById(`tts-btn-${qId}`);
+    if (!btn) return;
+    const origHtml = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="ph-fill ph-spinner animate-spin text-xs"></i>';
+    try {
+        const r = await apiFetch(`/api/mentor/speaking-question/${qId}/generate-tts/`, 'POST', {});
+        if (r.ok) {
+            const data = await r.json();
+            // Replace the audio block in the card
+            const card = document.getElementById(`qcard-${qId}`);
+            if (card && data.audio_url) {
+                const statusEl = document.getElementById(`qaudio-status-${qId}`);
+                const audioEl = document.getElementById(`qaudio-${qId}`);
+                if (statusEl) {
+                    // Was "not generated" state — swap to custom audio player
+                    const wrapper = statusEl.closest('div');
+                    const newEl = document.createElement('div');
+                    newEl.outerHTML; // noop — we build via buildCustomPlayer
+                    const tmp = document.createElement('template');
+                    tmp.innerHTML = buildCustomPlayer(data.audio_url, qId);
+                    const playerEl = tmp.content.firstElementChild;
+                    wrapper.replaceWith(playerEl);
+                    initAudioPlayers(playerEl);
+                } else if (audioEl) {
+                    // Already has audio — update source and reload
+                    const src = audioEl.querySelector('source');
+                    if (src) { src.src = data.audio_url; audioEl.load(); }
+                    else { audioEl.src = data.audio_url; audioEl.load(); }
+                    btn.disabled = false;
+                    btn.innerHTML = origHtml;
+                }
+                showSaved();
+            } else {
+                btn.disabled = false;
+                btn.innerHTML = origHtml;
+                showError();
+            }
+        } else {
+            const d = await r.json().catch(() => ({}));
+            alert('TTS ошибка: ' + (d.error || 'Неизвестная ошибка'));
+            btn.disabled = false;
+            btn.innerHTML = origHtml;
+            showError();
+        }
+    } catch {
+        btn.disabled = false;
+        btn.innerHTML = origHtml;
+        showError();
+    }
+}
+
+async function generateAllTts(partId) {
+    const part = state.parts.find(p => p.id === partId);
+    if (!part) return;
+    const pending = part.questions.filter(q => !q.has_audio);
+    if (!pending.length) return;
+
+    const btn = document.getElementById(`gen-all-tts-btn-${partId}`);
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="ph-fill ph-spinner animate-spin text-xs"></i> Генерация...'; }
+
+    for (const q of pending) {
+        await generateTts(q.id);
+        // update state
+        const sq = part.questions.find(x => x.id === q.id);
+        if (sq) sq.has_audio = true;
+    }
+
+    if (btn) btn.remove(); // hide button once all generated
+}
+
+// ─── Create / Delete ──────────────────────────────────────────────────────────
+async function createPart() {
+    showSaving();
+    try {
+        const r = await apiFetch(`/api/mentor/speaking-test/${TEST_ID}/part/create/`, 'POST', {});
+        if (!r.ok) { const d = await r.json(); alert(d.error || 'Ошибка'); showError(); return; }
+        const newPart = await r.json();
+        newPart.questions = newPart.questions || [];
+        state.parts.push(newPart);
+        renderSidebar(); selectPart(newPart.id); updateStats(); showSaved();
+    } catch { showError(); }
+}
+
+async function createQuestion(partId) {
+    showSaving();
+    try {
+        const r = await apiFetch(`/api/mentor/speaking-part/${partId}/question/create/`, 'POST', {});
+        if (!r.ok) { showError(); return; }
+        const newQ = await r.json();
+        const part = state.parts.find(p => p.id === partId);
+        if (part) part.questions.push(newQ);
+        const list = document.getElementById('questions-list');
+        if (list) { list.innerHTML += renderQuestionCard(newQ); document.getElementById(`qt-${newQ.id}`)?.focus(); }
+        updateQCount(part); updateStats(); showSaved();
+    } catch { showError(); }
+}
+
+function deletePart(partId) {
+    pendingDelete = { type: 'part', id: partId };
+    document.getElementById('modal-title').textContent = 'Удалить часть?';
+    document.getElementById('modal-msg').textContent   = 'Все вопросы и изображение этой части будут удалены.';
+    document.getElementById('confirm-modal').classList.remove('hidden');
+}
+function deleteQuestion(qId) {
+    pendingDelete = { type: 'question', id: qId };
+    document.getElementById('modal-title').textContent = 'Удалить вопрос?';
+    document.getElementById('modal-msg').textContent   = 'Это действие нельзя отменить.';
+    document.getElementById('confirm-modal').classList.remove('hidden');
+}
+
+async function confirmDelete() {
+    closeModal();
+    if (!pendingDelete) return;
+    const { type, id } = pendingDelete;
+    pendingDelete = null;
+    const url = type === 'part'
+        ? `/api/mentor/speaking-part/${id}/delete/`
+        : `/api/mentor/speaking-question/${id}/delete/`;
+    showSaving();
+    try {
+        const r = await apiFetch(url, 'POST', {});
+        if (!r.ok) { showError(); return; }
+        if (type === 'part') {
+            state.parts = state.parts.filter(p => p.id !== id);
+            renderSidebar();
+            state.parts.length ? selectPart(state.parts[0].id) : showEmptyState();
+        } else {
+            state.parts.forEach(p => { p.questions = p.questions.filter(q => q.id !== id); });
+            document.getElementById(`qcard-${id}`)?.remove();
+            updateQCount(state.parts.find(p => p.id === state.activePartId));
+        }
+        updateStats(); showSaved();
+    } catch { showError(); }
+}
+
+function closeModal() { document.getElementById('confirm-modal').classList.add('hidden'); }
+
+// ─── Toggle Active / Rename ───────────────────────────────────────────────────
+async function toggleActive() {
+    const r = await apiFetch(`/api/mentor/speaking-test/${TEST_ID}/toggle-active/`, 'POST', {});
+    if (!r.ok) return;
+    const d   = await r.json();
+    const btn = document.getElementById('toggle-active-btn');
+    if (d.is_active) {
+        btn.textContent = 'Активен';
+        btn.className   = 'badge-duo cursor-pointer transition-all text-xs bg-duo-green/15 text-duo-green border border-duo-green/30 hover:bg-duo-green/25';
+    } else {
+        btn.textContent = 'Черновик';
+        btn.className   = 'badge-duo cursor-pointer transition-all text-xs bg-duo-surface-2 text-duo-text-muted border border-duo-border';
+    }
+}
+
+async function publishTest(btn) {
+    const report = await loadValidationReport(true);
+    if (!report || !report.is_publishable) {
+        return;
+    }
+
+    const originalHtml = btn.innerHTML;
+    btn.innerHTML = '<i class="ph ph-spinner spin"></i> <span data-i18n="mnt_bld_saving">PUBLISHING...</span>';
+    btn.disabled = true;
+    
+    const splitParts = document.getElementById('split-parts-toggle').checked;
+    
+    try {
+        const r = await apiFetch(`/api/mentor/test/${TEST_ID}/publish/`, 'POST', { split_parts: splitParts });
+        const data = await r.json();
+        if (data.success) {
+            window.location.href = '/mentor/';
+        } else {
+            alert('Error publishing test: ' + (data.error || 'Unknown error'));
+            btn.innerHTML = originalHtml;
+            btn.disabled = false;
+        }
+    } catch (e) {
+        console.error(e);
+        alert('Server error while publishing');
+        btn.innerHTML = originalHtml;
+        btn.disabled = false;
+    }
+}
+
+async function editTestName() {
+    const current = document.getElementById('test-title').textContent.trim();
+    const newName = prompt('Новое название теста:', current);
+    if (!newName || newName.trim() === current) return;
+    const r = await apiFetch(`/api/mentor/speaking-test/${TEST_ID}/update/`, 'POST', { name: newName.trim() });
+    if (r.ok) { document.getElementById('test-title').textContent = newName.trim(); showSaved(); }
+    else showError();
+}
+
+function renderValidationReport(report) {
+    const blockers = report?.summary?.blockers || 0;
+    const warnings = report?.summary?.warnings || 0;
+    const isPublishable = !!report?.is_publishable;
+    const issues = report?.issues || [];
+
+    document.getElementById('validation-blockers-chip').textContent = `${blockers} blockers`;
+    document.getElementById('validation-warnings-chip').textContent = `${warnings} warnings`;
+
+    const publishableChip = document.getElementById('validation-publishable-chip');
+    publishableChip.textContent = isPublishable ? 'Можно публиковать' : 'Публикация заблокирована';
+    publishableChip.className = isPublishable
+        ? 'rounded-full border border-duo-green/20 bg-duo-green/10 px-3 py-1 text-duo-green'
+        : 'rounded-full border border-red-400/20 bg-red-500/10 px-3 py-1 text-red-300';
+
+    document.getElementById('validation-summary-text').textContent = isPublishable
+        ? 'Критичных проблем не найдено. Speaking тест можно публиковать.'
+        : `Найдены критичные проблемы: ${blockers} blocker(s).`;
+
+    const issuesWrap = document.getElementById('validation-issues');
+    if (!issues.length) {
+        issuesWrap.innerHTML = '<div class="rounded-xl border border-duo-green/20 bg-duo-green/10 px-4 py-3 text-sm font-bold text-duo-green">Пока проблем не найдено.</div>';
+    } else {
+        issuesWrap.innerHTML = issues.map((issue) => {
+            const isBlocker = issue.severity === 'blocker';
+            const classes = isBlocker
+                ? 'border-red-400/20 bg-red-500/10 text-red-100'
+                : 'border-yellow-300/20 bg-yellow-400/10 text-yellow-100';
+            const badge = isBlocker ? 'BLOCKER' : 'WARNING';
+            return `
+                <div class="rounded-xl border px-4 py-3 ${classes}">
+                    <div class="flex items-start justify-between gap-3">
+                        <div>
+                            <p class="text-xs font-black uppercase tracking-[0.16em]">${badge}</p>
+                            <p class="mt-1 text-sm font-black">${issue.message}</p>
+                            <p class="mt-1 text-xs font-semibold opacity-80">${issue.location || 'Test level'}</p>
+                        </div>
+                        <span class="text-[10px] font-black uppercase tracking-[0.16em] opacity-70">${issue.code}</span>
+                    </div>
+                </div>`;
+        }).join('');
+    }
+
+    const publishButton = document.querySelector('#publish-panel button[onclick="publishTest(this)"]');
+    if (publishButton) {
+        publishButton.disabled = !isPublishable;
+        publishButton.classList.toggle('opacity-60', !isPublishable);
+        publishButton.classList.toggle('pointer-events-none', !isPublishable);
+    }
+}
+
+async function loadValidationReport(forceToast = false) {
+    try {
+        const response = await fetch(`/api/mentor/test/${TEST_ID}/validate/`);
+        const report = await response.json();
+        renderValidationReport(report);
+        if (forceToast) {
+            if (report.is_publishable) showSaved();
+            else showError();
+        }
+        return report;
+    } catch (error) {
+        console.error('Validation failed', error);
+        showError();
+        return null;
+    }
+}
+
+// ─── OCR Modal ────────────────────────────────────────────────────────────────
+function openOcrModal() {
+    resetOcrModal();
+    document.getElementById('ocr-modal').classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+}
+function closeOcrModal() {
+    document.getElementById('ocr-modal').classList.add('hidden');
+    document.body.style.overflow = '';
+}
+function resetOcrModal() {
+    document.getElementById('ocr-step-2').classList.add('hidden');
+    document.getElementById('ocr-status').textContent        = '';
+    document.getElementById('ocr-image-input').value         = '';
+    document.getElementById('ocr-process-btn').disabled      = false;
+    cropInteractionsInitialized = false;
+    ocrWizardState = { currentIdx: 0, parts: [], images: [] };
+    Object.assign(cropState, { left: 0.2, top: 0.2, width: 0.6, height: 0.4 });
+}
+
+let ocrWizardState = { currentIdx: 0, parts: [], images: [] };
+
+async function processOcr() {
+    const fileInput = document.getElementById('ocr-image-input');
+    if (!fileInput.files.length) { document.getElementById('ocr-status').textContent = 'Выберите файл'; return; }
+    const btn = document.getElementById('ocr-process-btn');
+    const statusEl = document.getElementById('ocr-status');
+    btn.disabled = true;
+    statusEl.innerHTML = '<i class="ph-fill ph-spinner animate-spin mr-1"></i>Обработка...';
+    statusEl.className = 'text-sm font-semibold text-duo-purple';
+    const formData = new FormData();
+    formData.append('image', fileInput.files[0]);
+    try {
+        const r    = await fetch(`/api/mentor/speaking-test/${TEST_ID}/upload/`, {
+            method: 'POST', headers: { 'X-CSRFToken': CSRF }, body: formData,
+        });
+        const data = await r.json();
+        if (data.status === 'success') {
+            statusEl.textContent = '✓ Успешно распознано';
+            statusEl.className   = 'text-sm font-semibold text-duo-green';
+            
+            ocrWizardState.parts = [];
+            let jsonParts = data.data.parts || [];
+            let ids = data.part_ids || [];
+            const allPartNumbers = jsonParts.map(p => p?.part_number);
+            for (let i = 0; i < ids.length; i++) {
+                const partCandidate = {
+                   id: ids[i],
+                   data: jsonParts[i] || {} 
+                };
+                const partNumber = partCandidate.data.part_number;
+                if (shouldIncludeInCropWizard(partNumber, i, ids.length, allPartNumbers)) {
+                    ocrWizardState.parts.push(partCandidate);
+                }
+            }
+
+            if (!ocrWizardState.parts.length) {
+                closeOcrModal();
+                await loadData();
+                return;
+            }
+            
+            ocrWizardState.currentIdx = 0;
+            showOcrCropWizard(data.image_url);
+        } else {
+            statusEl.textContent = 'Ошибка: ' + (data.message || 'неизвестная');
+            statusEl.className   = 'text-sm font-semibold text-red-400';
+            btn.disabled = false;
+        }
+    } catch { statusEl.textContent = 'Ошибка сети'; statusEl.className = 'text-sm font-semibold text-red-400'; btn.disabled = false; }
+}
+
+function showOcrCropWizard(imageUrl) {
+    document.getElementById('ocr-step-2').classList.remove('hidden');
+    document.getElementById('ocr-step-2').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    const img = document.getElementById('ocr-original-image');
+    img.src = imageUrl;
+    
+    // Default crop state
+    cropState.left = 0.2; cropState.top = 0.2; cropState.width = 0.6; cropState.height = 0.4;
+    
+    const initCrop = () => {
+        applyCropBoxFromState();
+        document.getElementById('ocr-crop-box').classList.remove('hidden');
+        setupCropInteractions();
+    };
+    img.complete ? initCrop() : (img.onload = initCrop);
+    
+    renderOcrWizardStep();
+}
+
+function renderOcrWizardStep() {
+    if (ocrWizardState.currentIdx >= ocrWizardState.parts.length) {
+        finishOcrWizard();
+        return;
+    }
+    
+    const partObj = ocrWizardState.parts[ocrWizardState.currentIdx];
+    const partNum = partObj.data.part_number || (ocrWizardState.currentIdx + 1);
+    
+    document.getElementById('ocr-crop-title').innerText = `Разметка картинки для Part ${partNum}`;
+    document.getElementById('ocr-crop-instruction').innerHTML = 
+        `<i class="ph-fill ph-info text-duo-blue mr-1"></i>Выделите изображение, которое относится к <b>Части ${partNum}</b> (если нужно).`;
+    
+    const isLast = (ocrWizardState.currentIdx === ocrWizardState.parts.length - 1);
+    const btn = document.getElementById('ocr-save-btn');
+    if (isLast) {
+        btn.innerHTML = `<i class="ph-bold ph-check-circle text-lg"></i> Завершить загрузку`;
+    } else {
+        btn.innerHTML = `Далее <i class="ph-bold ph-arrow-right text-lg"></i>`;
+    }
+    
+    // Automatically skip Part 1 if we're feeling smart, but let's let mentor do it by pressing "Skip".
+}
+
+async function skipCropOcr() {
+    await submitCurrentCrop(null);
+}
+
+async function saveCurrentCropOcr() {
+    await submitCurrentCrop({
+        minX: cropState.left,  minY: cropState.top,
+        maxX: cropState.left + cropState.width,
+        maxY: cropState.top  + cropState.height,
+    });
+}
+
+async function submitCurrentCrop(bbox) {
+    const partObj = ocrWizardState.parts[ocrWizardState.currentIdx];
+    
+    const validated_data = {
+        instructions: partObj.data.instructions || "", 
+        questions: partObj.data.questions || []
+    };
+    if (bbox) {
+        validated_data.bounding_box = bbox;
+    }
+    
+    const btnSkip = document.getElementById('ocr-skip-btn');
+    const btnSave = document.getElementById('ocr-save-btn');
+    btnSkip.disabled = true; btnSave.disabled = true;
+    const oldText = btnSave.innerHTML;
+    btnSave.innerHTML = '<i class="ph-fill ph-spinner animate-spin"></i> Сохранение...';
+    
+    try {
+        const r = await apiFetch(`/api/mentor/speaking-test/${TEST_ID}/save-validation/`, 'POST',
+            { part_id: partObj.id, validated_data });
+        if (r.ok) {
+            ocrWizardState.currentIdx++;
+            renderOcrWizardStep();
+        } else {
+            const d = await r.json().catch(() => ({}));
+            alert('Ошибка сервера: ' + (d.message || 'неизвестная'));
+        }
+    } catch { 
+        alert('Ошибка сети при сохранении'); 
+    } finally {
+        btnSkip.disabled = false; btnSave.disabled = false;
+        if (btnSave.innerHTML.includes("Сохранение")) btnSave.innerHTML = oldText;
+    }
+}
+
+async function finishOcrWizard() {
+    closeOcrModal();
+    await loadData();
+    showSaved();
+}
+
+// ─── Crop Box ─────────────────────────────────────────────────────────────────
+function applyCropBoxFromState() {
+    const b = document.getElementById('ocr-crop-box');
+    b.style.left   = `${cropState.left   * 100}%`;
+    b.style.top    = `${cropState.top    * 100}%`;
+    b.style.width  = `${cropState.width  * 100}%`;
+    b.style.height = `${cropState.height * 100}%`;
+}
+function setCropStateFromBoundingBox(bbox) {
+    const cl = (v, a, b) => Math.min(Math.max(v, a), b);
+    const minX = cl(+bbox.minX ?? 0.2, 0, 1), minY = cl(+bbox.minY ?? 0.2, 0, 1);
+    const maxX = cl(+bbox.maxX ?? 0.8, 0, 1), maxY = cl(+bbox.maxY ?? 0.6, 0, 1);
+    cropState.left   = Math.min(minX, maxX - 0.05);
+    cropState.top    = Math.min(minY, maxY - 0.05);
+    cropState.width  = Math.max(0.05, maxX - cropState.left);
+    cropState.height = Math.max(0.05, maxY - cropState.top);
+    cropState.left = cl(cropState.left, 0, 1 - cropState.width);
+    cropState.top  = cl(cropState.top,  0, 1 - cropState.height);
+}
+function updateCropBoundingBox() {
+    if (!ocrData) ocrData = { parts: [{}] };
+    if (!ocrData.parts) ocrData.parts = [{}];
+    if (!ocrData.parts[0]) ocrData.parts[0] = {};
+    ocrData.parts[0].bounding_box = {
+        minX: cropState.left,  minY: cropState.top,
+        maxX: cropState.left + cropState.width,
+        maxY: cropState.top  + cropState.height,
+    };
+}
+function setupCropInteractions() {
+    if (cropInteractionsInitialized) return;
+    cropInteractionsInitialized = true;
+    const box = document.getElementById('ocr-crop-box');
+    const cnt = document.getElementById('ocr-canvas-container');
+    let drag = null;
+    box.addEventListener('pointerdown', e => {
+        if (e.button && e.button !== 0) return;
+        e.preventDefault();
+        const handle = e.target.closest('[data-handle]')?.dataset?.handle ?? null;
+        drag = { mode: handle ? 'resize' : 'move', handle, pid: e.pointerId,
+                 sx: e.clientX, sy: e.clientY, ss: { ...cropState } };
+        box.setPointerCapture(e.pointerId);
+    });
+    box.addEventListener('pointermove', e => {
+        if (!drag || e.pointerId !== drag.pid) return;
+        e.preventDefault();
+        const cl   = (v, a, b) => Math.min(Math.max(v, a), b);
+        const rect = cnt.getBoundingClientRect();
+        const dx   = (e.clientX - drag.sx) / rect.width;
+        const dy   = (e.clientY - drag.sy) / rect.height;
+        const s    = drag.ss;
+        if (drag.mode === 'move') {
+            cropState.left   = cl(s.left + dx, 0, 1 - s.width);
+            cropState.top    = cl(s.top  + dy, 0, 1 - s.height);
+            cropState.width  = s.width; cropState.height = s.height;
+        } else {
+            const h = drag.handle;
+            let [x0, y0, x1, y1] = [s.left, s.top, s.left + s.width, s.top + s.height];
+            if (h === 'nw') { x0 = cl(s.left + dx, 0, x1 - 0.05); y0 = cl(s.top + dy, 0, y1 - 0.05); }
+            if (h === 'ne') { x1 = cl(s.left + s.width + dx, x0 + 0.05, 1); y0 = cl(s.top + dy, 0, y1 - 0.05); }
+            if (h === 'sw') { x0 = cl(s.left + dx, 0, x1 - 0.05); y1 = cl(s.top + s.height + dy, y0 + 0.05, 1); }
+            if (h === 'se') { x1 = cl(s.left + s.width + dx, x0 + 0.05, 1); y1 = cl(s.top + s.height + dy, y0 + 0.05, 1); }
+            cropState.left = x0; cropState.top = y0;
+            cropState.width = x1 - x0; cropState.height = y1 - y0;
+        }
+        applyCropBoxFromState();
+    });
+    box.addEventListener('pointerup',     () => { drag = null; });
+    box.addEventListener('pointercancel', () => { drag = null; });
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+function showEmptyState() {
+    document.getElementById('loading-state').classList.add('hidden');
+    document.getElementById('part-editor').classList.add('hidden');
+    document.getElementById('empty-state').classList.remove('hidden');
+}
+function updateQCount(part) {
+    const el = document.getElementById('q-count');
+    if (el && part) el.textContent = `(${part.questions.length})`;
+    const navEl = document.querySelector(`#nav-part-${part?.id} .text-\\[10px\\]`);
+    if (navEl && part) navEl.textContent = `${part.questions.length} вопр.`;
+}
+function updateStats() {
+    const total = state.parts.reduce((s, p) => s + p.questions.length, 0);
+    document.getElementById('stats-text').textContent = `${state.parts.length} частей · ${total} вопросов`;
+}
+async function apiFetch(url, method, body) {
+    return fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+        body: JSON.stringify(body),
+    });
+}
+function escHtml(s) {
+    if (!s) return '';
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function showSaving() {
+    const el = document.getElementById('save-indicator');
+    el.className = 'save-indicator saving show';
+    document.getElementById('save-text').textContent       = 'Сохранение...';
+    document.getElementById('autosave-status').textContent = 'Сохранение...';
+}
+function showSaved() {
+    const el = document.getElementById('save-indicator');
+    el.className = 'save-indicator saved show';
+    document.getElementById('save-text').textContent       = 'Сохранено';
+    document.getElementById('autosave-status').textContent = 'Все изменения сохранены';
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(() => el.classList.remove('show'), 2000);
+}
+function showError() {
+    const el = document.getElementById('save-indicator');
+    el.className = 'save-indicator error show';
+    document.getElementById('save-text').textContent       = 'Ошибка сохранения';
+    document.getElementById('autosave-status').textContent = 'Ошибка!';
+}
+</script>
+{% endblock %}

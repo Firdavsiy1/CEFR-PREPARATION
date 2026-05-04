@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Вступить в класс — CEFR Prep{% endblock %}
+
+{% block content %}
+<div class="min-h-[60vh] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-md w-full animate-slide-up">
+        <div class="card-duo p-8 sm:p-10">
+            <!-- Header -->
+            <div class="text-center mb-8">
+                <div class="w-20 h-20 mx-auto mb-5 rounded-2xl flex items-center justify-center bg-duo-blue shadow-[0_4px_0_#1899D6] animate-bounce-in">
+                    <i class="ph-fill ph-chalkboard-teacher text-white text-4xl"></i>
+                </div>
+                <h2 class="text-2xl font-black text-white mb-1" data-i18n="join_title">Вступить в класс</h2>
+                <p class="text-duo-text-dim font-semibold text-sm" data-i18n="join_subtitle">Введите код, который дал вам ментор</p>
+            </div>
+
+            {% if existing %}
+            <div class="mb-6 p-4 rounded-2xl bg-duo-blue/10 border border-duo-blue/25">
+                <div class="flex items-center gap-3 mb-2">
+                    <i class="ph-fill ph-info text-duo-blue text-lg"></i>
+                    <span class="text-sm font-bold text-duo-blue" data-i18n="join_already_in">Вы уже в классе:</span>
+                </div>
+                <p class="text-white font-black">{{ existing.classroom.name }}</p>
+                <p class="text-xs text-duo-text-dim font-semibold mt-1">
+                    Ментор: {% if existing.classroom.mentor.first_name %}{{ existing.classroom.mentor.first_name }} {{ existing.classroom.mentor.last_name }}{% else %}{{ existing.classroom.mentor.username }}{% endif %}
+                </p>
+                <p class="text-xs text-duo-gold font-bold mt-2">
+                    <i class="ph-fill ph-warning"></i> При вступлении в новый класс вы покинете текущий.
+                </p>
+            </div>
+            {% endif %}
+
+            <form method="POST" class="space-y-5">
+                {% csrf_token %}
+                <div>
+                    <label class="block text-xs font-extrabold text-duo-text-dim mb-2 uppercase tracking-widest" data-i18n="join_code_label">Код класса</label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                            <i class="ph-fill ph-key text-duo-text-muted text-lg"></i>
+                        </div>
+                        <input type="text" name="code" required maxlength="8"
+                               placeholder="Например: ABC123"
+                               class="input-duo w-full text-center text-xl font-black tracking-[0.3em] uppercase"
+                               style="letter-spacing: 0.3em; text-transform: uppercase;"
+                               autocomplete="off">
+                    </div>
+                </div>
+
+                <button type="submit" class="btn-duo-blue w-full text-base !py-3.5">
+                    <i class="ph-fill ph-sign-in text-lg"></i>
+                    <span data-i18n="join_btn">Вступить</span>
+                </button>
+            </form>
+
+            <div class="text-center mt-6 pt-6 border-t-2 border-duo-border">
+                <a href="{% url 'exams:dashboard' %}" class="text-sm text-duo-text-dim hover:text-white font-bold transition-colors">
+                    <i class="ph-fill ph-arrow-left"></i>
+                    <span data-i18n="join_back">Вернуться на главную</span>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
